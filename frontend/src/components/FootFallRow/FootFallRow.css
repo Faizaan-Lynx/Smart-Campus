@@ -1,0 +1,29 @@
+.app__container__row {
+  display: flex;
+  gap: 20px;
+}
+
+.footfall__container {
+  flex: 0.65;
+}
+
+.video__container__row {
+  flex: 0.35;
+}
+
+@media screen and (max-width: 1450px) {
+  .footfall__container {
+    flex: 0.6;
+  }
+
+  .video__container__row {
+    flex: 0.4;
+  }
+}
+
+@media screen and (max-width: 1150px) {
+  .app__container__row {
+    flex-direction: column;
+    gap: 0;
+  }
+}

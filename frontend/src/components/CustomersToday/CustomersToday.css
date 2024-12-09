@@ -1,0 +1,27 @@
+.customers__today__div {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customers_today {
+  min-height: 300px;
+  max-height: 300px;
+}
+.customers__today__div > div {
+  padding-left: 10px;
+  padding-right: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.customers__today__div > div > p {
+  font-size: 16px;
+}
+.customers__p__tag {
+  font-weight: 450;
+}
+
+.customer__icon {
+  color: rgba(94, 55, 255, 0.85);
+}

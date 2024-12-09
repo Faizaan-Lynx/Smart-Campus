@@ -1,0 +1,7 @@
+.engagement__container {
+  min-height: 400px;
+}
+.engagement__graph {
+  display: flex;
+  padding: 30px;
+}

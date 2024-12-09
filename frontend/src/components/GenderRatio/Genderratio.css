@@ -1,0 +1,30 @@
+p {
+  margin: 0;
+}
+.genderratio__main__div {
+  margin-top: 35px;
+  padding-right: 16px;
+}
+
+.genderratio__container {
+  background-color: #fff;
+  border-radius: 21px;
+  padding: 20px;
+}
+.genderratio__content__div {
+  display: flex;
+  justify-content: center;
+}
+
+.genderratio__content__div p {
+  color: #2d3748;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.genderratio__div {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

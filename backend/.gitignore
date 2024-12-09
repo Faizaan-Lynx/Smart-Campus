@@ -1,0 +1,11 @@
+__pycache__
+log.txt
+env3.*
+env
+.env
+docs_build
+site_build
+venv
+.pt
+*.pt
+*.mp4

@@ -1,0 +1,14 @@
+.sitetableprofile__div__main {
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+/* CustomTable.css */
+.table-container::-webkit-scrollbar {
+  width: 4px; /* Set width of the scrollbar */
+  height: 4px; /* Set height of the scrollbar */
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background-color: rgb(171, 163, 163); /* Set color of the scrollbar thumb */
+  border-radius: 2px; /* Set border radius of the scrollbar thumb */
+}
