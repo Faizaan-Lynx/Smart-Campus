@@ -1,25 +1,16 @@
 from datetime import datetime, timedelta
-import os
 from typing import Annotated
 from fastapi import Depends, APIRouter, HTTPException, File, UploadFile
 from sqlmodel import Session, select, or_
 from models import User, UserPublicMe, UserPublicMeWith, UserUpdateMe, Visit
 from models import Site, SiteCreate, SitePublicMe, SitePublicMeWith, SiteUpdate
-from models import Guest, GuestCreate, GuestPublicMe, GuestPublicWith, GuestUpdateMe, SitePublicMeWithHosts
 from core import crud, utils
-from config import settings
 
-from deepface import DeepFace
 
 router = APIRouter(
     prefix="/dashboard", 
     tags=["dashboard"],
     )
-
-
-# @router.get("/", response_model=UserPublicMeWith)
-# def read_me(current_user: Annotated[User, Depends(crud.get_current_active_user)]):
-#     return current_user
 
 
 @router.get("/", response_model=UserPublicMeWith)
@@ -80,13 +71,6 @@ def read_site(*,
               site_id: int
               ):
     current_site = crud.get_current_site(session, current_user, site_id)
-    # access_token = utils.get_key()
-    # in_url= utils.get_feed_url(access_token, current_site.in_camera)
-    # out_url= utils.get_feed_url(access_token, current_site.out_camera)
-    # current_site.in_url = in_url
-    # current_site.out_url = out_url
-    # session.add(current_site)
-    # session.commit()
     return current_site
 
 
@@ -186,112 +170,3 @@ def delete_site(*,
     session.delete(db_site)
     session.commit()
     return {"ok": True}
-
-
-# --------------------
-# ------ Hosts -------
-# --------------------
-
-
-@router.post("/sites/{site_id}/hosts", response_model=GuestPublicMe)
-def create_host(*, 
-                session: Session = Depends(utils.get_session),
-                current_user: Annotated[User, Depends(crud.get_current_active_user)], 
-                site_id: int,
-                host: GuestCreate
-                ):
-    _ = crud.get_current_site(session, current_user, site_id)
-    if host.vector is not None:
-        crud.vector_exists(session, host, site_id)
-    extra_data = {"site_id": site_id,
-                  "is_host": True}
-    db_host = Guest.model_validate(host, update=extra_data)
-    session.add(db_host)
-    session.commit()
-    session.refresh(db_host)
-    return db_host
-
-
-
-@router.get("/sites/{site_id}/hosts", response_model=SitePublicMeWithHosts)
-def read_hosts(*, 
-              session: Session = Depends(utils.get_session),
-              current_user: Annotated[User, Depends(crud.get_current_active_user)], 
-              site_id: int,
-              ):
-    current_site = crud.get_current_site(session, current_user, site_id)
-    return current_site
-
-
-
-@router.get("/sites/{site_id}/hosts/{host_id}", response_model=GuestPublicWith)
-def read_host(*, 
-              session: Session = Depends(utils.get_session),
-              current_user: Annotated[User, Depends(crud.get_current_active_user)], 
-              site_id: int,
-              host_id: int,
-              ):
-    current_site = crud.get_current_site(session, current_user, site_id)
-    return crud.get_host_of_site(session, current_site, host_id)
-
-
-
-@router.patch("/sites/{site_id}/hosts/{host_id}", response_model=GuestPublicMe)
-def update_host(*, 
-                session: Session = Depends(utils.get_session), 
-                current_user: Annotated[User, Depends(crud.get_current_active_user)], 
-                site_id: int,
-                host_id: int,
-                host: GuestUpdateMe
-                ):
-    current_site = crud.get_current_site(session, current_user, site_id)
-    db_host = crud.get_host_of_site(session, current_site, host_id)
-    if host.vector is not None:
-        crud.vector_exists(session, host, site_id)
-    host_data = host.model_dump(exclude_unset=True)
-    extra_data = {"site_id": site_id,
-                  "updated_at": datetime.now()}
-    db_host.sqlmodel_update(host_data, update=extra_data)
-    session.add(db_host)
-    session.commit()
-    session.refresh(db_host)
-    return db_host
-
-
-@router.delete("/sites/{site_id}/hosts/{host_id}")
-def delete_host(*, 
-                session: Session = Depends(utils.get_session),
-                current_user: Annotated[User, Depends(crud.get_current_active_user)], 
-                site_id: int, 
-                host_id: int
-                ):
-    current_site = crud.get_current_site(session, current_user, site_id)
-    db_host = crud.get_host_of_site(session, current_site, host_id)
-    session.delete(db_host)
-    session.commit()
-    return {"ok": True}
-
-
-@router.post("/get_vector")
-async def get_vector(*, 
-                current_user: Annotated[User, Depends(crud.get_current_active_user)],
-                # file: Annotated[Union[bytes, None], File()] = None
-                image: UploadFile = File(...)
-                ):
-   
-    try:
-        file_path = os.path.join(settings.HOST_DIRECTORY, image.filename)
-        with open(file_path, "wb") as file_object:
-            file_object.write(await image.read())
-
-        pers_vs = DeepFace.represent(
-            file_path,
-            model_name='SFace',
-            enforce_detection=False,
-            detector_backend='yolov8',
-        )
-
-        return pers_vs
-
-    except Exception as e:
-        return {"error": str(e)}

@@ -163,32 +163,6 @@ def get_current_site(session: Session, current_user: User, site_id: int):
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     return site
-    
-
-
-
-# --------------------
-# ------ Hosts -------
-# --------------------
-
-def vector_exists(session: Session, guest, site_id):
-    statement = select(Guest).where(Guest.vector == guest.vector, Guest.site_id == site_id)
-    db_guest = session.exec(statement).first()
-    if db_guest:
-        raise HTTPException(status_code=400, detail=f"Guest/Host vector already exists at id {db_guest.id}")
-
-
-
-def get_host_of_site(session: Session, current_site: Site, host_id:int):
-    site_host_ids = [host.id for host in current_site.hosts]
-    if host_id not in site_host_ids:
-        raise HTTPException(status_code=403, detail="Access only allowed for own hosts")
-    host = session.get(Guest, host_id)
-    if not host:
-        raise HTTPException(status_code=404, detail="Host not found")
-    return host
-
-
 
 
 

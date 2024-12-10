@@ -5,9 +5,6 @@ from pathlib import Path
 env_path = Path('.env')
 load_dotenv(dotenv_path=env_path)
 
-destination = "./hosts"
-os.makedirs(destination, exist_ok=True)
-
 class Settings:
     PROJECT_NAME:str = "Pulsse"
     PROJECT_VERSION: str = "1.0.0"
@@ -28,7 +25,6 @@ class Settings:
     EZV_SECRET = os.getenv("EZV_SECRET")
     MAXIMUM_RECONNECT_ATTEMPTS = int(os.getenv("MAXIMUM_RECONNECT_ATTEMPTS"))
     STREAM_FRAME_QUALITY=int(os.getenv("STREAM_FRAME_QUALITY"))
-    HOST_DIRECTORY = destination
 
 # INSERT INTO user (username, full_name, email, password, disabled) VALUES ('johndoe', 'John Doe', 'johndoe@example.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', False)
 
