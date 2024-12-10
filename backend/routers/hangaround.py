@@ -1,26 +1,17 @@
 import threading
 import asyncio
 from threading import Thread
-from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, Request
 from sqlmodel import Session, select
 from models import Guest, Site, User, Visit
 from core import crud, utils
-from collections import deque
 from fastapi.responses import StreamingResponse
-from collections import defaultdict
 from ultralytics.utils.plotting import save_one_box
-from deepface import DeepFace
 from ultralytics import YOLO
-from ultralytics.utils import LOGGER
-from typing import Annotated
-from shapely.geometry import Point, LineString
 import numpy as np
 import cv2
 import time
-from pathlib import Path
 # New imports
-import os
 import sys
 import matplotlib.path
 from queue import Queue
@@ -115,39 +106,9 @@ class Hangaround_Tracker:
         print(f"Exception raised: {e}")
         continue
 
-  # old main func -- can delete
-  # def display_frames(self):
-  #   while True:
-  #     ret, frame = self.capture.read()
-  #     if not ret:
-  #       print("Error: failed to capture frame")
-  #       break
-      
-  #     frame = cv2.resize(frame, (self.window_width, self.window_height))
-
-  #     try:
-  #       unprocessed_frame_queue.put(frame)
-  #     except:
-  #       print("Unprocessed Frames Queue Full. Waiting for space.")
-      
-  #     try:
-  #       frame = processed_frame_queue.get()
-  #     except:
-  #       print("Processed Frames Queue Empty. Showing unprocessed frame instead.")
-        
-  #     # display the frame
-  #     cv2.imshow('live video feed', frame)
-  #     output_frame = frame
-  #     if cv2.waitKey(1) & 0xFF == ord('q'):
-  #       break
-
-
   # separate thread function for yolo functionality
   def yolo_thread_func(self, yolo: YOLO):
     global running, hangaround_time
-    
-    # dict of all yolo class names
-    # names = self.yolo.names
 
     while True:
       # draw bounding boxes for detected objects
@@ -273,21 +234,3 @@ def get_hang_time():
             hangaround_tracker.min_hangaround_time,
             hangaround_tracker.max_hangaround_time
           ]
-
-# @router.post("/stop_tracking/{site_id}")
-# def stop_stream(*,
-#                 site_id: int,
-#                 session: Session = Depends(utils.get_session),
-#                 current_user: Annotated[User, Depends(crud.get_current_super_user)]
-#                 ):
-#     db_site = crud.get_current_site(session, current_user, site_id)
-#     if db_site:
-#         try:
-#             utils.trackers[db_site.id].stop_tracking = True
-#             utils.trackers[db_site.id].tracker_thread.join()
-
-#             return {"message": "Site Tracking Closed!"}
-#         except:
-#             raise HTTPException(status_code=404, detail="model already stopped.")
-#     else:
-#         raise HTTPException(status_code=404, detail="Site not found.")

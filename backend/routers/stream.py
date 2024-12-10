@@ -17,7 +17,6 @@ from shapely.geometry import Point, LineString
 import numpy as np
 import cv2
 import time
-from pathlib import Path
 
 router = APIRouter(tags=["Stream"])
 

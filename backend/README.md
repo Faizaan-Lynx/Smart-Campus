@@ -1,5 +1,5 @@
 ---
-title: Pulse Be
+title: Lynx Smart-Campus
 emoji: 🚀
 colorFrom: pink
 colorTo: green

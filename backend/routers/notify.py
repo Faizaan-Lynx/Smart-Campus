@@ -7,7 +7,6 @@ from typing import List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import threading
 from core import utils
-import psycopg2
 import asyncio
 import time
 import json

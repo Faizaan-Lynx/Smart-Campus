@@ -10,9 +10,6 @@ from core import crud, utils
 from config import settings
 
 from deepface import DeepFace
-from PIL import Image
-from io import BytesIO
-import numpy as np
 
 router = APIRouter(
     prefix="/dashboard", 

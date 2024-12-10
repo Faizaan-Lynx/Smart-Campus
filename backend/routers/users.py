@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, Query
 from sqlmodel import Session, select
 from models import User, UserCreate, UserPublic, UserUpdate, UserPublicWith, Site
