@@ -5,11 +5,45 @@ import numpy as np
 from ultralytics import YOLO
 from fastapi import FastAPI, HTTPException, APIRouter
 from core.RealTimeVideoCapture import RealTimeVideoCapture
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
 router = APIRouter(tags=["IntrusionDetection"])
+
+
+def send_email(sender_email:str, sender_password:str, receiver_email:str, subject:str, body:str, server:str, port:int=587):
+    """
+    Sends an email using the SMTP protocol.
+
+    Args:
+        sender_email (str): The email address of the sender.
+        sender_password (str): The password of the sender's email.
+        receiver_email (str): The email address of the receiver.
+        subject (str): The subject of the email.
+        body (str): The body of the email.
+        server (str): The SMTP server address.
+        port (int): The port number of the SMTP server.
+    """
+    try:
+        server = smtplib.SMTP_SSL(server, port)
+        server.login(sender_email, sender_password)
+
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        text = msg.as_string()
+        server.sendmail(sender_email, receiver_email, text)
+        server.quit()
+    except Exception as e:
+        print(f"Error: {e}")
+        # raise RuntimeError(f"Error: {e}")
 
 
 def centroid_near_line(centroid_x:float, centroid_y:float, line_point1:tuple, line_point2:tuple, threshold:float=10) -> bool:
