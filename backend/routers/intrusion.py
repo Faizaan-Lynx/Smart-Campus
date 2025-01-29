@@ -5,6 +5,9 @@ import numpy as np
 from ultralytics import YOLO
 from fastapi import FastAPI, HTTPException, APIRouter
 from core.RealTimeVideoCapture import RealTimeVideoCapture
+
+import time
+import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -14,8 +17,8 @@ load_dotenv(override=True)
 
 router = APIRouter(tags=["IntrusionDetection"])
 
-
-def send_email(sender_email:str, sender_password:str, receiver_email:str, subject:str, body:str, server:str, port:int=587):
+# ensure emails are valid before using this function
+def send_email(sender_email:str, sender_password:str, receiver_emails:list, subject:str, body:str, server:str, port:int=587):
     """
     Sends an email using the SMTP protocol.
 
@@ -39,7 +42,8 @@ def send_email(sender_email:str, sender_password:str, receiver_email:str, subjec
         msg.attach(MIMEText(body, 'plain'))
 
         text = msg.as_string()
-        server.sendmail(sender_email, receiver_email, text)
+        for receiver_email in receiver_emails:
+            server.sendmail(sender_email, receiver_email, text)
         server.quit()
     except Exception as e:
         print(f"Error: {e}")
@@ -106,16 +110,24 @@ class IntrusionDetection:
         framerate (int): Frame rate for video file playback (used if capped_fps is True).
         crop (tuple): A tuple of two points defining a crop region (x1, y1), (x2, y2).
         resize (tuple): A tuple of two values defining the resize dimensions (width, height).
+        camera_id (int): The camera ID.
+        camera_location (str): The location of the camera.
+        receiver_emails (list): A list of valid email addresses to send notifications to.
     """
 
     def __init__(
                     self, video_source:str, lines:tuple, show_line:bool=False, model_path:str="model/yolov8m.pt",
                     intrusion_threshold:int=120, intrusion_flag_duration:int=15, capped_fps:bool=True, restart_on_end:bool=True, 
                     framerate:int=20, crop:tuple=None, resize:tuple=(1280, 720),
+                    camera_id:int=0, camera_location:str="Unknown", receiver_emails:list=[]
                 ):
         # model and video cap setup
         self.yolo = YOLO(model_path)
         self.cap = RealTimeVideoCapture(video_source, capped_fps=capped_fps, restart_on_end=restart_on_end, framerate=framerate)
+        self.camera_id = camera_id
+        self.camera_location = camera_location
+        self.receiver_emails = receiver_emails
+
         if not self.cap.isOpened():
             print("Error: Could not access the feed.")
             exit()
@@ -172,8 +184,17 @@ class IntrusionDetection:
                     if centroid_near_line(cx, cy, self.lines[0], self.lines[1], threshold=self.intrusion_threshold):
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
                         self.intrusion_flag = True
+                        flag_frame_count = self.intrusion_flag_duration
                     else:
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            if self.intrusion_flag and flag_frame_count == self.intrusion_flag_duration:
+                email_subject = f"Intrusion Detected at {self.camera_location}"
+                email_text = f"An intrusion has been detected at {self.camera_location} on {datetime.datetime.now()}."
+                send_email(
+                    os.getenv("SMTP_EMAIL"), os.getenv("SMTP_PASSWORD"), self.receiver_emails,
+                    email_subject, email_text, os.getenv("SMTP_SERVER"), os.getenv("SMTP_PORT")
+                )
 
             if self.intrusion_flag:
                 cv2.putText(annotated_frame, f"INTRUSION DETECTED", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
