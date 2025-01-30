@@ -3,7 +3,9 @@ import cv2
 import threading
 import numpy as np
 from ultralytics import YOLO
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import APIRouter
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
 from core.RealTimeVideoCapture import RealTimeVideoCapture
 
 import time
@@ -132,6 +134,8 @@ class IntrusionDetection:
             print("Error: Could not access the feed.")
             exit()
 
+        self.last_frame = None # stores the last processed frame
+
         # intrusion detection parameters
         self.show_line = show_line
         self.lines = lines
@@ -188,6 +192,7 @@ class IntrusionDetection:
                     else:
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
+            # send email notification when intrusion is detected initially
             if self.intrusion_flag and flag_frame_count == self.intrusion_flag_duration:
                 email_subject = f"Intrusion Detected at {self.camera_location}"
                 email_text = f"An intrusion has been detected at {self.camera_location} on {datetime.datetime.now()}."
@@ -196,20 +201,31 @@ class IntrusionDetection:
                     email_subject, email_text, os.getenv("SMTP_SERVER"), os.getenv("SMTP_PORT")
                 )
 
+            # display intrusion flag on the frame
             if self.intrusion_flag:
                 cv2.putText(annotated_frame, f"INTRUSION DETECTED", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
                 flag_frame_count -= 1
                 if flag_frame_count == 0:
                     self.intrusion_flag = False
                     flag_frame_count = self.intrusion_flag_duration
-            
+
+            # can show/hide the line on the frame            
             if self.show_line:
                 annotated_frame = cv2.line(annotated_frame, self.lines[0], self.lines[1], (0, 0, 255), 2)
             
+            # save and display the frame
+            self.last_frame = annotated_frame
             cv2.imshow('Intrusion Detection', annotated_frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
+    def get_last_frame(self):
+        """
+        Returns the last processed frame.
+        """
+        return self.last_frame
+
 
     def stop(self):
         """
@@ -220,23 +236,86 @@ class IntrusionDetection:
         self.thread.join(2)
 
 
-# driver code
-def main():
-    
-    # cv2lines = [(950,700),(950,20)]
-    cv2lines = [(20,450),(1000,250)]
-    # cv2lines = [(300,200),(600,300)]
 
-    intr_det = IntrusionDetection(  
-                                    "data/vid4.mp4", cv2lines, show_line=True, capped_fps=True, 
-                                    restart_on_end=True, framerate=20, intrusion_threshold=120, 
-                                    intrusion_flag_duration=15, resize=(1280, 720), crop=((0,0), (1280,720))
-                                )
-    while True:
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            intr_det.stop()
-            break
+# dictionary to store camera_id and intrusion detection stream
+camera_id_stream = {}
+
+async def create_stream(camera_id:int):
+    """
+    create_stream
+    -------------
+    This function creates a new intrusion detection stream.
+
+    Parameters:
+        camera_id (int): The camera ID.
+    """
+    if camera_id not in camera_id_stream:
+        camera_id_stream[camera_id] = IntrusionDetection(
+            "data/vid4.mp4", [(20,450),(1000,250)], show_line=True, capped_fps=True, 
+            restart_on_end=True, framerate=20, intrusion_threshold=120, 
+            intrusion_flag_duration=15, resize=(1280, 720), crop=((0,0), (1280,720))
+        )
+
+    # while the camera is running, stream the frames
+    while not camera_id_stream[camera_id].stop_event.is_set():
+        frame = camera_id_stream[camera_id].get_last_frame()
+        if frame is None:
+            continue
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 
-if __name__ == "__main__":
-    main()
+
+class VideoDetails(BaseModel):
+    """
+    VideoDetails
+    ------------
+    Pydanctic model for the video details.
+    """
+    video_source: str
+    lines: tuple
+    show_line: bool = False
+    model_path: str = "model/yolov8m.pt"
+    intrusion_threshold: int = 120
+    intrusion_flag_duration: int = 15
+    capped_fps: bool = False
+    restart_on_end: bool = True
+    framerate: int
+    crop: tuple
+    resize: tuple
+    camera_id: int
+    camera_location: str
+    receiver_emails: list
+
+
+@router.get("/intrusion/{user_id}/{camera_id}/{video_details}")
+async def video_feed(user_id:int, camera_id:int, video_details:VideoDetails):
+    """
+    video_feed
+    ----------
+    This function returns the video feed for a specific camera for a specific user.
+
+    Parameters:
+        user_id (int): The user ID.
+        camera_id (int): The camera ID.
+    """
+    return StreamingResponse(create_stream(camera_id),
+        media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@router.get("/intrusion/{user_id}/{camera_id}/stop")
+async def stop_intrusion_detection(user_id:int, camera_id:int):
+    """
+    stop_intrusion_detection
+    ------------------------
+    This function stops the intrusion detection process for a specific camera for a specific user.
+
+    Parameters:
+        user_id (int): The user ID.
+        camera_id (int): The camera ID.
+    """
+    camera_id_stream[camera_id].stop()
+    del camera_id_stream[camera_id]
+    return {"message": "Intrusion detection stopped."}
