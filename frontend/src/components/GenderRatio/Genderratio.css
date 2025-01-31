@@ -1,9 +1,17 @@
 p {
   margin: 0;
 }
-.genderratio__main__div {
+
+
+/* Old CSS for Gender Ratio Row Usage
+ .genderratio__main__div {
   margin-top: 35px;
   padding-right: 16px;
+} */
+
+/* New CSS for gender ratio when in line with camera */
+.genderratio__main__div {
+  margin-top: 110px;
 }
 
 .genderratio__container {

@@ -114,8 +114,8 @@ const Dashboard = () => {
         </div>
         <BoxRow visitData={visitData} />
         <FootFallRow visitData={visitData} siteId={siteId} />
-        <GenderRatioRow visitData={visitData} />
-        <EngagementRow visitData={visitData} />
+        {/* <GenderRatioRow visitData={visitData} /> */}
+        {/* <EngagementRow visitData={visitData} /> */}
         <FootTable visitData={visitData} />
       </div>
       <Toaster />
