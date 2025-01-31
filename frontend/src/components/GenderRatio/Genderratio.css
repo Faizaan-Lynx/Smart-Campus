@@ -11,13 +11,13 @@ p {
 
 /* New CSS for gender ratio when in line with camera */
 .genderratio__main__div {
-  margin-top: 125px;
+  margin-top: 75px;
 }
 
 .genderratio__container {
   background-color: #fff;
   border-radius: 21px;
-  padding: 20px;
+  padding: 70px;
 }
 .genderratio__content__div {
   display: flex;

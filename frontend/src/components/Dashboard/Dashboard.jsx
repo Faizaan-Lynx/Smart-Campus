@@ -11,6 +11,7 @@ import axios from "axios";
 import { filterVisits, localurl } from "../../utils";
 import { useParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import FootFall from "../FootFall/FootFall";
 
 const Dashboard = () => {
   const selectedOptionRedux = useSelector((state) => state.auth.selectedOption);
@@ -114,6 +115,8 @@ const Dashboard = () => {
         </div>
         <BoxRow visitData={visitData} />
         <FootFallRow visitData={visitData} siteId={siteId} />
+        {/* Line Graph Added Below the Video Row */}
+        <FootFall visitData={visitData} />
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
         <FootTable visitData={visitData} />
