@@ -8,7 +8,7 @@ from config import settings
 import numpy as np
 
 from models import Token, Site, Guest, Visit, User, UserPublicMe, UserCreate, VisitOut, VisitPublic, VisitPublicWithGuest, VisitIn, VisitUpdate
-from routers import stream, users, sites, visits, guests, profile, notify,hangaround
+from routers import stream, users, sites, visits, guests, profile, notify, hangaround, intrusion
 from core import utils, crud
 
 app = FastAPI()
@@ -36,6 +36,7 @@ app.include_router(guests.router)
 app.include_router(stream.router)
 app.include_router(notify.router)
 app.include_router(hangaround.router)
+app.include_router(intrusion.router)
 
 @app.on_event("startup")
 def on_startup():
