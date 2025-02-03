@@ -97,6 +97,9 @@ function App() {
                 path="/guests/:siteId"
                 element={user ? <Guests /> : <Navigate to="/login" replace />}
               />
+              {/* Route For user routing */}
+
+              <Route path="/userDashboard/:siteId" element=<Dashboard /> />
               {/* <Route
                 path="/host/:hostId/visits/:siteId"
                 element={
