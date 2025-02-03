@@ -2,56 +2,62 @@ import React, { useEffect, useState } from "react";
 import "./Settings.css";
 import UserAdmin from "../../components/Settings/Users/UsersAdmin";
 import SitesAdmin from "../../components/Settings/Sites/SitesAdmin";
-import { localurl } from "../../utils";
-import axios from "axios";
 import UsersAdminSitesEditModal from "../../components/Settings/Users/UsersAdminSitesEditModal";
 
 const Settings = () => {
-  const [userInfo, setUserInfo] = useState([]);
-  const [siteInfo, setSiteInfo] = useState([]);
+  // Dummy Data for Users and Sites
+  const [userInfo, setUserInfo] = useState([
+    {
+      id: 1,
+      username: "johndoe",
+      email: "john@example.com",
+      full_name: "John Doe",
+      disabled: false,
+      is_su: true,
+      created_at: "2023-01-01T12:00:00Z",
+    },
+    {
+      id: 2,
+      username: "janedoe",
+      email: "jane@example.com",
+      full_name: "Jane Doe",
+      disabled: true,
+      is_su: false,
+      created_at: "2022-07-23T14:15:30Z",
+    },
+  ]);
+
+  const [siteInfo, setSiteInfo] = useState([
+    {
+      id: 1,
+      name: "Site 1",
+      location: "New York",
+      contact: "123-456-7890",
+      in_camera: true,
+      out_camera: true,
+      in_url: "http://site1.com/in",
+      out_url: "http://site1.com/out",
+      users: [1, 2],
+      hosts: [1],
+      visits: [{ is_new: true }, { is_new: false }],
+    },
+    {
+      id: 2,
+      name: "Site 2",
+      location: "San Francisco",
+      contact: "987-654-3210",
+      in_camera: false,
+      out_camera: true,
+      in_url: "http://site2.com/in",
+      out_url: "http://site2.com/out",
+      users: [2],
+      hosts: [2],
+      visits: [{ is_new: false }],
+    },
+  ]);
+
   const [showEditSitesModal, setShowEditSitesModal] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${localurl}/users/?offset=0&limit=100`,
-          {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        setUserInfo(response.data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${localurl}/sites/?offset=0&limit=100`,
-          {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        setSiteInfo(response.data);
-      } catch (error) {
-        console.error("Error fetching site data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const [id, setId] = useState(null);
 
   const userColumns = [
     { Header: "ID", accessor: "id" },
@@ -80,14 +86,13 @@ const Settings = () => {
           }}
           style={{ cursor: "pointer", fontSize: "20px" }}
         >
-          <i class="bx bx-edit-alt"></i>
+          <i className="bx bx-edit-alt"></i>
         </p>
       </div>
     ),
     created: user.created_at,
   }));
 
-  const [id, setId] = useState(null);
   const siteColumns = [
     { Header: "Name", accessor: "name" },
     { Header: "Location", accessor: "location" },
@@ -104,36 +109,24 @@ const Settings = () => {
     if (!url) {
       return;
     }
-    if (url?.length <= 7) {
+    if (url.length <= 7) {
       return url;
     }
-    const truncatedUrl = url?.substring(0, 15);
+    const truncatedUrl = url.substring(0, 15);
     return <>{truncatedUrl}...</>;
   };
 
   const siteData = siteInfo.map((site) => ({
     name: site.name,
     location: site.location,
-    contact: site.contact, // Use "N/A" if contact is null
-    inCamera: site.in_camera, // Use "N/A" if in_camera is null
-    outCamera: site.out_camera, // Use "N/A" if out_camera is null
-    siteId: site.id,
-    in_url: site.in_url,
-    out_url: site.out_url,
+    contact: site.contact || "N/A",
+    inCamera: site.in_camera ? "Yes" : "No",
+    outCamera: site.out_camera ? "Yes" : "No",
     in_url_trunc: createHref(site.in_url),
     out_url_trunc: createHref(site.out_url),
-    protocol: site.protocol,
-    sensitivity: site.sensitivity,
-    fps: site.fps,
-    threshold: site.threshold,
-    rotation: site.rotation,
-    reg_pts: site.reg_pts,
-    crop_area: site.crop_area,
-    users: site.users ? site.users.length : 0,
-    hosts: site.hosts ? site.hosts.length : 0,
-    guests: site.visits
-      ? site.visits.filter((visit) => visit.is_new).length
-      : 0,
+    users: site.users.length,
+    hosts: site.hosts.length,
+    guests: site.visits.filter((visit) => visit.is_new).length,
   }));
 
   return (
