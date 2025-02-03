@@ -61,7 +61,7 @@ const Settings = () => {
     { Header: "Name", accessor: "name" },
     { Header: "Email", accessor: "email" },
     { Header: "Assigned Camera", accessor: "assignedCamera" },
-    { Header: "Action", accessor: "action" },
+    // Removed Action column from here
   ];
 
   const userData = userInfo.map((user, index) => ({
