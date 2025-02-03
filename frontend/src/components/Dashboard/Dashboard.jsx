@@ -116,7 +116,7 @@ const Dashboard = () => {
         <BoxRow visitData={visitData} />
         <FootFallRow visitData={visitData} siteId={siteId} />
         {/* Line Graph Added Below the Video Row */}
-        <FootFall visitData={visitData} />
+        {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
         <FootTable visitData={visitData} />

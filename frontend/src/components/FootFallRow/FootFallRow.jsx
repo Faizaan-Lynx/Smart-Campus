@@ -14,10 +14,10 @@ const FootFallRow = ({ visitData, siteId }) => {
       </div> */}
 
       {/* Repeat Ratio Graph */}
-      <div className="footfall_repeat_ratio_container">
-        {/* <FootFall visitData={visitData} /> */}
+      {/* <div className="footfall_repeat_ratio_container">
+        <FootFall visitData={visitData} />
         <RepeatRatio visitData={visitData} />
-      </div>
+      </div> */}
 
       <div className="video__container__row">
         <VideoFeed visitData={visitData} siteId={siteId} />
