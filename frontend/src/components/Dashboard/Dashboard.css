@@ -1,7 +1,15 @@
 .dashboard__main {
   max-height: 100%;
-  max-width: 100%;
+  width: calc(100% - 200px);
+  margin-left: 200px;
   font-family: "Poppins", sans-serif;
+  transition: var(--tran-05);
+}
+
+/* When the sidebar is closed */
+.sidebar.close ~ .dashboard__main {
+  width: calc(100% - 50px);
+  margin-left: 35px;
 }
 
 .dashboard__content {

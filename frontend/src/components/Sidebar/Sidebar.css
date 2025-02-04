@@ -237,11 +237,22 @@ header .image-text .profession {
   color: var(--text-color);
   padding: 12px 60px;
 }
-.sidebar.close ~ .home {
-  left: 78px;
+.home {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100vh;
-  width: calc(100% - 78px);
+  width: calc(100% - 250px);
+  margin-left: 250px;
+  background-color: var(--body-color);
+  transition: var(--tran-05);
 }
+
+.sidebar.close ~ .home {
+  margin-left: 88px;
+  width: calc(100% - 88px);
+}
+
 .nav-link {
   cursor: pointer;
 }

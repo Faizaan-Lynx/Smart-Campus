@@ -1,29 +1,35 @@
 .app__container__row {
   display: flex;
   gap: 20px;
+  align-items: stretch; /* Ensures equal height if flex items have different content */
 }
 
-.footfall__container {
+/* .footfall__container {
   flex: 0.65;
+} */
+ 
+.footfall_repeat_ratio_container, 
+.video__container__row {
+  flex: 1; /* Makes both containers flexible */
 }
 
 .video__container__row {
-  flex: 0.35;
+  flex: 2; /* Make the video container take more space */
 }
 
-@media screen and (max-width: 1450px) {
-  .footfall__container {
-    flex: 0.6;
-  }
-
-  .video__container__row {
-    flex: 0.4;
-  }
-}
-
+/* Responsive Adjustments */
 @media screen and (max-width: 1150px) {
   .app__container__row {
     flex-direction: column;
     gap: 0;
+  }
+
+  .footfall_repeat_ratio_container, 
+  .video__container__row {
+    width: 100%; /* Ensure full width in column layout */
+  }
+
+  .video__container__row {
+    flex: 1; /* Reset flex in column layout */
   }
 }
