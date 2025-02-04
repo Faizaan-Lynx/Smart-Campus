@@ -132,21 +132,20 @@ const Sidebar = () => {
                 </div>
               </>
             )}
-
             <li className="nav-link">
               <a onClick={() => navigate("/contact")}>
                 <i className="bx bx-phone icon"></i>
                 <span className="text nav-text">Contact</span>
               </a>
             </li>
-            {userInfo?.is_superuser && (
-              <li className="nav-link">
-                <a onClick={() => navigate("/settings")}>
-                  <i className="bx bx-cog icon"></i>
-                  <span className="text nav-text">Settings</span>
-                </a>
-              </li>
-            )}
+            {/* {userInfo?.is_superuser && (*/}
+            <li className="nav-link">
+              <a onClick={() => navigate("/settings")}>
+                <i className="bx bx-cog icon"></i>
+                <span className="text nav-text">Settings</span>
+              </a>
+            </li>
+            {/*)}*/}
           </ul>
         </div>
         <div className="bottom-content">
