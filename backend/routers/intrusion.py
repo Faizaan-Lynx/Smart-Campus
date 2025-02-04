@@ -1,5 +1,6 @@
 import os
 import cv2
+import asyncio
 import threading
 import numpy as np
 from ultralytics import YOLO
@@ -118,7 +119,7 @@ class IntrusionDetection:
     """
 
     def __init__(
-                    self, video_source:str, lines:tuple, show_line:bool=False, model_path:str="model/yolov8m.pt",
+                    self, video_source:str, lines:tuple, show_line:bool=False, model_path:str="model/yolov8n.pt",
                     intrusion_threshold:int=120, intrusion_flag_duration:int=15, capped_fps:bool=True, restart_on_end:bool=True, 
                     framerate:int=20, crop:tuple=None, resize:tuple=(1280, 720),
                     camera_id:int=0, camera_location:str="Unknown", receiver_emails:list=[]
@@ -165,6 +166,8 @@ class IntrusionDetection:
         while True:
             ret, frame = self.cap.read()
             if not ret:
+                print("missing frame")
+                time.sleep(0.5)
                 continue
             
             if self.crop is not None:
@@ -173,7 +176,6 @@ class IntrusionDetection:
                 annotated_frame = frame
 
             annotated_frame = cv2.resize(annotated_frame, self.resize)
-
             results = self.yolo.track(annotated_frame, classes=[0], verbose=False, stream=True, persist=True)
 
             for res in results:
@@ -213,12 +215,9 @@ class IntrusionDetection:
             if self.show_line:
                 annotated_frame = cv2.line(annotated_frame, self.lines[0], self.lines[1], (0, 0, 255), 2)
             
-            # save and display the frame
+            # save the frame
             self.last_frame = annotated_frame
-            cv2.imshow('Intrusion Detection', annotated_frame)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
     def get_last_frame(self):
         """
@@ -249,23 +248,29 @@ async def create_stream(camera_id:int):
     Parameters:
         camera_id (int): The camera ID.
     """
-    if camera_id not in camera_id_stream:
-        camera_id_stream[camera_id] = IntrusionDetection(
-            "data/vid4.mp4", [(20,450),(1000,250)], show_line=True, capped_fps=True, 
-            restart_on_end=True, framerate=20, intrusion_threshold=120, 
-            intrusion_flag_duration=15, resize=(1280, 720), crop=((0,0), (1280,720))
-        )
+    # if camera_id not in camera_id_stream:
+    camera_id_stream = IntrusionDetection(
+        os.getenv("INTRUSION_VIDEO_SOURCE"), [(20,450),(1000,250)], show_line=True, capped_fps=True, 
+        restart_on_end=True, framerate=20, intrusion_threshold=120, 
+        intrusion_flag_duration=15, resize=(1280, 720), crop=((0,0), (1280,720)),
+        receiver_emails=os.getenv("RECEIVER_EMAILS").split(","),
+    )
 
     # while the camera is running, stream the frames
-    while not camera_id_stream[camera_id].stop_event.is_set():
-        frame = camera_id_stream[camera_id].get_last_frame()
-        if frame is None:
-            continue
-        _, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-        yield (b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    try:
+        while not camera_id_stream.stop_event.is_set():
+            frame = camera_id_stream.get_last_frame()
+            if frame is None:
+                continue
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
 
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            await asyncio.sleep(1/20)
+
+    except Exception as e:
+        print(f"Error in frame streaming: {e}")
 
 
 class VideoDetails(BaseModel):
@@ -290,8 +295,10 @@ class VideoDetails(BaseModel):
     receiver_emails: list
 
 
-@router.get("/intrusion/{user_id}/{camera_id}/{video_details}")
-async def video_feed(user_id:int, camera_id:int, video_details:VideoDetails):
+@router.get("/intrusion_feed/{camera_id}")
+async def video_feed(
+        camera_id:int, 
+    ):
     """
     video_feed
     ----------
