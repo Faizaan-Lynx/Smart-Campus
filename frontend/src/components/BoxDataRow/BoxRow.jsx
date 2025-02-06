@@ -22,7 +22,7 @@ const BoxRow = ({ visitData }) => {
   }, [visitData]);
 
   const statsArray = [
-    { label: "Total Visits", value: stats.visits },
+    { label: "Total Alerts", value: stats.visits },
     { label: "Last 24 Hours", value: stats.groups },
     // { label: "Visits", value: stats.visits },
     // { label: "Groups", value: stats.groups },
