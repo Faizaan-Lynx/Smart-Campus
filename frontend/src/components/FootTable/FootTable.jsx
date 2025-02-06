@@ -56,91 +56,226 @@ const rows = [
   createData("KitKat", 518, 26.0, 65, 7.0),
 ];
 
+// const columns = [
+//   { Header: "TimeStamp", accessor: "timestamp" },
+//   { Header: "Location", accessor: "location" },
+//   { Header: "Status", accessor: "status" },
+//   // { Header: "Visit Date", accessor: "visitDate" },
+//   // { Header: "Gender", accessor: "gender" },
+//   // { Header: "Group", accessor: "group" },
+//   // { Header: "New", accessor: "new" },
+//   // { Header: "Time In", accessor: "timeIn" },
+//   // { Header: "Time Out", accessor: "timeOut" },
+//   // { Header: "Stay", accessor: "stay" },
+// ];
+
+// const FootTable = ({ visitData }) => {
+//   const [page, setPage] = useState(0);
+//   const [rowsPerPage, setRowsPerPage] = React.useState(5);
+//   const [tableData, setTableData] = useState([]);
+
+//   useEffect(() => {
+//     try {
+//       if (visitData) {
+//         const extractedData = visitData.map((visit) => ({
+//           id: visit.id,
+//           new: visit.is_new ? "Yes" : "No",
+//           gender: visit.is_female
+//             ? "Female"
+//             : visit.is_female === false
+//             ? "Male"
+//             : "Unknown",
+//           group: visit.is_group ? "Yes" : "No",
+//           stay: calculateStay(visit.time_in, visit.time_out),
+//           timeIn: visit.time_in ? extractTime(visit.time_in) : "",
+//           timeOut: visit.time_out ? extractTime(visit.time_out) : "",
+//           visitDate: visit.date_in,
+//         }));
+//         if (extractedData.length > 1) {
+//           extractedData.reverse();
+//         }
+//         setTableData(extractedData);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching data:", error);
+//     }
+//   }, [visitData]);
+
+//   const calculateStay = (timeIn, timeOut) => {
+//     // Parse the timeIn and timeOut strings into hours, minutes, and seconds
+//     const [hoursIn, minutesIn, secondsIn] = timeIn.split(":").map(Number);
+
+//     // If timeOut is provided, parse it; otherwise, use the current time
+//     let totalMinutesOut;
+//     if (timeOut) {
+//       const [hoursOut, minutesOut, secondsOut] = timeOut.split(":").map(Number);
+//       totalMinutesOut = hoursOut * 60 + minutesOut + secondsOut / 60;
+//     } else {
+//       const now = new Date();
+//       totalMinutesOut =
+//         now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+//     }
+
+//     // Convert the parsed timeIn into minutes
+//     const totalMinutesIn = hoursIn * 60 + minutesIn + secondsIn / 60;
+
+//     // Calculate the difference in minutes
+//     const diff = totalMinutesOut - totalMinutesIn;
+
+//     // If the difference is zero or negative, it means the user has not left yet
+//     // if (diff <= 0) {
+//     //   return "Not left";
+//     // }
+
+//     return `${Math.floor(diff)} minutes`;
+//   };
+
+//   // const calculateStay = (timeIn, timeOut) => {
+//   //   const startTime = new Date(`1970-01-01T${timeIn}Z`);
+//   //   const endTime = new Date(`1970-01-01T${timeOut}Z`);
+//   //   const diff = endTime - startTime;
+//   //   if (!Math.floor(diff / 60000)) {
+//   //     return "Not left";
+//   //   }
+//   //   return Math.floor(diff / 60000);
+//   // };
+
+//   const extractTime = (fullTime) => {
+//     const [time] = fullTime.split(".");
+//     return time.substr(0, 5);
+//   };
+
+//   const handleChangePage = (event, newPage) => {
+//     setPage(newPage);
+//   };
+
+//   const handleChangeRowsPerPage = (event) => {
+//     setRowsPerPage(parseInt(event.target.value, 10));
+//     setPage(0);
+//   };
+//   return (
+//     <div className="foottable__div__main">
+//       <TableContainer
+//         component={Paper}
+//         sx={{ borderRadius: "11px" }}
+//         className="table-container"
+//       >
+//         <Table sx={{ minWidth: 700 }} aria-label="customized table">
+//           <TableHead>
+//             <TableRow>
+//               {columns.map((column, index) => (
+//                 <StyledTableCell
+//                   key={column.Header}
+//                   align={index === 0 ? "left" : "left"} // Align the first column to the left and the rest to the right
+//                 >
+//                   {column.Header}
+//                 </StyledTableCell>
+//               ))}
+//               <StyledTableCell align="left">Action</StyledTableCell>
+//             </TableRow>
+//           </TableHead>
+//           <TableBody>
+//             {tableData
+//               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+//               .map((row, index) => (
+//                 <StyledTableRow key={index}>
+//                   {columns.map((column, columnIndex) => (
+//                     <StyledTableCell
+//                       key={column.accessor}
+//                       align={columnIndex === 0 ? "left" : "left"}
+//                       component={columnIndex === 0 ? "th" : undefined}
+//                       scope={columnIndex === 0 ? "row" : undefined}
+//                     >
+//                       {row[column.accessor]}
+//                     </StyledTableCell>
+//                   ))}
+//                   <StyledTableCell align="center">
+//                     <div className="action-icons">
+//                       <p>hello</p>
+//                       {/* <img
+//                         src={DeleteIcon}
+//                         onClick={() => deleteVisit(row.id)}
+//                         alt="Delete"
+//                         className="icon"
+//                       />
+//                       <img
+//                         src={EditIcon}
+//                         onClick={() => EditVisit(row.id)}
+//                         alt="Edit"
+//                         className="icon"
+//                       /> */}
+//                     </div>
+//                   </StyledTableCell>
+//                 </StyledTableRow>
+//               ))}
+//             {/* {rows
+//               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+//               .map((row) => (
+//                 <StyledTableRow key={row.name}>
+//                   <StyledTableCell component="th" scope="row">
+//                     {row.name}
+//                   </StyledTableCell>
+//                   <StyledTableCell align="right">
+//                     {row.calories}
+//                   </StyledTableCell>
+//                   <StyledTableCell align="right">{row.fat}</StyledTableCell>
+//                   <StyledTableCell align="right">{row.carbs}</StyledTableCell>
+//                   <StyledTableCell align="right">{row.protein}</StyledTableCell>
+//                   <StyledTableCell align="right">{row.protein}</StyledTableCell>
+//                 </StyledTableRow>
+//               ))} */}
+//           </TableBody>
+//         </Table>
+//         <TablePagination
+//           rowsPerPageOptions={[5, 10, 15, 20, 25]}
+//           component="div"
+//           count={visitData?.length > 0 ? visitData.length : 0}
+//           rowsPerPage={rowsPerPage}
+//           page={page}
+//           onPageChange={handleChangePage}
+//           onRowsPerPageChange={handleChangeRowsPerPage}
+//         />
+//       </TableContainer>
+//     </div>
+//   );
+// };
+
 const columns = [
-  { Header: "Visit Date", accessor: "visitDate" },
-  { Header: "Gender", accessor: "gender" },
-  { Header: "Group", accessor: "group" },
-  { Header: "New", accessor: "new" },
-  { Header: "Time In", accessor: "timeIn" },
-  // { Header: "Time Out", accessor: "timeOut" },
-  // { Header: "Stay", accessor: "stay" },
+  { Header: "Timestamp", accessor: "timestamp" },
+  { Header: "Location (Camera ID)", accessor: "location" },
+  { Header: "Status", accessor: "status" },
 ];
 
-const FootTable = ({ visitData }) => {
+const sampleData = [
+  {
+    id: 1,
+    timestamp: "2025-02-06 14:32:00",
+    location: "Camera A1",
+    status: "Acknowledged",
+  },
+  {
+    id: 2,
+    timestamp: "2025-02-06 14:35:45",
+    location: "Camera B3",
+    status: "Pending",
+  },
+  {
+    id: 3,
+    timestamp: "2025-02-06 14:40:10",
+    location: "Camera C2",
+    status: "Acknowledged",
+  },
+  {
+    id: 4,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+  },
+];
+
+const FootTable = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const [tableData, setTableData] = useState([]);
-
-  useEffect(() => {
-    try {
-      if (visitData) {
-        const extractedData = visitData.map((visit) => ({
-          id: visit.id,
-          new: visit.is_new ? "Yes" : "No",
-          gender: visit.is_female
-            ? "Female"
-            : visit.is_female === false
-            ? "Male"
-            : "Unknown",
-          group: visit.is_group ? "Yes" : "No",
-          stay: calculateStay(visit.time_in, visit.time_out),
-          timeIn: visit.time_in ? extractTime(visit.time_in) : "",
-          timeOut: visit.time_out ? extractTime(visit.time_out) : "",
-          visitDate: visit.date_in,
-        }));
-        if (extractedData.length > 1) {
-          extractedData.reverse();
-        }
-        setTableData(extractedData);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  }, [visitData]);
-
-  const calculateStay = (timeIn, timeOut) => {
-    // Parse the timeIn and timeOut strings into hours, minutes, and seconds
-    const [hoursIn, minutesIn, secondsIn] = timeIn.split(":").map(Number);
-
-    // If timeOut is provided, parse it; otherwise, use the current time
-    let totalMinutesOut;
-    if (timeOut) {
-      const [hoursOut, minutesOut, secondsOut] = timeOut.split(":").map(Number);
-      totalMinutesOut = hoursOut * 60 + minutesOut + secondsOut / 60;
-    } else {
-      const now = new Date();
-      totalMinutesOut =
-        now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-    }
-
-    // Convert the parsed timeIn into minutes
-    const totalMinutesIn = hoursIn * 60 + minutesIn + secondsIn / 60;
-
-    // Calculate the difference in minutes
-    const diff = totalMinutesOut - totalMinutesIn;
-
-    // If the difference is zero or negative, it means the user has not left yet
-    // if (diff <= 0) {
-    //   return "Not left";
-    // }
-
-    return `${Math.floor(diff)} minutes`;
-  };
-
-  // const calculateStay = (timeIn, timeOut) => {
-  //   const startTime = new Date(`1970-01-01T${timeIn}Z`);
-  //   const endTime = new Date(`1970-01-01T${timeOut}Z`);
-  //   const diff = endTime - startTime;
-  //   if (!Math.floor(diff / 60000)) {
-  //     return "Not left";
-  //   }
-  //   return Math.floor(diff / 60000);
-  // };
-
-  const extractTime = (fullTime) => {
-    const [time] = fullTime.split(".");
-    return time.substr(0, 5);
-  };
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -150,83 +285,49 @@ const FootTable = ({ visitData }) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
+
   return (
     <div className="foottable__div__main">
-      <TableContainer
-        component={Paper}
-        sx={{ borderRadius: "11px" }}
-        className="table-container"
-      >
+      <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
             <TableRow>
               {columns.map((column, index) => (
-                <StyledTableCell
-                  key={column.Header}
-                  align={index === 0 ? "left" : "left"} // Align the first column to the left and the rest to the right
-                >
+                <StyledTableCell key={column.Header} align="left">
                   {column.Header}
                 </StyledTableCell>
               ))}
-              <StyledTableCell align="left">Action</StyledTableCell>
+              <StyledTableCell align="left">Actions</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {tableData
+            {sampleData
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, index) => (
-                <StyledTableRow key={index}>
-                  {columns.map((column, columnIndex) => (
-                    <StyledTableCell
-                      key={column.accessor}
-                      align={columnIndex === 0 ? "left" : "left"}
-                      component={columnIndex === 0 ? "th" : undefined}
-                      scope={columnIndex === 0 ? "row" : undefined}
-                    >
+              .map((row) => (
+                <StyledTableRow key={row.id}>
+                  {columns.map((column) => (
+                    <StyledTableCell key={column.accessor} align="left">
                       {row[column.accessor]}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
-                    <div className="action-icons">
-                      <p>hello</p>
-                      {/* <img
-                        src={DeleteIcon}
-                        onClick={() => deleteVisit(row.id)}
-                        alt="Delete"
-                        className="icon"
-                      />
-                      <img
-                        src={EditIcon}
-                        onClick={() => EditVisit(row.id)}
-                        alt="Edit"
-                        className="icon"
-                      /> */}
+                    <div className="action-buttons">
+                      <button className="acknowledge-button" onClick={() => console.log("Acknowledged", row.id)}>
+                        Acknowledge
+                      </button>
+                      <button className="delete-button" onClick={() => console.log("Deleted", row.id)}>
+                        Delete
+                      </button>
                     </div>
                   </StyledTableCell>
                 </StyledTableRow>
               ))}
-            {/* {rows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
-                <StyledTableRow key={row.name}>
-                  <StyledTableCell component="th" scope="row">
-                    {row.name}
-                  </StyledTableCell>
-                  <StyledTableCell align="right">
-                    {row.calories}
-                  </StyledTableCell>
-                  <StyledTableCell align="right">{row.fat}</StyledTableCell>
-                  <StyledTableCell align="right">{row.carbs}</StyledTableCell>
-                  <StyledTableCell align="right">{row.protein}</StyledTableCell>
-                  <StyledTableCell align="right">{row.protein}</StyledTableCell>
-                </StyledTableRow>
-              ))} */}
           </TableBody>
         </Table>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 15, 20, 25]}
+          rowsPerPageOptions={[5, 10, 15, 20]}
           component="div"
-          count={visitData?.length > 0 ? visitData.length : 0}
+          count={sampleData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

@@ -13,3 +13,41 @@
   background-color: rgb(171, 163, 163); /* Set color of the scrollbar thumb */
   border-radius: 2px; /* Set border radius of the scrollbar thumb */
 }
+
+
+/* Sample CSS for Acknowledge  & Delete Buttons */
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.acknowledge-button {
+  background-color: #4caf50; /* Green */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.acknowledge-button:hover {
+  background-color: #45a049;
+}
+
+.delete-button {
+  background-color: #f44336; /* Red */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.delete-button:hover {
+  background-color: #d32f2f;
+}
