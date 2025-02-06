@@ -4,10 +4,10 @@ import assets from "../../assets";
 
 const BoxRow = ({ visitData }) => {
   const [stats, setStats] = useState({
-    visits: 0,
-    groups: 0,
-    new: 0,
-    females: 0,
+    visits: 4,
+    groups: 1,
+    new: 2,
+    females: 4,
   });
 
   useEffect(() => {
@@ -22,10 +22,12 @@ const BoxRow = ({ visitData }) => {
   }, [visitData]);
 
   const statsArray = [
-    { label: "Visits", value: stats.visits },
-    { label: "Groups", value: stats.groups },
-    { label: "New", value: stats.new },
-    { label: "Females", value: stats.females },
+    { label: "Total Visits", value: stats.visits },
+    { label: "Last 24 Hours", value: stats.groups },
+    // { label: "Visits", value: stats.visits },
+    // { label: "Groups", value: stats.groups },
+    // { label: "New", value: stats.new },
+    // { label: "Females", value: stats.females },
   ];
 
   return (
