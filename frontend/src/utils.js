@@ -12,7 +12,9 @@ export const token =
 // export const localurl = "https://khawir-pulse-be.hf.space";
 // export const localurl = "http://13.212.84.18/api";
 // export const localurl = "http://54.179.81.103/api";
-export const localurl = "http://app.pulsse.io/api";
+// export const localurl = "http://app.pulsse.io/api";
+export const localurl = "http://vs1.gpuhut.com/api";
+
 
 // export const localurl = "https://khawir-pulse-be.hf.space";
 function formatDateToISO(date) {

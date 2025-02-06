@@ -6,7 +6,9 @@ import { localurl } from "../../utils";
 const VideoFeed = ({ siteId }) => {
   useEffect(() => {
     const img = document.getElementById("camera_feed");
-    img.src = `${localurl}/video_feed/${siteId}`;
+    // img.src = `${localurl}/video_feed/${siteId}`;
+    img.src = `${localurl}/intrusion_feed/1/${siteId}`;
+
   }, []);
 
   
