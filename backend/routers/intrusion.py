@@ -28,7 +28,7 @@ def send_email(sender_email:str, sender_password:str, receiver_emails:list, subj
     Args:
         sender_email (str): The email address of the sender.
         sender_password (str): The password of the sender's email.
-        receiver_email (str): The email address of the receiver.
+        receiver_emails (list[str]): The list of email addresses of the receivers.
         subject (str): The subject of the email.
         body (str): The body of the email.
         server (str): The SMTP server address.
@@ -40,17 +40,16 @@ def send_email(sender_email:str, sender_password:str, receiver_emails:list, subj
 
         msg = MIMEMultipart()
         msg['From'] = sender_email
-        msg['To'] = receiver_email
+        msg['To'] = ", ".join(receiver_emails)
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
         text = msg.as_string()
-        for receiver_email in receiver_emails:
-            server.sendmail(sender_email, receiver_email, text)
+        server.sendmail(from_addr=sender_email, to_addrs=receiver_emails, msg=text)
         server.quit()
+    
     except Exception as e:
         print(f"Error: {e}")
-        # raise RuntimeError(f"Error: {e}")
 
 
 def centroid_near_line(centroid_x:float, centroid_y:float, line_point1:tuple, line_point2:tuple, threshold:float=10) -> bool:
