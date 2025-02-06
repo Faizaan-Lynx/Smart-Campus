@@ -99,7 +99,7 @@ const Dashboard = () => {
       <div className="dashboard__content">
         <div className="dashboard__text__main">
           <div className="dashboard__text">
-            <p className="overview__text">{visitData1?.name}'s Overview</p>
+            {/* <p className="overview__text">{visitData1?.name}'s Overview</p> */}
             <p className="dash__text">Main Dashboard</p>
           </div>
           <div className="top_heading_right select-dropdown">
