@@ -15,7 +15,7 @@ import Dashboard from "./components/Dashboard/Dashboard";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Settings from "./pages/Settings/Settings";
 import Contact from "./pages/Contact/Contact";
-import Home from "./pages/Home/Home";
+// import Home from "./pages/Home/Home";
 import Profile from "./pages/Profile/Profile";
 import NotFound from "./pages/NotFound/NotFound"; // Import your 404 page component
 import { useSelector } from "react-redux";
@@ -66,20 +66,27 @@ function App() {
                 )
               }
             >
-              <Route
+              {/* <Route
                 path="/"
                 element={user ? <Home /> : <Navigate to="/login" replace />}
-              />
+              /> */}
               <Route
                 path="/profile"
                 element={user ? <Profile /> : <Navigate to="/login" replace />}
               />
-              <Route
-                path="/site/:siteId"
+               <Route
+                path="/"
                 element={
                   user ? <Dashboard /> : <Navigate to="/login" replace />
                 }
               />
+              {/* <Route
+                path="/site/:siteId"
+                element={
+                  user ? <Dashboard /> : <Navigate to="/login" replace />
+                }
+              /> */}
+              
               <Route
                 path="/contact"
                 element={user ? <Contact /> : <Navigate to="/login" replace />}
