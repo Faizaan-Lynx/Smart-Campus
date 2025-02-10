@@ -1,8 +1,15 @@
 .contact__main__div {
   margin-top: 80px;
-  margin-left: 103px;
   padding-right: 16px;
+  transition: var(--tran-05);
+  margin-left: 250px; /* Adjusted for open sidebar */
 }
+
+/* When sidebar is closed */
+.sidebar.close ~ .contact__main__div {
+  margin-left: 88px; /* Adjusted for closed sidebar */
+}
+
 
 .contact__container {
   position: relative;
@@ -13,6 +20,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
+  margin-left: 7px;
 }
 
 .form {

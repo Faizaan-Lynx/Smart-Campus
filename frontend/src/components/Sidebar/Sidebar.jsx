@@ -107,15 +107,11 @@ const Sidebar = () => {
                 <span className="text nav-text">Profile</span>
               </a>
             </li>
-            <li className="nav-link sites__link">
-              
+            {/* <li className="nav-link sites__link"> */}
+            <li className="nav-link">
               <a onClick={() => navigate("/site/1")}>
-              <i className="bx bx-sitemap icon"></i>
-              <span className="text nav-text">Sites</span>
-            
-
-
-               
+                <i className="bx bx-sitemap icon"></i>
+                <span className="text nav-text">Sites</span>
               </a>
             </li>
             {!isSidebarClosed && (

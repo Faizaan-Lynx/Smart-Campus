@@ -4,7 +4,7 @@ import asyncio
 import threading
 import numpy as np
 from ultralytics import YOLO
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from core.RealTimeVideoCapture import RealTimeVideoCapture
@@ -19,6 +19,16 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 router = APIRouter(tags=["IntrusionDetection"])
+
+async def send_email_background(    background_tasks: BackgroundTasks, sender_email:str, sender_password:str, 
+                                    receiver_emails:list, subject:str, body:str, server:str, port:int=587):
+    """
+    send_email_background
+    ---------------------
+    Async function to send an email in the background with FastAPI.
+    """
+    background_tasks.add_task(send_email, sender_email, sender_password, receiver_emails, subject, body, server, port)
+
 
 # ensure emails are valid before using this function
 def send_email(sender_email:str, sender_password:str, receiver_emails:list, subject:str, body:str, server:str, port:int=587):
@@ -46,6 +56,7 @@ def send_email(sender_email:str, sender_password:str, receiver_emails:list, subj
 
         text = msg.as_string()
         server.sendmail(from_addr=sender_email, to_addrs=receiver_emails, msg=text)
+        print("Email sent successfully.")
         server.quit()
     
     except Exception as e:
@@ -118,10 +129,10 @@ class IntrusionDetection:
     """
 
     def __init__(
-                    self, video_source:str, lines:tuple, show_line:bool=False, model_path:str="model/yolov8n.pt",
+                    self, background_tasks: BackgroundTasks, video_source:str, lines:tuple, show_line:bool=False, model_path:str="models/yolov8s.pt",
                     intrusion_threshold:int=120, intrusion_flag_duration:int=15, capped_fps:bool=True, restart_on_end:bool=True, 
                     framerate:int=20, crop:tuple=None, resize:tuple=(1280, 720),
-                    camera_id:int=0, camera_location:str="Unknown", receiver_emails:list=[]
+                    camera_id:int=0, camera_location:str="[Unknown Location]", receiver_emails:list=[]
                 ):
         # model and video cap setup
         self.yolo = YOLO(model_path)
@@ -149,12 +160,12 @@ class IntrusionDetection:
 
         # threading setup
         self.stop_event = threading.Event()
-        self.thread = threading.Thread(target=self.__intrusion_detection_thread__)
+        self.thread = threading.Thread(target=self.__intrusion_detection_thread__, args=(background_tasks,))
         self.thread.daemon = True
         self.thread.start()
 
 
-    def __intrusion_detection_thread__(self):
+    def __intrusion_detection_thread__(self, background_tasks: BackgroundTasks):
         """
         Continuously reads frames from the video source in a separate thread.
         """
@@ -197,9 +208,10 @@ class IntrusionDetection:
             if self.intrusion_flag and flag_frame_count == self.intrusion_flag_duration:
                 email_subject = f"Intrusion Detected at {self.camera_location}"
                 email_text = f"An intrusion has been detected at {self.camera_location} on {datetime.datetime.now()}."
-                send_email(
+                send_email_background(
+                    background_tasks,
                     os.getenv("SMTP_EMAIL"), os.getenv("SMTP_PASSWORD"), self.receiver_emails,
-                    email_subject, email_text, os.getenv("SMTP_SERVER"), os.getenv("SMTP_PORT")
+                    email_subject, email_text, os.getenv("SMTP_SERVER"), os.getenv("SMTP_PORT"),
                 )
 
             # display intrusion flag on the frame
@@ -238,7 +250,7 @@ class IntrusionDetection:
 # dictionary to store camera_id and intrusion detection stream
 camera_id_stream = {}
 
-async def create_stream(camera_id:int):
+async def create_stream(camera_id:int, background_tasks: BackgroundTasks):
     """
     create_stream
     -------------
@@ -249,9 +261,10 @@ async def create_stream(camera_id:int):
     """
     # if camera_id not in camera_id_stream:
     camera_id_stream = IntrusionDetection(
-        os.getenv("INTRUSION_VIDEO_SOURCE"), [(20,450),(1000,250)], show_line=True, capped_fps=True, 
+        background_tasks,
+        os.getenv("INTRUSION_VIDEO_SOURCE"), [(950,700),(950,20)], show_line=True, capped_fps=True, 
         restart_on_end=True, framerate=20, intrusion_threshold=120, 
-        intrusion_flag_duration=15, resize=(1280, 720), crop=((0,0), (1280,720)),
+        intrusion_flag_duration=15, resize=(1280, 720),
         receiver_emails=os.getenv("RECEIVER_EMAILS").split(","),
     )
 
@@ -297,6 +310,7 @@ class VideoDetails(BaseModel):
 @router.get("/intrusion_feed/{camera_id}")
 async def video_feed(
         camera_id:int, 
+        background_tasks: BackgroundTasks,
     ):
     """
     video_feed
@@ -307,7 +321,7 @@ async def video_feed(
         user_id (int): The user ID.
         camera_id (int): The camera ID.
     """
-    return StreamingResponse(create_stream(camera_id),
+    return StreamingResponse(create_stream(camera_id, background_tasks),
         media_type="multipart/x-mixed-replace; boundary=frame")
 
 

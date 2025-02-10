@@ -1,11 +1,18 @@
 .profile__div__main {
   margin-top: 80px;
-  margin-left: 103px;
   padding-right: 16px;
   display: flex;
   justify-content: center;
   flex-direction: column;
+  transition: var(--tran-05);
+  margin-left: 270px; /* Adjusted for open sidebar */
 }
+
+/* When sidebar is closed */
+.sidebar.close ~ .profile__div__main {
+  margin-left: 120px; /* Adjusted for closed sidebar */
+}
+
 .wrapper,
 .wrapper .img-area,
 .social-icons a,
