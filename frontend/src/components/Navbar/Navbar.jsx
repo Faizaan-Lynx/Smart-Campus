@@ -17,7 +17,7 @@ const Navbar = () => {
           <div className="content__nav__div">
             <div className="name__div">
               <p>
-                © 2024 <span className="bold__font">Lynx-Infosec</span>{" "}
+                © 2025 <span className="bold__font">Lynx-Infosec</span>{" "}
               </p>
 
               <p>

@@ -142,11 +142,11 @@ const SitesTableProfile = ({ columns, data }) => {
         style={{ marginBottom: "20px", display: "flex", alignItems: "center" }}
       >
         MY SITES &nbsp;
-        <i
+        {/* <i
           onClick={() => setShowAddModal(!showAddModal)}
           style={{ fontSize: "27px", cursor: "pointer" }}
           class="bx bxs-plus-square"
-        ></i>
+        ></i> */}
       </p>
       <TableContainer
         component={Paper}

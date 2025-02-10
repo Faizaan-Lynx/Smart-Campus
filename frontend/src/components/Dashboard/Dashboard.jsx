@@ -101,16 +101,16 @@ const Dashboard = () => {
           <div className="dashboard__text">
             {/* <p className="overview__text">{visitData1?.name}'s Overview</p> */}
             <p className="dash__text">Main Dashboard</p>
-          </div>
+          {/* </div>
           <div className="top_heading_right select-dropdown">
-            <select value={selectedOptionRedux} onChange={handleOptionChange}>
+            <select value={selectedOptionRedux} onChange={handleOptionChange}> */}
               {/* <option value="last12Hours">Last 12 Hours</option> */}
-              <option value="today">Today</option>
+              {/* <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
               <option value="last7Days">Last 7 Days</option>
               <option value="lastMonth">Last Month</option>
               <option value="allTime">All Time</option>
-            </select>
+            </select> */}
           </div>
         </div>
         <BoxRow visitData={visitData} />

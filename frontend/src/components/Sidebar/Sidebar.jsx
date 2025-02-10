@@ -95,12 +95,19 @@ const Sidebar = () => {
             <input type="text" placeholder="Search..." />
           </li> */}
           <ul className="menu-links">
-            <li className="nav-link">
+            {/* <li className="nav-link">
               <a onClick={() => navigate("/")}>
                 <i className="bx bx-home-alt icon"></i>
                 <span className="text nav-text">Home</span>
               </a>
+            </li> */}
+            <li className="nav-link">
+              <a onClick={() => navigate("/site/1")}>
+                <i className="bx bx-sitemap icon"></i>
+                <span className="text nav-text">Dashboard</span>
+              </a>
             </li>
+
             <li className="nav-link">
               <a onClick={() => navigate("/profile")}>
                 <i className="bx bx-user icon"></i>
@@ -108,12 +115,7 @@ const Sidebar = () => {
               </a>
             </li>
             {/* <li className="nav-link sites__link"> */}
-            <li className="nav-link">
-              <a onClick={() => navigate("/site/1")}>
-                <i className="bx bx-sitemap icon"></i>
-                <span className="text nav-text">Sites</span>
-              </a>
-            </li>
+
             {!isSidebarClosed && (
               <>
                 {" "}
@@ -143,7 +145,7 @@ const Sidebar = () => {
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>
                 <i className="bx bx-cog icon"></i>
-                <span className="text nav-text">Settings</span>
+                <span className="text nav-text">Users</span>
               </a>
             </li>
             {/*)}*/}

@@ -139,7 +139,7 @@ const Profile = () => {
           <i class="fas fa-arrow-left"></i>
         </div> */}
         <div onClick={() => setShowEditProfileModal(true)} class="icon dots">
-          <i class="fas fa-edit"></i>
+          {/* <i class="fas fa-edit"></i> */}
         </div>
         <div class="name">{userData?.username}</div>
         <div class="about">{userData?.email || "none"}</div>

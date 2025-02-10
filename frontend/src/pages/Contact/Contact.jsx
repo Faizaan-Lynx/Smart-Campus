@@ -72,11 +72,11 @@ const Contact = () => {
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
-                <p>khawir@gmail.com</p>
+                <p>123@gmail.com</p>
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
-                <p>03356787654</p>
+                <p>12345678</p>
               </div>
             </div>
 
