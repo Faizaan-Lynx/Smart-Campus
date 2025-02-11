@@ -18,14 +18,14 @@ const SignIn = () => {
     const signInButton = signInButtonRef.current;
     const container = containerRef.current;
 
-    const handleSignUpClick = () => {
-      userRef.current.value = "";
-      passRef.current.value = "";
-      fullNameRef.current.value = "";
-      passwordRef.current.value = "";
-      emailRef.current.value = "";
-      container.classList.add("right-panel-active");
-    };
+    // const handleSignUpClick = () => {
+    //   userRef.current.value = "";
+    //   passRef.current.value = "";
+    //   fullNameRef.current.value = "";
+    //   passwordRef.current.value = "";
+    //   emailRef.current.value = "";
+    //   container.classList.add("right-panel-active");
+    // };
 
     const handleSignInClick = () => {
       userRef.current.value = "";
@@ -226,7 +226,7 @@ const SignIn = () => {
               </button>
             </div>
             <div className="overlay-panel overlay-right">
-              <h1>Lynx-InfoSec</h1>
+              <h1>Lynx-Infoec</h1>
               {/* <p>Sign Up for Smarter Security Today!</p> */}
               {/* <button
                 ref={signUpButtonRef}
