@@ -70,22 +70,24 @@ function App() {
                 path="/"
                 element={user ? <Home /> : <Navigate to="/login" replace />}
               /> */}
-              <Route
-                path="/profile"
-                element={user ? <Profile /> : <Navigate to="/login" replace />}
-              />
                <Route
                 path="/"
                 element={
                   user ? <Dashboard /> : <Navigate to="/login" replace />
                 }
               />
-              {/* <Route
+              
+              <Route
+                path="/profile"
+                element={user ? <Profile /> : <Navigate to="/login" replace />}
+              />
+              
+              <Route
                 path="/site/:siteId"
                 element={
                   user ? <Dashboard /> : <Navigate to="/login" replace />
                 }
-              /> */}
+              />
               
               <Route
                 path="/contact"

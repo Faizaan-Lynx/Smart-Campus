@@ -102,7 +102,8 @@ const Sidebar = () => {
               </a>
             </li> */}
             <li className="nav-link">
-              <a onClick={() => navigate("/site/1")}>
+              {/* <a onClick={() => navigate("/site/1")}> */}
+              <a onClick={() => navigate("/")}>
                 <i className="bx bx-sitemap icon"></i>
                 <span className="text nav-text">Dashboard</span>
               </a>
