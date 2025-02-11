@@ -1,4 +1,4 @@
-fastapi
+fastapi[all]
 celery[redis]
 passlib[bcrypt]
 psycopg2
