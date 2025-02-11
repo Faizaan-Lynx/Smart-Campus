@@ -24,9 +24,9 @@ const Navbar = () => {
                 Hi, <span className="bold__font">{username}</span>
               </p>
             </div>
-            <div className="name__div">
+            {/* <div className="name__div">
               <img src={assets.logo} alt="profile" />
-            </div>
+            </div> */}
           </div>
         </nav>
       </header>

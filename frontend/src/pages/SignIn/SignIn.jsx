@@ -94,6 +94,8 @@ const SignIn = () => {
         throw new Error(JSON.stringify(errorData));
       }
 
+      console.log("Login Api called");
+
       const userData = await response.json();
       // Dispatch loginSuccess action with user data
       dispatch(loginSuccess(userData));
