@@ -68,60 +68,108 @@ const SignIn = () => {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
+  // const handleLogin = async (e) => {
+  //   e.preventDefault();
+  //   if (userRef.current.value == "" || passRef.current.value == "") {
+  //     toast.error("Please fill out all fields!");
+  //     return;
+  //   }
+  //   console.log(userRef.current.value, passRef.current.value);
+  //   console.log("Login successful");
+  //   ///dispatch(loginSuccess(true));
+
+  //   //navigate(`/`);
+  //   try {
+  //     const response = await fetch(`${localurl}/login`, {
+  //       method: "POST",
+  //       headers: {
+  //         Accept: "application/json",
+  //         "Content-Type": "application/x-www-form-urlencoded",
+  //       },
+  //       body: `grant_type=&username=${userRef.current.value}&password=${passRef.current.value}&scope=&client_id=&client_secret=`,
+  //     });
+
+  //     if (!response.ok) {
+  //       // Parse the error response
+  //       const errorData = await response.json();
+  //       throw new Error(JSON.stringify(errorData));
+  //     }
+
+  //     console.log("Login Api called");
+
+  //     const userData = await response.json();
+  //     // Dispatch loginSuccess action with user data
+  //     //dispatch(loginSuccess(userData));
+  //     //navigate("/profile");
+  //   } catch (error) {
+  //     try {
+  //       const errorData = JSON.parse(error.message);
+  //       if (errorData.detail == "Inactive user") {
+  //         toast.dismiss();
+  //         toast.error("Account Disabled or inactive. Contact admin");
+  //       } else {
+  //         toast.dismiss();
+  //         toast.error("Invalid credentials");
+  //       }
+  //     } catch (parseError) {
+  //       toast.dismiss();
+  //       // If parsing fails, show a generic error message
+  //       toast.error("An unexpected error occurred");
+  //     }
+  //   }
+  // };
+  // const handleKeyDown = (event) => {
+  //   if (event.key === "Enter") {
+  //     handleLogin();
+  //   }
+  // };
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (userRef.current.value == "" || passRef.current.value == "") {
-      toast.error("Please fill out all fields!");
-      return;
+    if (userRef.current.value === "" || passRef.current.value === "") {
+        toast.error("Please fill out all fields!");
+        return;
     }
-    console.log("Login successful");
-    dispatch(loginSuccess(true));
 
-    navigate(`/`);
+    const formData = new URLSearchParams();
+    formData.append('username', userRef.current.value);
+    formData.append('password', passRef.current.value);
+
     try {
-      const response = await fetch(`${localurl}/login`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `grant_type=&username=${userRef.current.value}&password=${passRef.current.value}&scope=&client_id=&client_secret=`,
-      });
+        const response = await fetch(`${localurl}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formData.toString(),
+        });
 
-      if (!response.ok) {
-        // Parse the error response
-        const errorData = await response.json();
-        throw new Error(JSON.stringify(errorData));
-      }
-
-      console.log("Login Api called");
-
-      const userData = await response.json();
-      // Dispatch loginSuccess action with user data
-      dispatch(loginSuccess(userData));
-      navigate("/profile");
-    } catch (error) {
-      try {
-        const errorData = JSON.parse(error.message);
-        if (errorData.detail == "Inactive user") {
-          toast.dismiss();
-          toast.error("Account Disabled or inactive. Contact admin");
-        } else {
-          toast.dismiss();
-          toast.error("Invalid credentials");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(JSON.stringify(errorData));
         }
-      } catch (parseError) {
-        toast.dismiss();
-        // If parsing fails, show a generic error message
-        toast.error("An unexpected error occurred");
-      }
+
+        const userData = await response.json();
+        console.log(userData);
+        //Handle successful login
+        dispatch(loginSuccess(userData));
+        navigate("/");
+    } catch (error) {
+        try {
+            const errorData = JSON.parse(error.message);
+            if (errorData.detail === "Inactive user") {
+                toast.dismiss();
+                toast.error("Account Disabled or inactive. Contact admin");
+            } else {
+                toast.dismiss();
+                toast.error("Invalid credentials");
+            }
+        } catch (parseError) {
+            toast.dismiss();
+            toast.error("An unexpected error occurred");
+        }
     }
-  };
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
-      handleLogin();
-    }
-  };
+};
 
   const handleSignup = async (e) => {
     e.preventDefault();
