@@ -8,13 +8,13 @@ import { loginSuccess } from "../../redux/actions/authActions";
 import { localurl } from "../../utils";
 
 const SignIn = () => {
-  const signUpButtonRef = useRef(null);
+  // const signUpButtonRef = useRef(null);
   const signInButtonRef = useRef(null);
   const containerRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
-    const signUpButton = signUpButtonRef.current;
+    // const signUpButton = signUpButtonRef.current;
     const signInButton = signInButtonRef.current;
     const container = containerRef.current;
 
@@ -36,12 +36,12 @@ const SignIn = () => {
       container.classList.remove("right-panel-active");
     };
 
-    signUpButton.addEventListener("click", handleSignUpClick);
+    // signUpButton.addEventListener("click", handleSignUpClick);
     signInButton.addEventListener("click", handleSignInClick);
 
     // Cleanup event listeners on component unmount
     return () => {
-      signUpButton.removeEventListener("click", handleSignUpClick);
+      // signUpButton.removeEventListener("click", handleSignUpClick);
       signInButton.removeEventListener("click", handleSignInClick);
     };
   }, []);
@@ -74,6 +74,10 @@ const SignIn = () => {
       toast.error("Please fill out all fields!");
       return;
     }
+    console.log("Login successful");
+    dispatch(loginSuccess(true));
+
+    navigate(`/`);
     try {
       const response = await fetch(`${localurl}/login`, {
         method: "POST",
@@ -128,33 +132,33 @@ const SignIn = () => {
       toast.error("Please fill out all fields!");
       return;
     }
-    try {
-      const response = await fetch(`${localurl}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          full_name: fullName,
-          password: password,
-        }),
-      });
+    // try {
+    //   const response = await fetch(`${localurl}/register`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({
+    //       email: email,
+    //       full_name: fullName,
+    //       password: password,
+    //     }),
+    //   });
 
-      if (response.ok) {
-        toast.success("Account created successfully! Redirecting to login");
-        // Navigate to login page after successful signup
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        toast.dismiss();
-        toast.error("Email already exists!");
-        console.error("Signup failed");
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
-    }
+    //   if (response.ok) {
+    //     toast.success("Account created successfully! Redirecting to login");
+    //     // Navigate to login page after successful signup
+    //     setTimeout(() => {
+    //       window.location.reload();
+    //     }, 2000);
+    //   } else {
+    //     toast.dismiss();
+    //     toast.error("Email already exists!");
+    //     console.error("Signup failed");
+    //   }
+    // } catch (error) {
+    //   console.error("Signup error:", error);
+    // }
   };
 
   return (
@@ -222,15 +226,15 @@ const SignIn = () => {
               </button>
             </div>
             <div className="overlay-panel overlay-right">
-              <h1>New User?</h1>
-              <p>Sign Up for Smarter Security Today!</p>
-              <button
+              <h1>Lynx-InfoSec</h1>
+              {/* <p>Sign Up for Smarter Security Today!</p> */}
+              {/* <button
                 ref={signUpButtonRef}
                 className="ghost button_auth"
                 id="signUp"
               >
                 Sign Up
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

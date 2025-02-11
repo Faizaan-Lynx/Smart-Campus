@@ -24,24 +24,24 @@ import Hosts from "./pages/Hosts/Hosts";
 import Guests from "./pages/Guests/Guests";
 
 function App() {
-  // const user = useSelector((state) => state.auth.isAuthenticated);
-  const user = true;
+  const user = useSelector((state) => state.auth.isAuthenticated);
+  // const user = true;
   // const user = false;
 
-  // const [userInfo, setUserInfo] = useState(null);
-  // useEffect(() => {
-  //   // Assuming token is stored in localStorage or received from an API
-  //   const token = localStorage.getItem("token");
+  const [userInfo, setUserInfo] = useState(null);
+  useEffect(() => {
+    // Assuming token is stored in localStorage or received from an API
+    const token = localStorage.getItem("token");
 
-  //   if (token) {
-  //     try {
-  //       const decoded = jwtDecode(token);
-  //       setUserInfo(decoded);
-  //     } catch (error) {
-  //       console.error("Error decoding token:", error);
-  //     }
-  //   }
-  // }, []);
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserInfo(decoded);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+  }, []);
 
   return (
     <>
@@ -70,25 +70,25 @@ function App() {
                 path="/"
                 element={user ? <Home /> : <Navigate to="/login" replace />}
               /> */}
-               <Route
+              <Route
                 path="/"
                 element={
                   user ? <Dashboard /> : <Navigate to="/login" replace />
                 }
               />
-              
+
               <Route
                 path="/profile"
                 element={user ? <Profile /> : <Navigate to="/login" replace />}
               />
-              
+
               <Route
                 path="/site/:siteId"
                 element={
                   user ? <Dashboard /> : <Navigate to="/login" replace />
                 }
               />
-              
+
               <Route
                 path="/contact"
                 element={user ? <Contact /> : <Navigate to="/login" replace />}
@@ -108,7 +108,7 @@ function App() {
               />
               {/* Route For user routing */}
 
-              <Route path="/userDashboard/:siteId" element=<Dashboard /> />
+              {/* <Route path="/userDashboard/:siteId" element=<Dashboard /> /> */}
               {/* <Route
                 path="/host/:hostId/visits/:siteId"
                 element={
@@ -118,6 +118,10 @@ function App() {
               {/* )} */}
               {/* Add more routes here */}
             </Route>
+            {/* <Route
+              path="/SignIn"
+              element={user ? <SignIn /> : <Navigate to="/" replace />}
+            /> */}
             <Route path="*" element={<NotFound />} /> {/* 404 route */}
           </Routes>
         </div>
