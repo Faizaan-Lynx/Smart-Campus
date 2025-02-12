@@ -14,4 +14,5 @@ data
 *.mp4
 
 # deprecated - keeping local for reference
-backend-old
+# backend-old
+# backend-old/*
