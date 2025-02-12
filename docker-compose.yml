@@ -1,0 +1,59 @@
+# for local development - do not use in production without modifications (ports exposed, etc.)
+services:
+  # FastAPI App
+  app:
+    build: .
+    container_name: fastapi_app
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - backend
+
+  # PostgreSQL
+  db:
+    image: postgres:17
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
+
+  # Redis
+  redis:
+    image: redis:latest
+    container_name: redis
+    networks:
+      - backend
+    ports:
+      - "6379:6379"
+
+  # Celery Worker
+  celery:
+    build: .
+    container_name: celery_worker
+    command: celery -A ${CELERY_MODULE}.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  postgres_data:
