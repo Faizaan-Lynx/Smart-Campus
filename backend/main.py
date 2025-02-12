@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 # middleware
 from middleware.JWTAuth import JWTAuthenticationMiddleware  
+from middleware.ip_middleware import IPMiddleware  
 
 # Routers
 from api.auth.routes import router as auth_router
@@ -11,10 +12,13 @@ from api.alerts.routes import router as alerts_router
 
 app = FastAPI()
 
-# add authentication middleware
+# authentication middleware
 app.add_middleware(JWTAuthenticationMiddleware)
+# IP middleware
+app.add_middleware(IPMiddleware)
 
-# include routers
+
+# routes
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(cameras_router, prefix="/camera", tags=["cameras"])
 app.include_router(alerts_router, prefix="/alerts", tags=["alerts"])
