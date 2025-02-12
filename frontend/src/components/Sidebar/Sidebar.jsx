@@ -142,6 +142,15 @@ const Sidebar = () => {
                 <span className="text nav-text">Contact</span>
               </a>
             </li>
+
+            {/* CCTV */}
+            <li className="nav-link">
+              <a onClick={() => navigate("/CCTV")}>
+                <i className="bx bx-camera icon"></i>
+                <span className="text nav-text">CCTV</span>
+              </a>
+            </li>
+
             {/* {userInfo?.is_superuser && (*/}
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>

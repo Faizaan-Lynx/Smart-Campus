@@ -1,0 +1,222 @@
+/* Main container */
+.cctv-container {
+  text-align: center;
+  background-color: #f8f8ff; /* Light purple-white background */
+  color: #4b0082; /* Deep purple text */
+  padding: 20px;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+}
+/* Adjust container based on sidebar state */
+.sidebar.close ~ .cctv-container {
+  margin-left: 88px;
+  width: calc(100% - 88px);
+}
+.sidebar ~ .cctv-container {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+}
+
+/* Title */
+.cctv-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+/* CCTV Grid */
+.cctv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* CCTV Feed Card */
+.cctv-feed {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  text-align: center;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.cctv-feed:hover {
+  transform: scale(1.05);
+}
+
+/* CCTV Feed Thumbnail */
+.feed-thumbnail {
+  background: #4b0082;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.feed-icon {
+  color: white;
+}
+
+/* Feed Text */
+.feed-text {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #4b0082;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 15px;
+}
+
+/* Page Indicator */
+.page-indicator {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4b0082;
+}
+
+/* Scroll Buttons */
+.scroll-button {
+  background-color: #4b0082;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.scroll-button:hover:not(:disabled) {
+  background-color: #6a0dad;
+}
+
+/* ======================== */
+/* Popup Feed Styling */
+/* ======================== */
+.feed-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.feed-popup-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  position: relative;
+  width: 50%;
+  max-width: 600px;
+  animation: scaleIn 0.3s forwards;
+}
+
+/* Close Button */
+.cctv-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #4b0082;
+}
+
+.cctv-close-button:hover {
+  color: #6a0dad;
+}
+
+/* Feed Image */
+.feed-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+/* Responsive adjustments */
+@media screen and (max-width: 1024px) {
+  .cctv-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    margin: 20px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .sidebar ~ .cctv-container,
+  .sidebar.close ~ .cctv-container {
+    margin-left: 0;
+    width: 100%;
+  }
+  .cctv-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .cctv-title {
+    font-size: 20px;
+  }
+  .cctv-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  .cctv-feed {
+    width: 100%;
+    height: auto;
+  }
+}

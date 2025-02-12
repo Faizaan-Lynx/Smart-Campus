@@ -22,6 +22,7 @@ import { useSelector } from "react-redux";
 import { jwtDecode } from "jwt-decode";
 import Hosts from "./pages/Hosts/Hosts";
 import Guests from "./pages/Guests/Guests";
+import CCTVPage from "./components/CCTV/CCTVPage";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -106,6 +107,12 @@ function App() {
                 path="/guests/:siteId"
                 element={user ? <Guests /> : <Navigate to="/login" replace />}
               />
+
+              <Route
+                path="/CCTV"
+                element={user ? <CCTVPage /> : <Navigate to="/login" replace />}
+              />
+
               {/* Route For user routing */}
 
               {/* <Route path="/userDashboard/:siteId" element=<Dashboard /> /> */}
