@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./FeedPopup.css";
 // FeedPopup Component
 const FeedPopup = ({ row, onClose }) => {
     const [loading, setLoading] = useState(true);
