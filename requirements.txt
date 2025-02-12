@@ -1,9 +1,10 @@
 fastapi[all]
 celery[redis]
 passlib[bcrypt]
-psycopg2
+psycopg2-binary
 python-jose[cryptography]
 python-multipart
+redis
 sqlmodel
 sqlalchemy
 uvicorn[standard]

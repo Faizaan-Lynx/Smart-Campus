@@ -2,4 +2,16 @@
 .env
 .venv
 
+# python specific
+__pycache__
+*.pyc
+
+# data files
 data
+*.jpg
+*.jpeg
+*.png
+*.mp4
+
+# deprecated - keeping local for reference
+backend-old
