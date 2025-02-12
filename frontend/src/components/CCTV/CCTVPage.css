@@ -199,7 +199,8 @@
 
 @media screen and (max-width: 768px) {
   .sidebar ~ .cctv-container,
-  .sidebar.close ~ .cctv-container {
+  /* .sidebar.close ~ .cctv-container  */
+  .cctv-container {
     margin-left: 0;
     width: 100%;
   }
