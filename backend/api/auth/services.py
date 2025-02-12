@@ -2,7 +2,6 @@ from datetime import timedelta
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from api.auth.security import generate_jwt_token, verify_password
 from api.auth import crud
 from core.database import get_db
 from config import settings

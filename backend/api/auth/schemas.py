@@ -2,10 +2,10 @@ from pydantic import BaseModel, EmailStr, constr
 from typing import Annotated
 
 # Username: 3-20 characters, only letters, numbers, and underscores allowed
-UsernameStr = Annotated[str, constr(min_length=3, max_length=20, regex="^[a-zA-Z0-9_]+$")]
+UsernameStr = Annotated[str, constr(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_]+$")]
 
 # Password: At least 6 characters, must contain at least one letter and one number
-PasswordStr = Annotated[str, constr(min_length=6, regex="^(?=.*[A-Za-z])(?=.*\d).+$")]
+PasswordStr = Annotated[str, constr(min_length=6, pattern=r"^(?=.*[A-Za-z])(?=.*\d).+$")]
 
 # User Registration Schema
 class UserCreate(BaseModel):

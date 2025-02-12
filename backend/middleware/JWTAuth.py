@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 
 class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # if not accessing api routes, skip authentication
+        if not request.url.path.startswith("/api"):
+            return await call_next(request)
+
+
         if request.url.path.startswith("/auth/login") or request.url.path.startswith("/auth/register"):
             return await call_next(request)  # Skip authentication for login & registration
 
