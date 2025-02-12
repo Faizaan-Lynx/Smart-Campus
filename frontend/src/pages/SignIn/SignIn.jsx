@@ -127,10 +127,12 @@ const SignIn = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (userRef.current.value === "" || passRef.current.value === "") {
-        toast.error("Please fill out all fields!");
-        return;
+      toast.error("Please fill out all fields!");
+      return;
     }
+    dispatch(loginSuccess("userData"));
 
+    navigate("/");
     const formData = new URLSearchParams();
     formData.append('username', userRef.current.value);
     formData.append('password', passRef.current.value);
@@ -169,7 +171,7 @@ const SignIn = () => {
             toast.error("An unexpected error occurred");
         }
     }
-};
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
