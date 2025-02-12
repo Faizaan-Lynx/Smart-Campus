@@ -29,20 +29,20 @@ function App() {
   // const user = true;
   // const user = false;
 
-  const [userInfo, setUserInfo] = useState(null);
-  useEffect(() => {
-    // Assuming token is stored in localStorage or received from an API
-    const token = localStorage.getItem("token");
+  // const [userInfo, setUserInfo] = useState(null);
+  // useEffect(() => {
+  //   // Assuming token is stored in localStorage or received from an API
+  //   const token = localStorage.getItem("token");
 
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        setUserInfo(decoded);
-      } catch (error) {
-        console.error("Error decoding token:", error);
-      }
-    }
-  }, []);
+  //   if (token) {
+  //     try {
+  //       const decoded = jwtDecode(token);
+  //       setUserInfo(decoded);
+  //     } catch (error) {
+  //       console.error("Error decoding token:", error);
+  //     }
+  //   }
+  // }, []);
 
   return (
     <>

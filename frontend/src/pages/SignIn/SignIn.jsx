@@ -133,44 +133,44 @@ const SignIn = () => {
     dispatch(loginSuccess("userData"));
 
     navigate("/");
-    const formData = new URLSearchParams();
-    formData.append('username', userRef.current.value);
-    formData.append('password', passRef.current.value);
+    // const formData = new URLSearchParams();
+    // formData.append('username', userRef.current.value);
+    // formData.append('password', passRef.current.value);
 
-    try {
-        const response = await fetch(`${localurl}/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: formData.toString(),
-        });
+    // try {
+    //     const response = await fetch(`${localurl}/login`, {
+    //         method: "POST",
+    //         headers: {
+    //             "Content-Type": "application/x-www-form-urlencoded",
+    //         },
+    //         body: formData.toString(),
+    //     });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(JSON.stringify(errorData));
-        }
+    //     if (!response.ok) {
+    //         const errorData = await response.json();
+    //         throw new Error(JSON.stringify(errorData));
+    //     }
 
-        const userData = await response.json();
-        console.log(userData);
-        //Handle successful login
-        dispatch(loginSuccess(userData));
-        navigate("/");
-    } catch (error) {
-        try {
-            const errorData = JSON.parse(error.message);
-            if (errorData.detail === "Inactive user") {
-                toast.dismiss();
-                toast.error("Account Disabled or inactive. Contact admin");
-            } else {
-                toast.dismiss();
-                toast.error("Invalid credentials");
-            }
-        } catch (parseError) {
-            toast.dismiss();
-            toast.error("An unexpected error occurred");
-        }
-    }
+    //     const userData = await response.json();
+    //     console.log(userData);
+    //     //Handle successful login
+    //     dispatch(loginSuccess(userData));
+    //     navigate("/");
+    // } catch (error) {
+    //     try {
+    //         const errorData = JSON.parse(error.message);
+    //         if (errorData.detail === "Inactive user") {
+    //             toast.dismiss();
+    //             toast.error("Account Disabled or inactive. Contact admin");
+    //         } else {
+    //             toast.dismiss();
+    //             toast.error("Invalid credentials");
+    //         }
+    //     } catch (parseError) {
+    //         toast.dismiss();
+    //         toast.error("An unexpected error occurred");
+    //     }
+    // }
   };
 
   const handleSignup = async (e) => {
