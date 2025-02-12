@@ -23,4 +23,4 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello World. This is the Smart Campus project!"}
