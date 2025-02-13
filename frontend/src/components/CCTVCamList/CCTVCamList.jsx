@@ -31,7 +31,7 @@ const CameraList = ({ cameras }) => {
         ))}
       </div>
       <div className="video-feed">
-        {loading && <div className="loader"></div>}
+        {loading && <div className="cctv_camera_loader"></div>}
         {/* Display the selected camera ID */}
         <h1>{selectedCamera}</h1>
         <img

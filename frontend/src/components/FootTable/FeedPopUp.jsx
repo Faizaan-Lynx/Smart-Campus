@@ -28,7 +28,7 @@ const FeedPopup = ({ row, onClose }) => {
         <div className="popup-content">
           <h3>Camera Feed - {row.location}</h3>
           {loading ? (
-            <div className="loader">Loading...</div>
+            <div className="loader"></div>
           ) : error ? (
             <div className="error-message">{error}</div>
           ) : (
