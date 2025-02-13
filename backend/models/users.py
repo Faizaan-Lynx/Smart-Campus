@@ -1,9 +1,8 @@
-# app/auth/models.py
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from core.database import Base
+from models.base import Base
 
-class User(Base):
+class Users(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, index=True)

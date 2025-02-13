@@ -8,19 +8,16 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-# Move model imports inside function to avoid circular imports
-def create_tables():
-    from api.users.models import User 
-    from api.cameras.models import Camera  
-    from api.user_cameras.models import user_cameras  # Import association table
-    print("Creating tables...")
-    Base.metadata.create_all(engine)
-    print("✅ Tables created successfully!")
+# 🚀 Automatically create tables on startup
+from api.users.models import User
+from api.cameras.models import Camera
+from api.user_cameras.models import user_cameras
 
-create_tables()
+Base.metadata.create_all(engine)  # ✅ Auto-create tables if they don’t exist
 
-# Dependency to get DB session
+
 def get_db():
+    """Dependency to get the database session."""
     db = SessionLocal()
     try:
         yield db
