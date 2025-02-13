@@ -281,6 +281,38 @@ const sampleData = [
     feed: "View Feed",
 
   },
+  {
+    id: 5,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  }, 
+  {
+    id: 6,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  },
+  {
+    id: 7,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  },
+  {
+    id: 8,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  },
 ];
 
 // const FeedPopup = ({ row, onClose }) => {
