@@ -77,7 +77,7 @@ const FootFallRow = ({ visitData, siteId }) => {
           {
             id: 11,
             thumbnail: "https://via.placeholder.com/150",
-            name: "Camera 12",
+            name: "Camera 11",
           },{
             id: 12,
             thumbnail: "https://via.placeholder.com/150",
