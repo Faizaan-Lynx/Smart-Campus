@@ -1,27 +1,28 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./VideoFeed.css";
-import assets from "../../assets";
 import { localurl } from "../../utils";
 
 const VideoFeed = ({ siteId }) => {
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const img = document.getElementById("camera_feed");
     img.src = `${localurl}/intrusion_feed/1`;
 
+    // Hide loader when the image loads
+    img.onload = () => setLoading(false);
+    img.onerror = () => setLoading(false); // Hide loader even if image fails
   }, []);
 
-  
-
   return (
-    // <div className="main__video__feed">
-      // <div className="video__container">
-        <img
-          className="camera__feed__image"
-          id="camera_feed"
-          alt="Video Stream"
-        />
-      // </div>
-    // </div>
+    <div className="dashboard_video__container">
+      {loading && <div className="loader"></div>}
+      <img
+        className={`camera__feed__image ${loading ? "hidden" : ""}`}
+        id="camera_feed"
+        alt="Video Stream"
+      />
+    </div>
   );
 };
 
