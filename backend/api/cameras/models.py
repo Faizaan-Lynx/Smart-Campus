@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from core.database import Base
 from sqlalchemy.orm import relationship
+from api.user_cameras.models import user_cameras
 
 class Camera(Base):
     __tablename__ = 'cameras'
@@ -15,4 +16,4 @@ class Camera(Base):
     lines = Column(String)  # Store coordinates as a string or json
 
     # Relationship with users
-    users = relationship("User", secondary="user_cameras")
+    users = relationship("User", secondary=user_cameras, back_populates="cameras")

@@ -14,4 +14,4 @@ class User(Base):
     ip_address = Column(String, nullable=True)
 
     # Relationship with cameras
-    cameras = relationship("Camera", secondary="user_cameras")
+    cameras = relationship("Camera", secondary="user_cameras", back_populates="users")
