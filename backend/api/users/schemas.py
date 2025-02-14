@@ -1,17 +1,30 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-class UserCreate(BaseModel):
+class UserLoginSchema(BaseModel):
+    """Schema for user login request"""
+    username: str
+    password: str
+
+class UserResponseSchema(BaseModel):
+    """Schema for user response"""
+    id: int
+    username: str
+    email: EmailStr
+    is_admin: bool
+
+    class Config:
+        from_attributes = True
+
+class UserCreateSchema(BaseModel):
     username: str
     email: EmailStr
     password: str
 
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    is_admin: bool
-    ip_address: Optional[str] = None
-
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+class TokenSchema(BaseModel):
+    """Schema for JWT token response"""
+    access_token: str
+    token_type: str
