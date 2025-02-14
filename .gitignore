@@ -7,9 +7,7 @@ env/
 __pycache__
 __pycache__/*
 *.pyc
-alembic/versions/*.pyc
-alembic/versions/*.py~
-alembic/versions/__pycache__/
+*.py~
 
 # data files
 data

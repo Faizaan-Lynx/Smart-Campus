@@ -20,10 +20,18 @@ npm run dev
 <br>
 <br>
 
-To run the backend, first create a database named "tian" in PostgreSQL Database. Next, run the following python command in backend folder:
+To run the backend, Docker Desktop will be needed for easiest setup. First, fill out a .env file with all required information (from .env.copy).
 
-```python
-uvicorn main:app --reload
+Then, build the docker containers. This can take a while depending on internet speed.
+
+```bash
+docker-compose build
 ```
 
-Also ensure PyTorch with GPU capabilities has been installed onto the system/venv.
+Next, start the docker containers so that all services can run:
+
+```bash
+docker-compose up
+```
+
+With the default configuration, FastAPI requests will be accepted at localhost:8000
