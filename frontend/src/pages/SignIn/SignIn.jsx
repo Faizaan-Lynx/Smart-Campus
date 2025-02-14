@@ -8,24 +8,24 @@ import { loginSuccess } from "../../redux/actions/authActions";
 import { localurl } from "../../utils";
 
 const SignIn = () => {
-  const signUpButtonRef = useRef(null);
+  // const signUpButtonRef = useRef(null);
   const signInButtonRef = useRef(null);
   const containerRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
-    const signUpButton = signUpButtonRef.current;
+    // const signUpButton = signUpButtonRef.current;
     const signInButton = signInButtonRef.current;
     const container = containerRef.current;
 
-    const handleSignUpClick = () => {
-      userRef.current.value = "";
-      passRef.current.value = "";
-      fullNameRef.current.value = "";
-      passwordRef.current.value = "";
-      emailRef.current.value = "";
-      container.classList.add("right-panel-active");
-    };
+    // const handleSignUpClick = () => {
+    //   userRef.current.value = "";
+    //   passRef.current.value = "";
+    //   fullNameRef.current.value = "";
+    //   passwordRef.current.value = "";
+    //   emailRef.current.value = "";
+    //   container.classList.add("right-panel-active");
+    // };
 
     const handleSignInClick = () => {
       userRef.current.value = "";
@@ -36,12 +36,12 @@ const SignIn = () => {
       container.classList.remove("right-panel-active");
     };
 
-    signUpButton.addEventListener("click", handleSignUpClick);
+    // signUpButton.addEventListener("click", handleSignUpClick);
     signInButton.addEventListener("click", handleSignInClick);
 
     // Cleanup event listeners on component unmount
     return () => {
-      signUpButton.removeEventListener("click", handleSignUpClick);
+      // signUpButton.removeEventListener("click", handleSignUpClick);
       signInButton.removeEventListener("click", handleSignInClick);
     };
   }, []);
@@ -68,53 +68,109 @@ const SignIn = () => {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
+  // const handleLogin = async (e) => {
+  //   e.preventDefault();
+  //   if (userRef.current.value == "" || passRef.current.value == "") {
+  //     toast.error("Please fill out all fields!");
+  //     return;
+  //   }
+  //   console.log(userRef.current.value, passRef.current.value);
+  //   console.log("Login successful");
+  //   ///dispatch(loginSuccess(true));
+
+  //   //navigate(`/`);
+  //   try {
+  //     const response = await fetch(`${localurl}/login`, {
+  //       method: "POST",
+  //       headers: {
+  //         Accept: "application/json",
+  //         "Content-Type": "application/x-www-form-urlencoded",
+  //       },
+  //       body: `grant_type=&username=${userRef.current.value}&password=${passRef.current.value}&scope=&client_id=&client_secret=`,
+  //     });
+
+  //     if (!response.ok) {
+  //       // Parse the error response
+  //       const errorData = await response.json();
+  //       throw new Error(JSON.stringify(errorData));
+  //     }
+
+  //     console.log("Login Api called");
+
+  //     const userData = await response.json();
+  //     // Dispatch loginSuccess action with user data
+  //     //dispatch(loginSuccess(userData));
+  //     //navigate("/profile");
+  //   } catch (error) {
+  //     try {
+  //       const errorData = JSON.parse(error.message);
+  //       if (errorData.detail == "Inactive user") {
+  //         toast.dismiss();
+  //         toast.error("Account Disabled or inactive. Contact admin");
+  //       } else {
+  //         toast.dismiss();
+  //         toast.error("Invalid credentials");
+  //       }
+  //     } catch (parseError) {
+  //       toast.dismiss();
+  //       // If parsing fails, show a generic error message
+  //       toast.error("An unexpected error occurred");
+  //     }
+  //   }
+  // };
+  // const handleKeyDown = (event) => {
+  //   if (event.key === "Enter") {
+  //     handleLogin();
+  //   }
+  // };
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (userRef.current.value == "" || passRef.current.value == "") {
+    if (userRef.current.value === "" || passRef.current.value === "") {
       toast.error("Please fill out all fields!");
       return;
     }
-    try {
-      const response = await fetch(`${localurl}/login`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `grant_type=&username=${userRef.current.value}&password=${passRef.current.value}&scope=&client_id=&client_secret=`,
-      });
+    dispatch(loginSuccess("userData"));
 
-      if (!response.ok) {
-        // Parse the error response
-        const errorData = await response.json();
-        throw new Error(JSON.stringify(errorData));
-      }
+    navigate("/");
+    // const formData = new URLSearchParams();
+    // formData.append('username', userRef.current.value);
+    // formData.append('password', passRef.current.value);
 
-      const userData = await response.json();
-      // Dispatch loginSuccess action with user data
-      dispatch(loginSuccess(userData));
-      navigate("/profile");
-    } catch (error) {
-      try {
-        const errorData = JSON.parse(error.message);
-        if (errorData.detail == "Inactive user") {
-          toast.dismiss();
-          toast.error("Account Disabled or inactive. Contact admin");
-        } else {
-          toast.dismiss();
-          toast.error("Invalid credentials");
-        }
-      } catch (parseError) {
-        toast.dismiss();
-        // If parsing fails, show a generic error message
-        toast.error("An unexpected error occurred");
-      }
-    }
-  };
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
-      handleLogin();
-    }
+    // try {
+    //     const response = await fetch(`${localurl}/login`, {
+    //         method: "POST",
+    //         headers: {
+    //             "Content-Type": "application/x-www-form-urlencoded",
+    //         },
+    //         body: formData.toString(),
+    //     });
+
+    //     if (!response.ok) {
+    //         const errorData = await response.json();
+    //         throw new Error(JSON.stringify(errorData));
+    //     }
+
+    //     const userData = await response.json();
+    //     console.log(userData);
+    //     //Handle successful login
+    //     dispatch(loginSuccess(userData));
+    //     navigate("/");
+    // } catch (error) {
+    //     try {
+    //         const errorData = JSON.parse(error.message);
+    //         if (errorData.detail === "Inactive user") {
+    //             toast.dismiss();
+    //             toast.error("Account Disabled or inactive. Contact admin");
+    //         } else {
+    //             toast.dismiss();
+    //             toast.error("Invalid credentials");
+    //         }
+    //     } catch (parseError) {
+    //         toast.dismiss();
+    //         toast.error("An unexpected error occurred");
+    //     }
+    // }
   };
 
   const handleSignup = async (e) => {
@@ -128,33 +184,33 @@ const SignIn = () => {
       toast.error("Please fill out all fields!");
       return;
     }
-    try {
-      const response = await fetch(`${localurl}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          full_name: fullName,
-          password: password,
-        }),
-      });
+    // try {
+    //   const response = await fetch(`${localurl}/register`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({
+    //       email: email,
+    //       full_name: fullName,
+    //       password: password,
+    //     }),
+    //   });
 
-      if (response.ok) {
-        toast.success("Account created successfully! Redirecting to login");
-        // Navigate to login page after successful signup
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        toast.dismiss();
-        toast.error("Email already exists!");
-        console.error("Signup failed");
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
-    }
+    //   if (response.ok) {
+    //     toast.success("Account created successfully! Redirecting to login");
+    //     // Navigate to login page after successful signup
+    //     setTimeout(() => {
+    //       window.location.reload();
+    //     }, 2000);
+    //   } else {
+    //     toast.dismiss();
+    //     toast.error("Email already exists!");
+    //     console.error("Signup failed");
+    //   }
+    // } catch (error) {
+    //   console.error("Signup error:", error);
+    // }
   };
 
   return (
@@ -222,15 +278,15 @@ const SignIn = () => {
               </button>
             </div>
             <div className="overlay-panel overlay-right">
-              <h1>New User?</h1>
-              <p>Sign Up for Smarter Security Today!</p>
-              <button
+              <h1>Lynx-Infoec</h1>
+              {/* <p>Sign Up for Smarter Security Today!</p> */}
+              {/* <button
                 ref={signUpButtonRef}
                 className="ghost button_auth"
                 id="signUp"
               >
                 Sign Up
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
