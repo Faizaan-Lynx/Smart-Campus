@@ -1,5 +1,23 @@
 # environment
 .env
 .venv
+env/
 
+# python specific
+__pycache__
+__pycache__/*
+*.pyc
+alembic/versions/*.pyc
+alembic/versions/*.py~
+alembic/versions/__pycache__/
+
+# data files
 data
+*.jpg
+*.jpeg
+*.png
+*.mp4
+
+# deprecated - keeping local for reference
+backend-old
+backend-old/*
