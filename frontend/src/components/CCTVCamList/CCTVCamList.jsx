@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./CCTVCamList.css";
+// import "./CCTVCamList.css";
 import { localurl } from "../../utils";
 
 const CameraList = ({ cameras }) => {
