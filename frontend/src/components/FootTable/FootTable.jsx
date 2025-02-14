@@ -10,6 +10,7 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 import { color1 } from "../../utils";
+import FeedPopup from "./FeedPopUp";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -244,6 +245,8 @@ const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
   { Header: "Location (Camera ID)", accessor: "location" },
   { Header: "Status", accessor: "status" },
+  { Header: "Feed", accessor: "feed" },
+
 ];
 
 const sampleData = [
@@ -252,30 +255,111 @@ const sampleData = [
     timestamp: "2025-02-06 14:32:00",
     location: "Camera A1",
     status: "Acknowledged",
+    feed: "View Feed",
   },
   {
     id: 2,
     timestamp: "2025-02-06 14:35:45",
     location: "Camera B3",
     status: "Pending",
+    feed: "View Feed",
+
   },
   {
     id: 3,
     timestamp: "2025-02-06 14:40:10",
     location: "Camera C2",
     status: "Acknowledged",
+    feed: "View Feed",
+
   },
   {
     id: 4,
     timestamp: "2025-02-06 14:45:30",
     location: "Camera D4",
     status: "Pending",
+    feed: "View Feed",
+
+  },
+  {
+    id: 5,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  }, 
+  {
+    id: 6,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  },
+  {
+    id: 7,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
+  },
+  {
+    id: 8,
+    timestamp: "2025-02-06 14:45:30",
+    location: "Camera D4",
+    status: "Pending",
+    feed: "View Feed",
+
   },
 ];
 
+// const FeedPopup = ({ row, onClose }) => {
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [feedContent, setFeedContent] = useState("");
+
+//   // Simulate API Call
+//   React.useEffect(() => {
+//     setLoading(true);
+//     setError(null);
+
+//     setTimeout(() => {
+//       // Simulating API response
+//       if (Math.random() > 0.2) {
+//         setFeedContent(`Live feed data for ${row.location}`);
+//         setLoading(false);
+//       } else {
+//         setError("Failed to load feed. Please try again.");
+//         setLoading(false);
+//       }
+//     }, 2000);
+//   }, [row]);
+
+//   return (
+//     <div className="popup-overlay">
+//       <div className="popup-content">
+//         <h3>Camera Feed - {row.location}</h3>
+//         {loading ? (
+//           <div className="loader">Loading...</div>
+//         ) : error ? (
+//           <div className="error-message">{error}</div>
+//         ) : (
+//           <p>{feedContent}</p>
+//         )}
+//         <button className="close-button" onClick={onClose}>Close</button>
+//       </div>
+//     </div>
+//   );
+// };
+
+
+// Main Table Component
 const FootTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [selectedRow, setSelectedRow] = useState(null);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -286,13 +370,17 @@ const FootTable = () => {
     setPage(0);
   };
 
+  const handleFeedClick = (row) => {
+    setSelectedRow(row);
+  };
+
   return (
     <div className="foottable__div__main">
       <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
             <TableRow>
-              {columns.map((column, index) => (
+              {columns.map((column) => (
                 <StyledTableCell key={column.Header} align="left">
                   {column.Header}
                 </StyledTableCell>
@@ -307,7 +395,13 @@ const FootTable = () => {
                 <StyledTableRow key={row.id}>
                   {columns.map((column) => (
                     <StyledTableCell key={column.accessor} align="left">
-                      {row[column.accessor]}
+                      {column.accessor === "feed" ? (
+                        <button className="feed-button" onClick={() => handleFeedClick(row)}>
+                          {row[column.accessor]}
+                        </button>
+                      ) : (
+                        row[column.accessor]
+                      )}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
@@ -334,6 +428,8 @@ const FootTable = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
+
+      {selectedRow && <FeedPopup row={selectedRow} onClose={() => setSelectedRow(null)} />}
     </div>
   );
 };
