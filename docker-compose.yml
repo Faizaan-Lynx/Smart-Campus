@@ -1,25 +1,7 @@
 # for local development - do not use in production without modifications (ports exposed, etc.)
 services:
-  # FastAPI App
-  app:
-    build: .
-    container_name: fastapi_app
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      WATCHFILES_FORCE_POLLING: true
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app/backend
-    depends_on:
-      - db
-      - redis
-    networks:
-      - backend
-
   # PostgreSQL
-  db:
+  postgres-db:
     image: postgres:17
     container_name: postgres-db
     environment:
@@ -42,6 +24,24 @@ services:
     ports:
       - "6379:6379"
 
+  # FastAPI App
+  app:
+    build: .
+    container_name: fastapi_app
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      WATCHFILES_FORCE_POLLING: true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - postgres-db
+      - redis
+    networks:
+      - backend
+
   # Celery Worker
   celery:
     build: .
@@ -51,7 +51,7 @@ services:
       - .:/app
     depends_on:
       - redis
-      - db
+      - postgres-db
     networks:
       - backend
 
