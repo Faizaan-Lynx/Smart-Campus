@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.database import get_db
 from models.users import Users
-from api.users.security import create_access_token
-from api.users.schemas import UserLoginSchema, TokenSchema, UserCreateSchema
+from api.auth.security import create_access_token
+from api.auth.schemas import UserLoginSchema, TokenSchema, UserCreateSchema
 import bcrypt
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter()
 
-
-@router.post("/auth/login", response_model=TokenSchema)
+@router.post("/login", response_model=TokenSchema)
 def login(user_credentials: UserLoginSchema, db: Session = Depends(get_db)):
     """
     Authenticate user and return a JWT token.

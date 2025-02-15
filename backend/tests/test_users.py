@@ -18,7 +18,6 @@ def test_db():
         db.rollback()
         db.close()
 
-
 @pytest.fixture
 def test_user(test_db):
     """Creates a test user in the database after clearing previous data."""
