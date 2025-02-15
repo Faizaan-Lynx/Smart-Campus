@@ -9,3 +9,7 @@ sqlmodel
 sqlalchemy
 uvicorn[standard]
 ultralytics
+alembic
+jwt
+pytest 
+httpx 

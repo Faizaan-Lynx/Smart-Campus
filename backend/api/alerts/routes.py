@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.cameras import schemas, models
+from api.cameras import schemas
+from backend.models import cameras
 from core.database import get_db
 
 # Initialize FastAPI router with prefix "/cameras"
@@ -19,7 +20,7 @@ def create_camera(camera: schemas.CameraCreate, db: Session = Depends(get_db)):
     Returns:
         CameraResponse: The created camera record.
     """
-    db_camera = models.Camera(**camera.model_dump())
+    db_camera = cameras.Camera(**camera.model_dump())
     db.add(db_camera)
     db.commit()
     db.refresh(db_camera)
@@ -36,7 +37,7 @@ def get_cameras(db: Session = Depends(get_db)):
     Returns:
         List[CameraResponse]: A list of all stored cameras.
     """
-    return db.query(models.Camera).all()
+    return db.query(cameras.Camera).all()
 
 @router.get("/{camera_id}", response_model=schemas.CameraResponse)
 def get_camera(camera_id: int, db: Session = Depends(get_db)):
@@ -53,7 +54,7 @@ def get_camera(camera_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the camera is not found.
     """
-    camera = db.query(models.Camera).filter(models.Camera.id == camera_id).first()
+    camera = db.query(cameras.Camera).filter(cameras.Camera.id == camera_id).first()
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
     return camera
@@ -73,7 +74,7 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the camera is not found.
     """
-    camera = db.query(models.Camera).filter(models.Camera.id == camera_id).first()
+    camera = db.query(cameras.Camera).filter(cameras.Camera.id == camera_id).first()
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
 
