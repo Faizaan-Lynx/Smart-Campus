@@ -5,10 +5,9 @@ from models.cameras import Camera as CameraModel
 from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
 from core.database import get_db  # Assuming this is where the `get_db` function is located
 
-router = APIRouter()
+router = APIRouter(prefix="/camera", tags=["Cameras"])
 
-# Create a new camera
-@router.post("/cameras/", response_model=Camera, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Camera, status_code=status.HTTP_201_CREATED)
 def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
     db_camera = CameraModel(url=camera.url, location=camera.location, detection_threshold=camera.detection_threshold,
                             resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines)
@@ -18,21 +17,20 @@ def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
     return db_camera
 
 # Get all cameras
-@router.get("/cameras/", response_model=List[Camera])
+@router.get("/", response_model=List[Camera])
 def get_cameras(db: Session = Depends(get_db)):
     cameras = db.query(CameraModel).all()
     return cameras
 
-# Get a camera by ID
-@router.get("/cameras/{camera_id}", response_model=Camera)
+@router.get("/{camera_id}", response_model=Camera)
 def get_camera(camera_id: int, db: Session = Depends(get_db)):
     camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not camera:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
     return camera
 
-# Update a camera
-@router.put("/cameras/{camera_id}", response_model=Camera)
+# update a camera
+@router.put("/{camera_id}", response_model=Camera)
 def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(get_db)):
     db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not db_camera:
@@ -46,8 +44,7 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
     db.refresh(db_camera)
     return db_camera
 
-# Delete a camera
-@router.delete("/cameras/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not db_camera:

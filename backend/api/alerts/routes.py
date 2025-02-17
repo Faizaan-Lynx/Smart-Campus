@@ -4,7 +4,7 @@ from models.alerts import Alert
 from core.database import get_db
 from api.alerts.schemas import AlertCreate, AlertResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 @router.post("/", response_model=AlertResponse)
 def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db)):

@@ -6,7 +6,7 @@ from api.auth.security import create_access_token
 from api.auth.schemas import UserLoginSchema, TokenSchema, UserCreateSchema
 import bcrypt
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=TokenSchema)
 def login(user_credentials: UserLoginSchema, db: Session = Depends(get_db)):

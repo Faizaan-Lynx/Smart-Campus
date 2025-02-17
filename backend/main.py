@@ -35,9 +35,9 @@ def startup_db_check():
 # app.add_middleware(IPMiddleware)
 
 # Routes
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-app.include_router(cameras_router, prefix="/camera", tags=["Cameras"])
-app.include_router(alerts_router, prefix="/alerts", tags=["Alerts"])
+app.include_router(auth_router)
+app.include_router(cameras_router)
+app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
 
 @app.get("/")
