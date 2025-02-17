@@ -33,7 +33,6 @@ const CCTVPage = () => {
 
   return (
     <div className="cctv-container">
-      <h2 className="cctv-title">Live CCTV Feeds</h2>
 
       {/* CCTV Grid */}
       <div className="cctv-grid">
