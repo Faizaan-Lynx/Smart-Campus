@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 from config import settings
-from models.base import Base  # Import Base from your existing model logic
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -31,11 +30,12 @@ def test_db_connection():
 
 
 # Import models to ensure tables are created
-import models
+from models.base import Base
 
-# Create tables if they don’t exist
-Base.metadata.create_all(engine)
-logger.info("Database tables are ready.")
+logger.info(f"Tables detected by SQLAlchemy: {Base.metadata.tables.keys()}")
+Base.metadata.create_all(bind=engine)
+logger.info("✅ Database tables are ready.")
+
 
 # Test database connection on startup
 test_db_connection()

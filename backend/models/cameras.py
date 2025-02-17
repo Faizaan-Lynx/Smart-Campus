@@ -17,3 +17,6 @@ class Camera(Base):
     # Relationship with users
     from models.user_cameras import user_cameras  
     users = relationship("Users", secondary=user_cameras, back_populates="cameras")
+
+    # Relationship with alerts
+    alerts = relationship("Alert", back_populates="camera", cascade="all, delete-orphan")
