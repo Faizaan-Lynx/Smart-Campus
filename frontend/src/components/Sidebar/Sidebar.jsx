@@ -102,7 +102,8 @@ const Sidebar = () => {
               </a>
             </li> */}
             <li className="nav-link">
-              <a onClick={() => navigate("/site/1")}>
+              {/* <a onClick={() => navigate("/site/1")}> */}
+              <a onClick={() => navigate("/")}>
                 <i className="bx bx-sitemap icon"></i>
                 <span className="text nav-text">Dashboard</span>
               </a>
@@ -141,6 +142,15 @@ const Sidebar = () => {
                 <span className="text nav-text">Contact</span>
               </a>
             </li>
+
+            {/* CCTV */}
+            <li className="nav-link">
+              <a onClick={() => navigate("/CCTV")}>
+                <i className="bx bx-camera icon"></i>
+                <span className="text nav-text">CCTV</span>
+              </a>
+            </li>
+
             {/* {userInfo?.is_superuser && (*/}
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>

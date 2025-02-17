@@ -14,15 +14,15 @@ const Profile = () => {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const navigate = useNavigate();
   const columns = [
-    { Header: "Name", accessor: "name" },
+    { Header: "Camera ID", accessor: "name" },
     { Header: "Location", accessor: "location" },
-    { Header: "Contact", accessor: "contact" },
-    { Header: "In Camera", accessor: "inCamera" },
-    { Header: "Out Camera", accessor: "outCamera" },
-    { Header: "In url", accessor: "in_url_trunc" },
-    { Header: "Out url", accessor: "out_url_trunc" },
-    { Header: "Guests", accessor: "hosts" },
-    { Header: "Host", accessor: "host" },
+    { Header: "Status", accessor: "contact" },
+    { Header: "Last Activity", accessor: "inCamera" },
+    { Header: "Actions", accessor: "outCamera" },
+    // { Header: "In url", accessor: "in_url_trunc" },
+    // { Header: "Out url", accessor: "out_url_trunc" },
+    // { Header: "Guests", accessor: "hosts" },
+    // { Header: "Host", accessor: "host" },
   ];
 
   const createHref = (url) => {

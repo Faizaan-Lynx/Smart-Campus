@@ -164,8 +164,8 @@ const SitesTableProfile = ({ columns, data }) => {
                   {column.Header}
                 </StyledTableCell>
               ))}
-              <StyledTableCell align="left">Action</StyledTableCell>
-              <StyledTableCell align="left">Refresh URL</StyledTableCell>
+              {/* <StyledTableCell align="left">Action</StyledTableCell>
+              <StyledTableCell align="left">Refresh URL</StyledTableCell> */}
             </TableRow>
           </TableHead>
           <TableBody>

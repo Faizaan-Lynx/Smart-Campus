@@ -1,57 +1,72 @@
-.camera__feed__image {
-  display: block; /* Ensures the image behaves like a block element */
-  margin-top: 30px;
-  margin-left: auto; /* Centers the image horizontally */
-  margin-right: auto; /* Centers the image horizontally */
-  width: 50%; /* Reduce the size to about half */
-  height: auto; /* Maintain aspect ratio */
-  border-radius: 21px; /* Round the borders */
-  object-fit: contain; /* Ensures the image fits within its container without cropping */
+/* VideoFeed.css */
+.camera-feed-container {
+  display: flex;
+  gap: 20px;
+  /* background-color: #f9f7fc; Light purple background */
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 25px;
+  margin-right: 20.5px;
 }
 
-.main__video__feed {
-  margin-top: 40px; /* Adjusted margin-top */
-  padding-right: 8px; /* Adjusted padding-right */
-  width: 90%; /* Adjust container width to fit better */
-  max-width: 1200px; /* You can limit the width further if needed */
-  margin: 0 auto; /* Centers the container */
+.camera-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 500px;
+  background-color: #ffffff; /* White background */
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  scrollbar-width: thick;
+  scrollbar-color: #7272fa #ffffff; /* Purple thumb with white track */
 }
 
-.video__container {
-  background-color: #fff;
-  border-radius: 21px;
-  width: 100%; /* Make sure it spans the entire width of its parent */
-  height: 500px; /* Adjust the height of the container */
-  overflow: hidden; /* Hide any overflow from the image */
+.camera-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background-color: #e0e0ff; /* Light purple */
+  transition: background 0.3s;
 }
 
-.video__container img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Ensure the image covers the container and maintains aspect ratio */
-  border-radius: 21px;
-  transform: scale(1); /* Remove scaling to fit inside container */
+.camera-card.active,
+.camera-card:hover {
+  background-color: rgba(94, 55, 255, 0.85); /* Darker purple */
 }
 
-@media screen and (max-width: 1150px) {
-  .main__video__feed {
-    margin-top: 20px; /* Adjusted margin-top for smaller screens */
-  }
-
-  .video__container {
-    height: 400px; /* Adjust height for smaller screens */
-  }
-
-  .video__container img {
-    min-height: 400px; /* Adjust the image size for smaller screens */
-  }
+.camera-thumbnail {
+  width: 100px;
+  height: 75px;
+  object-fit: cover;
+  border-radius: 5px;
 }
 
-.video__container {
-  overflow: hidden;
+.video-feed {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ffffff; /* White */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
-.video__container > img {
-  /* Adjust the scale to reduce diagonal size */
-  transform: scale(1); /* Remove previous scaling and rely on object-fit */
+.cctv_camera_loader{
+  width: 50px;
+  height: 50px;
+  border: 5px solid  rgba(94, 55, 255, 0.85); /* Purple */
+  border-top: 5px solid #ffffff; /* White */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
