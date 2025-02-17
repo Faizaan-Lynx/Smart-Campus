@@ -39,7 +39,9 @@ const CameraList = ({ cameras }) => {
         {cameras.map((camera) => (
           <div
             key={camera.id}
-            className={`camera-card ${selectedCamera === camera.id ? "active" : ""}`}
+            className={`camera-card ${
+              selectedCamera === camera.id ? "active" : ""
+            }`}
             onClick={() => setSelectedCamera(camera.id)}
           >
             <p>{camera.name}</p>
@@ -50,7 +52,11 @@ const CameraList = ({ cameras }) => {
         {loading && <div className="cctv_camera_loader"></div>}
         <h1>{selectedCamera}</h1>
         <div className="video__container">
-          <img className={`camera__feed__image ${loading ? "hidden" : ""}`} id="camera_feed" alt="Video Stream" />
+          <img
+            className={`camera__feed__image ${loading ? "hidden" : ""}`}
+            id="camera_feed"
+            alt="Video Stream"
+          />
         </div>
       </div>
 
@@ -61,7 +67,11 @@ const CameraList = ({ cameras }) => {
             X
           </button>
           {loading && <div className="cctv_popup_loader"></div>}
-          <img className={`camera__feed__image ${loading ? "hidden" : ""}`} id="camera_feed_popup" alt="Video Stream" />
+          <img
+            className={`camera__feed__image ${loading ? "hidden" : ""}`}
+            id="camera_feed_popup"
+            alt="Video Stream"
+          />
         </div>
       </div>
     </div>
