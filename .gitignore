@@ -3,11 +3,15 @@
 .venv
 env/
 
+# Ignore Alembic migration cache
+alembic/versions/*.pyc
+alembic/versions/*.py~
+alembic/versions/__pycache__/
+
 # python specific
 __pycache__
 __pycache__/*
 *.pyc
-*.py~
 
 # data files
 data

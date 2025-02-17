@@ -1,7 +1,6 @@
-# app/alerts/models.py
 from sqlalchemy import Column, Integer, ForeignKey, Boolean, String
 from sqlalchemy.orm import relationship
-from core.database import Base
+from models.base import Base
 
 class Alert(Base):
     __tablename__ = 'alerts'

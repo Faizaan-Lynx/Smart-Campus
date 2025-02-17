@@ -22,7 +22,8 @@ class Settings:
     # JWT settings
     SECRET_KEY = os.getenv("SECRET_KEY") 
     ALGORITHM = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 300))  
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 3000))  
+    ADMIN_TOKEN_EXPIRE_MINUTES  = int(os.getenv("ADMIN_TOKEN_EXPIRE_MINUTES", 2000))  
     
     # SMTP settings for email notifications
     SMTP_SERVER = os.getenv("SMTP_SERVER")

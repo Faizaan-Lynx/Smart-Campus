@@ -1,109 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from api.cameras import schemas, models
-from core.database import get_db
+from models.cameras import Camera as CameraModel
+from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
+from core.database import get_db  # Assuming this is where the `get_db` function is located
 
 router = APIRouter()
 
-@router.post("/", response_model=schemas.CameraResponse)
-def create_camera(camera: schemas.CameraCreate, db: Session = Depends(get_db)):
-    """
-    Creates a new camera entry in the database.
-    
-    Args:
-        camera (CameraCreate): Camera details from request body.
-        db (Session): Database session dependency.
-    
-    Returns:
-        CameraResponse: The newly created camera object.
-    """
-    db_camera = models.Camera(**camera.model_dump())  # Convert Pydantic model to dictionary
-    db.add(db_camera)  # Add to the session
-    db.commit()  # Commit changes to the database
-    db.refresh(db_camera)  # Refresh to get the new ID
+# Create a new camera
+@router.post("/cameras/", response_model=Camera, status_code=status.HTTP_201_CREATED)
+def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
+    db_camera = CameraModel(url=camera.url, location=camera.location, detection_threshold=camera.detection_threshold,
+                            resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines)
+    db.add(db_camera)
+    db.commit()
+    db.refresh(db_camera)
     return db_camera
 
-@router.get("/", response_model=List[schemas.CameraResponse])
+# Get all cameras
+@router.get("/cameras/", response_model=List[Camera])
 def get_cameras(db: Session = Depends(get_db)):
-    """
-    Retrieves all cameras from the database.
-    
-    Args:
-        db (Session): Database session dependency.
-    
-    Returns:
-        List[CameraResponse]: A list of all stored cameras.
-    """
-    return db.query(models.Camera).all()
+    cameras = db.query(CameraModel).all()
+    return cameras
 
-@router.get("/{camera_id}", response_model=schemas.CameraResponse)
+# Get a camera by ID
+@router.get("/cameras/{camera_id}", response_model=Camera)
 def get_camera(camera_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves a specific camera by ID.
-    
-    Args:
-        camera_id (int): The ID of the camera to retrieve.
-        db (Session): Database session dependency.
-    
-    Returns:
-        CameraResponse: The camera object if found.
-    
-    Raises:
-        HTTPException: If the camera is not found.
-    """
-    camera = db.query(models.Camera).filter(models.Camera.id == camera_id).first()
+    camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not camera:
-        raise HTTPException(status_code=404, detail="Camera not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
     return camera
 
-@router.put("/{camera_id}", response_model=schemas.CameraResponse)
-def update_camera(camera_id: int, updated_data: schemas.CameraUpdate, db: Session = Depends(get_db)):
-    """
-    Updates an existing camera record.
-    
-    Args:
-        camera_id (int): The ID of the camera to update.
-        updated_data (CameraUpdate): The fields to update.
-        db (Session): Database session dependency.
-    
-    Returns:
-        CameraResponse: The updated camera object.
-    
-    Raises:
-        HTTPException: If the camera is not found.
-    """
-    camera = db.query(models.Camera).filter(models.Camera.id == camera_id).first()
-    if not camera:
-        raise HTTPException(status_code=404, detail="Camera not found")
-    
-    # Update only the fields provided in the request
-    for key, value in updated_data.model_dump(exclude_unset=True).items():
-        setattr(camera, key, value)
-    
-    db.commit()  # Save changes
-    db.refresh(camera)  # Refresh to get updated data
-    return camera
+# Update a camera
+@router.put("/cameras/{camera_id}", response_model=Camera)
+def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(get_db)):
+    db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
+    if not db_camera:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
 
-@router.delete("/{camera_id}")
+    # Update the camera fields
+    for key, value in camera.dict(exclude_unset=True).items():
+        setattr(db_camera, key, value)
+
+    db.commit()
+    db.refresh(db_camera)
+    return db_camera
+
+# Delete a camera
+@router.delete("/cameras/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_camera(camera_id: int, db: Session = Depends(get_db)):
-    """
-    Deletes a camera by ID.
+    db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
+    if not db_camera:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
     
-    Args:
-        camera_id (int): The ID of the camera to delete.
-        db (Session): Database session dependency.
-    
-    Returns:
-        dict: A success message if the camera is deleted.
-    
-    Raises:
-        HTTPException: If the camera is not found.
-    """
-    camera = db.query(models.Camera).filter(models.Camera.id == camera_id).first()
-    if not camera:
-        raise HTTPException(status_code=404, detail="Camera not found")
-    
-    db.delete(camera)  # Remove from database
-    db.commit()  # Commit deletion
-    return {"message": "Camera deleted successfully"}
+    db.delete(db_camera)
+    db.commit()
+    return None

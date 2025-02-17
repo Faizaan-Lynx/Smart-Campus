@@ -1,7 +1,7 @@
 # app/auth/user_cameras.py
 from sqlalchemy import Table, Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import Base
+from models.base import Base
 
 user_cameras = Table(
     "user_cameras",
