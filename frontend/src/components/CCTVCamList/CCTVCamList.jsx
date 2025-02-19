@@ -6,7 +6,6 @@ const CameraList = ({ cameras }) => {
   const [selectedCamera, setSelectedCamera] = useState(cameras[0]?.id || "");
   const [loading, setLoading] = useState(false);
   const [popupActive, setPopupActive] = useState(false);
-  const [selectedUrl, setSelectedUrl] = useState(cameras[0]?.url || "");
 
   useEffect(() => {
     console.log(cameras);
@@ -27,14 +26,6 @@ const CameraList = ({ cameras }) => {
 
   const youtubeEmbedUrl = getYouTubeEmbedUrl(selectedUrl);
   const isYouTube = !!youtubeEmbedUrl;
-      const img = document.getElementById("camera_feed");
-      img.src = `${localurl}/intrusion_feed/${selectedCamera}`;
-      setLoading(true);
-
-      img.onload = () => setLoading(false);
-      img.onerror = () => setLoading(false);
-    }
-  }, [selectedCamera]);
 
   const handleImageClick = () => {
     setPopupActive(true);
@@ -112,7 +103,7 @@ const CameraList = ({ cameras }) => {
         </div>
       </div>
     </div>
+    </div>
   );
 };
-
 export default CameraList;
