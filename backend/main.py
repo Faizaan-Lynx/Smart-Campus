@@ -2,8 +2,10 @@ from fastapi import FastAPI
 import logging
 
 # Middleware
-from middleware.JWTAuth import JWTAuthenticationMiddleware  
-from middleware.ip_middleware import IPMiddleware  
+# from middleware.JWTAuth import JWTAuthenticationMiddleware  
+# from middleware.ip_middleware import IPMiddleware  
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # DB
 from core.database import test_db_connection  
@@ -33,6 +35,14 @@ def startup_db_check():
 # app.add_middleware(JWTAuthenticationMiddleware)
 # IP middleware
 # app.add_middleware(IPMiddleware)
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change to specific frontend URLs for better security
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Routes
 app.include_router(auth_router)

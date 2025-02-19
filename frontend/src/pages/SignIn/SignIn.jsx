@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
 import { loginSuccess } from "../../redux/actions/authActions";
 import { localurl } from "../../utils";
+import axios from "axios";
 
 const SignIn = () => {
   // const signUpButtonRef = useRef(null);
@@ -126,52 +127,53 @@ const SignIn = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
     if (userRef.current.value === "" || passRef.current.value === "") {
-      toast.error("Please fill out all fields!");
-      return;
+        toast.error("Please fill out all fields!");
+        return;
     }
-    dispatch(loginSuccess("userData"));
 
-    navigate("/");
-    // const formData = new URLSearchParams();
-    // formData.append('username', userRef.current.value);
-    // formData.append('password', passRef.current.value);
+    const formData = {
+        username: userRef.current.value,
+        password: passRef.current.value,
+    };
 
-    // try {
-    //     const response = await fetch(`${localurl}/login`, {
-    //         method: "POST",
-    //         headers: {
-    //             "Content-Type": "application/x-www-form-urlencoded",
-    //         },
-    //         body: formData.toString(),
-    //     });
+    try {
+        const response = await axios.post(`${localurl}/auth/login`, formData, {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
-    //     if (!response.ok) {
-    //         const errorData = await response.json();
-    //         throw new Error(JSON.stringify(errorData));
-    //     }
+        const { access_token, token_type } = response.data;
 
-    //     const userData = await response.json();
-    //     console.log(userData);
-    //     //Handle successful login
-    //     dispatch(loginSuccess(userData));
-    //     navigate("/");
-    // } catch (error) {
-    //     try {
-    //         const errorData = JSON.parse(error.message);
-    //         if (errorData.detail === "Inactive user") {
-    //             toast.dismiss();
-    //             toast.error("Account Disabled or inactive. Contact admin");
-    //         } else {
-    //             toast.dismiss();
-    //             toast.error("Invalid credentials");
-    //         }
-    //     } catch (parseError) {
-    //         toast.dismiss();
-    //         toast.error("An unexpected error occurred");
-    //     }
-    // }
-  };
+        // Store token in localStorage
+        localStorage.setItem("token", access_token);
+
+        // Dispatch user authentication success
+        dispatch(loginSuccess({ access_token, token_type }));
+
+        toast.success("Login successful!");
+        navigate("/");
+    } catch (error) {
+        if (error.response) {
+            // Server responded with an error
+            const errorData = error.response.data;
+            if (errorData.detail === "Inactive user") {
+                toast.dismiss();
+                toast.error("Account Disabled or inactive. Contact admin.");
+            } else {
+                toast.dismiss();
+                toast.error("Invalid credentials.");
+            }
+        } else {
+            // Network error or other issues
+            toast.dismiss();
+            toast.error("An unexpected error occurred.");
+        }
+    }
+};
+
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -278,7 +280,7 @@ const SignIn = () => {
               </button>
             </div>
             <div className="overlay-panel overlay-right">
-              <h1>Lynx-Infoec</h1>
+              <h1>Lynx-Infosec</h1>
               {/* <p>Sign Up for Smarter Security Today!</p> */}
               {/* <button
                 ref={signUpButtonRef}
