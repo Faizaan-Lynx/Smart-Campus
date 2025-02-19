@@ -9,24 +9,22 @@ import "../GenderRatioRow/GenderRatiorow.css";
 import RepeatRatio from "../RepeatRatio/RepeatRatio";
 import CameraList from "../CCTVCamList/CCTVCamList";
 
-const FootFallRow = ({ visitData, siteId }) => {
-  const [cameras, setCameras] = useState([]);
-  const [loading, setLoading] = useState(true);
+const FootFallRow = ({ visitData, siteId, cameras, selectedCamera ,setSelectedCamera}) => {
+  const [loading, setLoading] = useState(false);
+  // useEffect(() => {
+  //   const fetchCameras = async () => {
+  //     try {
+  //       const response = await axios.get("http://127.0.0.1:8000/camera/");
+  //       setCameras(response.data);
+  //     } catch (error) {
+  //       toast.error("Failed to fetch camera list. Please try again later.");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-  useEffect(() => {
-    const fetchCameras = async () => {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/camera/");
-        setCameras(response.data);
-      } catch (error) {
-        toast.error("Failed to fetch camera list. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCameras();
-  }, []);
+  //   fetchCameras();
+  // }, []);
 
   return (
     <div className="app__container__row">
@@ -46,7 +44,7 @@ const FootFallRow = ({ visitData, siteId }) => {
         {loading ? (
           <p>Loading cameras...</p>
         ) : (
-          <CameraList cameras={cameras} />
+          <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={setSelectedCamera} />
         )}
       </div>
     </div>

@@ -2,21 +2,20 @@ import React, { useState, useEffect } from "react";
 import { localurl } from "../../utils";
 import "./CCTVCamList.css";
 
-const CameraList = ({ cameras }) => {
-  const [selectedCamera, setSelectedCamera] = useState(cameras[0]?.id || "");
+const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   const [loading, setLoading] = useState(false);
   const [popupActive, setPopupActive] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState(cameras[0]?.url || "");
 
-
+  console.log("Cameras: ", );
   useEffect(() => {
-    console.log(cameras);
+    console.log("Selected Camera:", selectedCamera);
     if (selectedCamera) {
       const camera = cameras.find((cam) => cam.id === selectedCamera);
       setSelectedUrl(camera?.url || "");
       setLoading(false);
     }
-  }, [selectedCamera, cameras]);
+  }, [selectedCamera, cameras]); // Reacts to changes in selectedCamera
 
   // Function to extract YouTube video ID and return the correct embed URL
   const getYouTubeEmbedUrl = (url) => {
@@ -31,7 +30,7 @@ const CameraList = ({ cameras }) => {
 
   const handleImageClick = () => {
     setPopupActive(true);
-    setLoading(true); // Ensure loader appears before fetching image
+    setLoading(false); // Ensure loader appears before fetching image
     const popupImg = document.getElementById("camera_feed_popup");
     // popupImg.src = `${localurl}/intrusion_feed/${selectedCamera}`;
     

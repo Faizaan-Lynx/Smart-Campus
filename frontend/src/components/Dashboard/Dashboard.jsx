@@ -11,7 +11,7 @@ import axios from "axios";
 import { filterVisits, localurl } from "../../utils";
 import { useParams } from "react-router-dom";
 // import toast, { Toaster } from "react-hot-toast";
-import {toast, ToastContainer} from "react-toastify"
+import { toast, ToastContainer } from "react-toastify";
 import FootFall from "../FootFall/FootFall";
 
 const Dashboard = () => {
@@ -21,65 +21,122 @@ const Dashboard = () => {
   const [visitData, setVisitData] = useState();
   const [visitData1, setVisitData1] = useState();
 
+  const [loading, setLoading] = useState(false);
+
+  const [popupActive, setPopupActive] = useState(false);
+
   const { siteId } = useParams();
 
+  const [cameras, setCameras] = useState([]);
+
+  const [selectedCamera, setSelectedCamera] = useState(null);
   const [alerts, setAlerts] = useState([]);
-const [alertUrl, setAlertUrl] = useState(null);
-const [isFirstLoad, setIsFirstLoad] = useState(true); // Track initial load
+  const [alertUrl, setAlertUrl] = useState(null);
+  const [isFirstLoad, setIsFirstLoad] = useState(true); // Track initial load
 
-useEffect(() => {
-  const fetchAlerts = async () => {
-    try {
-      const response = await axios.get("http://127.0.0.1:8000/alerts/", {
-        headers: {
-          accept: "application/json",
-        },
-      });
-
-      if (response.data && response.data.length > 0) {
-        const newAlerts = response.data.filter(
-          (alert) => !alerts.some((a) => a.id === alert.id)
-        );
-
-        // Show toast messages ONLY after the first load
-        if (!isFirstLoad) {
-          newAlerts.forEach((alert) => {
-            toast(`Alert at Camera ${alert.camera_id}`, {
-              duration: 5000,
-              position: "top-right",
-              style: {
-                background: "#333",
-                color: "white",
-                cursor: "pointer",
-              },
-              onClick: () => setAlertUrl(alert.file_path),
-            });
-          });
-        }
-
-        // Update state with new alerts
-        if (newAlerts.length > 0) {
-          setAlerts((prev) => [...prev, ...newAlerts]);
-        }
-      }
-
-      // Mark that initial load is done after first API call
-      if (isFirstLoad) {
-        setIsFirstLoad(false);
-      }
-    } catch (error) {
-      console.error("Error fetching alerts:", error);
-    }
+  const handleClosePopup = () => {
+    setPopupActive(false);
+    setLoading(false);
   };
 
-  // Fetch alerts initially
-  fetchAlerts();
+  const handleToastClick = (url, cameraId) => {
+    // Function to extract YouTube video ID and return the correct embed URL
+    const getYouTubeEmbedUrl = (url) => {
+      const videoIdMatch = url.match(
+        /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
+      );
+      return videoIdMatch
+        ? `https://www.youtube.com/embed/${videoIdMatch[1]}`
+        : null;
+    };
 
-  // Set interval to fetch alerts every 5 seconds
-  const interval = setInterval(fetchAlerts, 5000);
+    const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
+    setAlertUrl(youtubeEmbedUrl);
+    setSelectedCamera(cameraId); // Update selected camera
+    console.log("Selected Camera: ", cameraId);
+    setPopupActive(true);
+    setLoading(true);
+  };
 
-  return () => clearInterval(interval);
-}, [alerts, isFirstLoad]); // Include isFirstLoad in dependency array
+  useEffect(() => {
+    const fetchCameras = async () => {
+      try {
+        const response = await axios.get("http://127.0.0.1:8000/camera/");
+        setCameras(response.data);
+        setSelectedCamera(response.data[0].id); // Set first camera as selected
+      } catch (error) {
+        toast.error("Failed to fetch camera list. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCameras();
+  }, []);
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const response = await axios.get("http://127.0.0.1:8000/alerts/", {
+          headers: {
+            accept: "application/json",
+          },
+        });
+
+        if (response.data && response.data.length > 0) {
+          const newAlerts = response.data.filter(
+            (alert) => !alerts.some((a) => a.id === alert.id)
+          );
+
+          // Show toast messages ONLY after the first load
+          if (!isFirstLoad) {
+            newAlerts.forEach((alert) => {
+              toast(`Alert at Camera ${alert.camera_id}`, {
+                duration: 5000,
+                position: "top-right",
+                style: {
+                  background: "#333",
+                  color: "white",
+                  cursor: "pointer",
+                },
+                onClick: () =>
+                  handleToastClick(alert.file_path, alert.camera_id),
+              });
+            });
+          }
+
+          // Update state with new alerts
+          if (newAlerts.length > 0) {
+            setAlerts((prev) => [...prev, ...newAlerts]);
+          }
+        }
+
+        // Mark that initial load is done after first API call
+        if (isFirstLoad) {
+          setIsFirstLoad(false);
+        }
+      } catch (error) {
+        console.error("Error fetching alerts:", error);
+      }
+    };
+
+    // Fetch alerts initially
+    fetchAlerts();
+
+    // Set interval to fetch alerts every 5 seconds
+    const interval = setInterval(fetchAlerts, 5000);
+
+    return () => clearInterval(interval);
+  }, [alerts, isFirstLoad]); // Include isFirstLoad in dependency array
+
+  const getYouTubeEmbedUrl = (url) => {
+    const videoIdMatch = url.match(
+      /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
+    );
+    return videoIdMatch
+      ? `https://www.youtube.com/embed/${videoIdMatch[1]}`
+      : null;
+  };
 
   useEffect(() => {
     if (visitData1) {
@@ -114,7 +171,7 @@ useEffect(() => {
       if (visitData) setVisitData((prevData) => [newData, ...prevData]);
       //toast.dismiss();
       if (parsedData.time_out != null) {
-       // toast.error("A person left");
+        // toast.error("A person left");
       } else {
         //Wtoast.success("New visit!");
       }
@@ -135,29 +192,23 @@ useEffect(() => {
   return (
     <div className="dashboard__main">
       <ToastContainer
-  theme="light"
-  position="top-right"
-  className="toast-container"
-  toastClassName="toast-message"
-/>
+        onClick={handleToastClick}
+        theme="light"
+        position="top-right"
+        className="toast-container"
+        toastClassName="toast-message"
+      />
 
-      {alertUrl && (
-        <iframe
-          src={alertUrl}
-          style={{ width: "100%", height: "500px", border: "none", marginTop: "20px" }}
-          title="Alert"
-        />
-      )}
       <div className="dashboard__content">
         <div className="dashboard__text__main">
           <div className="dashboard__text">
             {/* <p className="overview__text">{visitData1?.name}'s Overview</p> */}
             <p className="dash__text">Main Dashboard</p>
-          {/* </div>
+            {/* </div>
           <div className="top_heading_right select-dropdown">
             <select value={selectedOptionRedux} onChange={handleOptionChange}> */}
-              {/* <option value="last12Hours">Last 12 Hours</option> */}
-              {/* <option value="today">Today</option>
+            {/* <option value="last12Hours">Last 12 Hours</option> */}
+            {/* <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
               <option value="last7Days">Last 7 Days</option>
               <option value="lastMonth">Last Month</option>
@@ -166,14 +217,35 @@ useEffect(() => {
           </div>
         </div>
         <BoxRow alerts={alerts} />
-        <FootFallRow visitData={visitData} siteId={siteId} />
+        <FootFallRow
+          visitData={visitData}
+          siteId={siteId}
+          cameras={cameras}
+          selectedCamera={selectedCamera} // Pass selectedCamera
+          setSelectedCamera={setSelectedCamera} // Pass setter function
+        />{" "}
         {/* Line Graph Added Below the Video Row */}
         {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
         <FootTable visitData={visitData} />
       </div>
-      
+      {/* Popup Modal */}
+      <div className={`cctv-popup-container ${popupActive ? "active" : ""}`}>
+        <div className="cctv-popup-content">
+          <button className="cctv-popup-close-btn" onClick={handleClosePopup}>
+            X
+          </button>
+          {loading && <div className="cctv_popup_loader"></div>}
+          <iframe
+            className="camera__feed_iframe"
+            src={alertUrl}
+            title="YouTube Video Stream"
+            frameBorder="0"
+            allowFullScreen
+          ></iframe>
+        </div>
+      </div>
     </div>
   );
 };
