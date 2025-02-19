@@ -1,0 +1,167 @@
+/* VideoFeed.css */
+.camera-feed-container {
+    display: flex;
+    gap: 20px;
+    /* background-color: #f9f7fc; Light purple background */
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 25px;
+    margin-right: 20.5px;
+  }
+  
+  .camera-list {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 500px;
+    background-color: #ffffff; /* White background */
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    scrollbar-width: thick;
+    scrollbar-color: #7272fa #ffffff; /* Purple thumb with white track */
+  }
+  
+  .camera-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #e0e0ff; /* Light purple */
+    transition: background 0.3s;
+  }
+  
+  .camera-card.active,
+  .camera-card:hover {
+    background-color: rgba(94, 55, 255, 0.85); /* Darker purple */
+  }
+  
+  .camera-thumbnail {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 5px;
+  }
+  
+  .video-feed {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ffffff; /* White */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .cctv_camera_loader{
+    width: 50px;
+    height: 50px;
+    border: 5px solid  rgba(94, 55, 255, 0.85); /* Purple */
+    border-top: 5px solid #ffffff; /* White */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+/* Popup Modal Container */
+.cctv-popup-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    visibility: hidden;
+    padding: 20px; /* Prevent content from touching edges */
+}
+
+.cctv-popup-container.active {
+    visibility: visible;
+}
+
+/* Popup Content */
+.cctv-popup-content {
+    position: relative;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 90%;
+    max-height: 90%;
+    min-width: 400px; /* Ensures popup doesn't get too small */
+    min-height: 300px;
+    overflow: hidden;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Close Button */
+.cctv-popup-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 18px;
+    background-color: rgba(94, 55, 255, 0.85);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.cctv-popup-close-btn:hover {
+    background-color: darkpurple;
+}
+
+/* Loader inside Popup */
+.cctv_popup_loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid rgba(94, 55, 255, 0.85);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    position: absolute;
+    top: 43%;
+    left: 45%;
+}
+
+/* Ensure image fits properly in the popup */
+.cctv-popup-content img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+    object-fit: contain;
+}
+
+/* Ensure minimum size for better visibility */
+.cctv-popup-content .camera__feed__image {
+    min-width: 350px;
+    min-height: 250px;
+}
+
+/* Hide the image while loading */
+.hidden {
+    display: none;
+}
+
+/* Loader Animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); } 
+}
