@@ -1,6 +1,15 @@
 # Smart-Campus
 The Smart-Campus system developed by Lynx InfoSec
 
+Before building/pulling, ensure the following two commands have been run:
+
+```bash
+git config --global core.autocrlf false
+git config --global core.eol lf
+```
+
+This will make line-endings match those for unix systems, if using docker.
+
 <br>
 
 ## Deployment
@@ -34,4 +43,4 @@ Next, start the docker containers so that all services can run:
 docker-compose up
 ```
 
-With the default configuration, FastAPI requests will be accepted at localhost:8000
+With the default configuration, FastAPI requests will be accepted at localhost:8000.
