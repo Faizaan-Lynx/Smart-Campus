@@ -26,14 +26,14 @@ const Dashboard = () => {
   const [popupActive, setPopupActive] = useState(false);
 
   const { siteId } = useParams();
-// Camera Related Variables
+  // Camera Related Variables
   const [cameras, setCameras] = useState([]);
 
   const [selectedCamera, setSelectedCamera] = useState(null);
   // Alert Related Variables
   const [alerts, setAlerts] = useState([]);
   const [alertUrl, setAlertUrl] = useState(null);
-  const [isFirstLoad, setIsFirstLoad] = useState(true); 
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   const handleClosePopup = () => {
     setPopupActive(false);
@@ -41,7 +41,6 @@ const Dashboard = () => {
   };
 
   const handleToastClick = (url, cameraId) => {
-    
     const getYouTubeEmbedUrl = (url) => {
       const videoIdMatch = url.match(
         /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
