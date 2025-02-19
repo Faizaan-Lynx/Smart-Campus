@@ -141,24 +141,43 @@
     left: 45%;
 }
 
-/* Ensure image fits properly in the popup */
-.cctv-popup-content img {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 10px;
-    object-fit: contain;
+/* Ensure the iframe fits properly in the video container */
+.camera__feed_iframe {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
-/* Ensure minimum size for better visibility */
-.cctv-popup-content .camera__feed__image {
-    min-width: 350px;
-    min-height: 250px;
+/* Adjust iframe in popup */
+.cctv-popup-content .camera__feed_iframe {
+  width: 100%;
+  height: 100%;
+  min-width: 400px;
+  min-height: 300px;
 }
 
-/* Hide the image while loading */
+/* Ensure iframe inside video feed container */
+.video-feed iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Ensures iframe scales properly inside the popup */
+.cctv-popup-container iframe {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+}
+
+/* Keep the hidden class for preloading */
 .hidden {
-    display: none;
+  display: none;
 }
+
 
 /* Loader Animation */
 @keyframes spin {

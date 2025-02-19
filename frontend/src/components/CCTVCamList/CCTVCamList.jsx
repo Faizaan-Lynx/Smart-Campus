@@ -6,6 +6,8 @@ const CameraList = ({ cameras }) => {
   const [selectedCamera, setSelectedCamera] = useState(cameras[0]?.id || "");
   const [loading, setLoading] = useState(false);
   const [popupActive, setPopupActive] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState(cameras[0]?.url || "");
+
 
   useEffect(() => {
     console.log(cameras);
@@ -31,7 +33,8 @@ const CameraList = ({ cameras }) => {
     setPopupActive(true);
     setLoading(true); // Ensure loader appears before fetching image
     const popupImg = document.getElementById("camera_feed_popup");
-    popupImg.src = `${localurl}/intrusion_feed/${selectedCamera}`;
+    // popupImg.src = `${localurl}/intrusion_feed/${selectedCamera}`;
+    
 
     popupImg.onload = () => setLoading(false);
     popupImg.onerror = () => setLoading(false);
@@ -58,18 +61,17 @@ const CameraList = ({ cameras }) => {
         ))}
       </div>
 
-      <div className="video-feed">
       <div className="video-feed" onClick={handleImageClick}>
         {loading && <div className="cctv_camera_loader"></div>}
-        <h1>{selectedCamera}</h1>
 
         {isYouTube ? (
           <iframe
-            className="camera__feed_iframe"
+            className="camera__feed__image"
             src={youtubeEmbedUrl}
             title="YouTube Video Stream"
             frameBorder="0"
             allowFullScreen
+            alt="Video Stream"
           ></iframe>
         ) : (
           <img
@@ -79,13 +81,13 @@ const CameraList = ({ cameras }) => {
             alt="Video Stream"
           />
         )}
-        <div className="video__container">
+        {/* <div className="video__container">
           <img
             className={`camera__feed__image ${loading ? "hidden" : ""}`}
             id="camera_feed"
             alt="Video Stream"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Popup Modal */}
@@ -95,14 +97,15 @@ const CameraList = ({ cameras }) => {
             X
           </button>
           {loading && <div className="cctv_popup_loader"></div>}
-          <img
-            className={`camera__feed__image ${loading ? "hidden" : ""}`}
-            id="camera_feed_popup"
-            alt="Video Stream"
-          />
+          <iframe
+            className="camera__feed_iframe"
+            src={youtubeEmbedUrl}
+            title="YouTube Video Stream"
+            frameBorder="0"
+            allowFullScreen
+          ></iframe>
         </div>
       </div>
-    </div>
     </div>
   );
 };
