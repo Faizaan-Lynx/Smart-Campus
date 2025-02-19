@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./BoxRow.css";
 import assets from "../../assets";
 
-const BoxRow = ({ visitData }) => {
+const BoxRow = ({ alerts }) => {
   const [stats, setStats] = useState({
     visits: 4,
     groups: 1,
@@ -10,19 +10,19 @@ const BoxRow = ({ visitData }) => {
     females: 4,
   });
 
-  useEffect(() => {
-    if (visitData) {
-      const visits = visitData.length;
-      const groups = visitData.filter((visit) => visit.is_group).length;
-      const newVisitors = visitData.filter((visit) => visit.is_new).length;
-      const females = visitData.filter((visit) => visit.is_female).length;
+  // useEffect(() => {
+  //   if (visitData) {
+  //     const visits = visitData.length;
+  //     const groups = visitData.filter((visit) => visit.is_group).length;
+  //     const newVisitors = visitData.filter((visit) => visit.is_new).length;
+  //     const females = visitData.filter((visit) => visit.is_female).length;
 
-      setStats({ visits, groups, new: newVisitors, females });
-    }
-  }, [visitData]);
+  //     setStats({ visits, groups, new: newVisitors, females });
+  //   }
+  // }, [visitData]);
 
   const statsArray = [
-    { label: "Total Alerts", value: stats.visits },
+    { label: "Total Alerts", value: alerts.length},
     { label: "Last 24 Hours", value: stats.groups },
     // { label: "Visits", value: stats.visits },
     // { label: "Groups", value: stats.groups },

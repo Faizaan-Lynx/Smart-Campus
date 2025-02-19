@@ -10,7 +10,8 @@ import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { filterVisits, localurl } from "../../utils";
 import { useParams } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+// import toast, { Toaster } from "react-hot-toast";
+import {toast, ToastContainer} from "react-toastify"
 import FootFall from "../FootFall/FootFall";
 
 const Dashboard = () => {
@@ -22,26 +23,63 @@ const Dashboard = () => {
 
   const { siteId } = useParams();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${localurl}/dashboard/sites/${siteId}`,
-          {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        setVisitData1(response.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
+  const [alerts, setAlerts] = useState([]);
+const [alertUrl, setAlertUrl] = useState(null);
+const [isFirstLoad, setIsFirstLoad] = useState(true); // Track initial load
 
-    fetchData();
-  }, []);
+useEffect(() => {
+  const fetchAlerts = async () => {
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/alerts/", {
+        headers: {
+          accept: "application/json",
+        },
+      });
+
+      if (response.data && response.data.length > 0) {
+        const newAlerts = response.data.filter(
+          (alert) => !alerts.some((a) => a.id === alert.id)
+        );
+
+        // Show toast messages ONLY after the first load
+        if (!isFirstLoad) {
+          newAlerts.forEach((alert) => {
+            toast(`Alert at Camera ${alert.camera_id}`, {
+              duration: 5000,
+              position: "top-right",
+              style: {
+                background: "#333",
+                color: "white",
+                cursor: "pointer",
+              },
+              onClick: () => setAlertUrl(alert.file_path),
+            });
+          });
+        }
+
+        // Update state with new alerts
+        if (newAlerts.length > 0) {
+          setAlerts((prev) => [...prev, ...newAlerts]);
+        }
+      }
+
+      // Mark that initial load is done after first API call
+      if (isFirstLoad) {
+        setIsFirstLoad(false);
+      }
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+    }
+  };
+
+  // Fetch alerts initially
+  fetchAlerts();
+
+  // Set interval to fetch alerts every 5 seconds
+  const interval = setInterval(fetchAlerts, 5000);
+
+  return () => clearInterval(interval);
+}, [alerts, isFirstLoad]); // Include isFirstLoad in dependency array
 
   useEffect(() => {
     if (visitData1) {
@@ -74,11 +112,11 @@ const Dashboard = () => {
         time_out: parsedData.time_out,
       };
       if (visitData) setVisitData((prevData) => [newData, ...prevData]);
-      toast.dismiss();
+      //toast.dismiss();
       if (parsedData.time_out != null) {
-        toast.error("A person left");
+       // toast.error("A person left");
       } else {
-        toast.success("New visit!");
+        //Wtoast.success("New visit!");
       }
     };
 
@@ -96,6 +134,20 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard__main">
+      <ToastContainer
+  theme="light"
+  position="top-right"
+  className="toast-container"
+  toastClassName="toast-message"
+/>
+
+      {alertUrl && (
+        <iframe
+          src={alertUrl}
+          style={{ width: "100%", height: "500px", border: "none", marginTop: "20px" }}
+          title="Alert"
+        />
+      )}
       <div className="dashboard__content">
         <div className="dashboard__text__main">
           <div className="dashboard__text">
@@ -113,7 +165,7 @@ const Dashboard = () => {
             </select> */}
           </div>
         </div>
-        <BoxRow visitData={visitData} />
+        <BoxRow alerts={alerts} />
         <FootFallRow visitData={visitData} siteId={siteId} />
         {/* Line Graph Added Below the Video Row */}
         {/* <FootFall visitData={visitData} /> */}
@@ -121,7 +173,7 @@ const Dashboard = () => {
         {/* <EngagementRow visitData={visitData} /> */}
         <FootTable visitData={visitData} />
       </div>
-      <Toaster />
+      
     </div>
   );
 };
