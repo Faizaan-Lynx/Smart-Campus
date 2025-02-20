@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./FootTable.css";
 import { styled } from "@mui/material/styles";
 import Table from "@mui/material/Table";
@@ -15,8 +16,6 @@ import FeedPopup from "./FeedPopUp";
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     fontSize: "20px",
-    // backgroundColor: "#367f2b",
-    // backgroundColor: "#9F9FED",
     backgroundColor: color1,
     color: theme.palette.common.white,
     fontWeight: "bold",
@@ -30,17 +29,13 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
     backgroundColor: "#fff",
   },
-
   "&:nth-of-type(odd)": {
     backgroundColor: theme.palette.action.hover,
   },
-  // hide last border
   "&:last-child td, &:last-child th": {
     border: 0,
   },
 }));
-
-
 
 const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
@@ -49,7 +44,7 @@ const columns = [
   { Header: "Feed", accessor: "file_path" },
 ];
 
-const FootTable = ({ alerts }) => {
+const FootTable = ({ alerts, setAlerts }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedFeed, setSelectedFeed] = useState(null);
@@ -67,6 +62,35 @@ const FootTable = ({ alerts }) => {
     console.log("Feed Clicked", filePath);
     setSelectedFeed(filePath);
   };
+
+  const handleAcknowledge = async (alertId) => {
+    try {
+      await axios.patch(`http://127.0.0.1:8000/alerts/${alertId}/acknowledge`, {
+        is_acknowledged: true,
+      });
+
+      // Update the alert list locally
+      setAlerts((prevAlerts) =>
+        prevAlerts.map((alert) =>
+          alert.id === alertId ? { ...alert, is_acknowledged: true } : alert
+        )
+      );
+    } catch (error) {
+      console.error("Failed to acknowledge alert:", error);
+    }
+  };
+
+  const handleDelete = async (alertId) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/alerts/${alertId}`);
+  
+      // Update the alert list locally
+      setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== alertId));
+    } catch (error) {
+      console.error("Failed to delete alert:", error);
+    }
+  };
+  
 
   return (
     <div className="foottable__div__main">
@@ -90,23 +114,38 @@ const FootTable = ({ alerts }) => {
                   {columns.map((column) => (
                     <StyledTableCell key={column.accessor} align="left">
                       {column.accessor === "file_path" ? (
-                        <button className="feed-button" onClick={() => handleFeedClick(row.file_path)}>
+                        <button
+                          className="feed-button"
+                          onClick={() => handleFeedClick(row.file_path)}
+                        >
                           View Feed
                         </button>
                       ) : column.accessor === "camera_id" ? (
                         `Camera ${row[column.accessor]}`
                       ) : column.accessor === "is_acknowledged" ? (
-                        `${row[column.accessor]}` ) : (
+                        row[column.accessor] ? (
+                          "✅ Acknowledged"
+                        ) : (
+                          "❌ Pending"
+                        )
+                      ) : (
                         row[column.accessor]
                       )}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
                     <div className="action-buttons">
-                      <button className="acknowledge-button" onClick={() => console.log("Acknowledged", row.id)}>
+                      <button
+                        className="acknowledge-button"
+                        onClick={() => handleAcknowledge(row.id)}
+                        disabled={row.is_acknowledged}
+                      >
                         Acknowledge
                       </button>
-                      <button className="delete-button" onClick={() => console.log("Deleted", row.id)}>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDelete(row.id)}
+                      >
                         Delete
                       </button>
                     </div>
@@ -126,10 +165,14 @@ const FootTable = ({ alerts }) => {
         />
       </TableContainer>
 
-      {selectedFeed && <FeedPopup filePath={selectedFeed} onClose={() => setSelectedFeed(null)} />}
+      {selectedFeed && (
+        <FeedPopup
+          filePath={selectedFeed}
+          onClose={() => setSelectedFeed(null)}
+        />
+      )}
     </div>
   );
 };
-
 
 export default FootTable;

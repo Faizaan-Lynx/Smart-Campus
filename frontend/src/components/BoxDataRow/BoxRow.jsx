@@ -21,14 +21,25 @@ const BoxRow = ({ alerts }) => {
   //   }
   // }, [visitData]);
 
+  const getLast24HoursAlerts = (alerts) => {
+    const now = new Date();
+    
+    return alerts.filter((alert) => {
+      // Parse "dd mm yyyy" format to a Date object
+      const [day, month, year] = alert.timestamp.split(" ");
+      const alertDate = new Date(`${year}-${month}-${day}`); // Convert to YYYY-MM-DD format
+  
+      // Check if alert happened in the last 24 hours
+      const timeDifference = now - alertDate;
+      return timeDifference <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    }).length;
+  };
+  
   const statsArray = [
-    { label: "Total Alerts", value: alerts.length},
-    { label: "Last 24 Hours", value: stats.groups },
-    // { label: "Visits", value: stats.visits },
-    // { label: "Groups", value: stats.groups },
-    // { label: "New", value: stats.new },
-    // { label: "Females", value: stats.females },
+    { label: "Total Alerts", value: alerts.length },
+    { label: "Last 24 Hours", value: getLast24HoursAlerts(alerts) },
   ];
+  
 
   return (
     <div className="box__main__div">

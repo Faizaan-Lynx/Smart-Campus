@@ -13,6 +13,7 @@ import { useParams } from "react-router-dom";
 // import toast, { Toaster } from "react-hot-toast";
 import { toast, ToastContainer } from "react-toastify";
 import FootFall from "../FootFall/FootFall";
+import FeedPopup from "../FootTable/FeedPopUp";
 
 const Dashboard = () => {
   const selectedOptionRedux = useSelector((state) => state.auth.selectedOption);
@@ -227,24 +228,12 @@ const Dashboard = () => {
         {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
-        <FootTable alerts={alerts} />
+        <FootTable alerts={alerts} setAlerts={setAlerts} />
       </div>
-      {/* Popup Modal */}
-      <div className={`cctv-popup-container ${popupActive ? "active" : ""}`}>
-        <div className="cctv-popup-content">
-          <button className="cctv-popup-close-btn" onClick={handleClosePopup}>
-            X
-          </button>
-          {loading && <div className="cctv_popup_loader"></div>}
-          <iframe
-            className="camera__feed_iframe"
-            src={alertUrl}
-            title="YouTube Video Stream"
-            frameBorder="0"
-            allowFullScreen
-          ></iframe>
-        </div>
-      </div>
+      {popupActive && (
+  <FeedPopup filePath={alertUrl} onClose={handleClosePopup} />
+)}
+
     </div>
   );
 };
