@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
-from api.alerts.schemas import AlertCreate, AlertResponse
+from api.alerts.schemas import AlertCreate, AlertResponse, AlertUpdateAcknowledgment
 from api.alerts.websocket import send_alert
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
@@ -44,3 +44,18 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
     db.delete(alert)
     db.commit()
     return {"message": "Alert deleted successfully"}
+
+@router.patch("/{alert_id}/acknowledge", response_model=AlertResponse)
+def update_alert_acknowledgment(
+    alert_id: int, update_data: AlertUpdateAcknowledgment, db: Session = Depends(get_db)
+):
+    """Updates only the `is_acknowledged` field of an alert."""
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    alert.is_acknowledged = update_data.is_acknowledged
+    db.commit()
+    db.refresh(alert)
+
+    return AlertResponse.model_validate(alert)
