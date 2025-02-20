@@ -1,6 +1,7 @@
 alembic
 celery[redis]
 fastapi[all]
+flower
 httpx 
 jwt
 passlib[bcrypt]
