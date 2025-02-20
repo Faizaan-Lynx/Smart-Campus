@@ -10,6 +10,9 @@ class AlertBase(BaseModel):
 class AlertCreate(AlertBase):
     pass  # No extra fields for creation
 
+class AlertUpdateAcknowledgment(BaseModel):
+    is_acknowledged: bool
+
 class AlertResponse(AlertBase):
     id: int
 
