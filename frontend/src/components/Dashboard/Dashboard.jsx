@@ -76,67 +76,68 @@ const Dashboard = () => {
     fetchCameras();
   }, []);
 
-  // Fetch Alerts 
+  // Fetch Alerts
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const response = await axios.get("http://127.0.0.1:8000/alerts/", {
           headers: { accept: "application/json" },
         });
-
+  
         if (response.data && response.data.length > 0) {
           setAlerts(response.data); // Store initial alerts
         }
-
-        // Mark the first load as done
-        setIsFirstLoad(false);
+  
+        setIsFirstLoad(false); // Mark first load complete
       } catch (error) {
         console.error("Error fetching alerts:", error);
       }
     };
-
+  
     // Fetch initial alerts
     fetchAlerts();
-
+  
     // Setup WebSocket connection
     const socket = new WebSocket("ws://127.0.0.1:8000/ws/alerts");
-
+  
     socket.onopen = () => {
       console.log("✅ WebSocket Connected");
     };
-
+  
     socket.onmessage = (event) => {
       const newAlert = JSON.parse(event.data);
-
+  
       setAlerts((prevAlerts) => {
-        if (!prevAlerts.some((a) => a.id === newAlert.id)) {
-          // Show toast notification for real-time alerts
+        const alertExists = prevAlerts.some((a) => a.id === newAlert.id);
+        if (!alertExists) {
+          // Show toast notification
           toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
             duration: 5000,
             position: "top-right",
             style: { background: "#333", color: "white", cursor: "pointer" },
-            onClick: () => handleToastClick(newAlert.file_path, newAlert.camera_id),
+            onClick: () =>
+              handleToastClick(newAlert.file_path, newAlert.camera_id),
           });
-
-          return [...prevAlerts, newAlert]; // Add the new alert to state
+  
+          return [newAlert, ...prevAlerts]; // Add new alert at the top
         }
         return prevAlerts;
       });
     };
-
+  
     socket.onerror = (error) => {
       console.error("❌ WebSocket Error:", error);
     };
-
+  
     socket.onclose = () => {
       console.log("⚠️ WebSocket Disconnected");
     };
-
+  
     return () => {
       socket.close(); // Cleanup WebSocket on unmount
     };
-  }, []); // Runs only once when component mount
-
+  }, []);
+   // Runs only once when component mount
 
   useEffect(() => {
     if (visitData1) {
@@ -231,9 +232,8 @@ const Dashboard = () => {
         <FootTable alerts={alerts} setAlerts={setAlerts} />
       </div>
       {popupActive && (
-  <FeedPopup filePath={alertUrl} onClose={handleClosePopup} />
-)}
-
+        <FeedPopup filePath={alertUrl} onClose={handleClosePopup} />
+      )}
     </div>
   );
 };
