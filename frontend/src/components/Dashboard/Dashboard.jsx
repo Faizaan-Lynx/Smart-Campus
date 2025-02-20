@@ -227,7 +227,7 @@ const Dashboard = () => {
         {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
-        <FootTable visitData={visitData} />
+        <FootTable alerts={alerts} />
       </div>
       {/* Popup Modal */}
       <div className={`cctv-popup-container ${popupActive ? "active" : ""}`}>

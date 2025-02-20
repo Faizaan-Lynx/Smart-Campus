@@ -1,43 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "./FeedPopup.css";
-// FeedPopup Component
-const FeedPopup = ({ row, onClose }) => {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [feedContent, setFeedContent] = useState("");
-  
-    // Simulate API Call
-    React.useEffect(() => {
-      setLoading(true);
-      setError(null);
-  
-      setTimeout(() => {
-        // Simulating API response
-        if (Math.random() > 0.2) {
-          setFeedContent(`Live feed data for ${row.location}`);
-          setLoading(false);
-        } else {
-          setError("Failed to load feed. Please try again.");
-          setLoading(false);
-        }
-      }, 2000);
-    }, [row]);
-  
-    return (
-      <div className="popup-overlay">
-        <div className="popup-content">
-          <h3>Camera Feed - {row.location}</h3>
-          {loading ? (
-            <div className="loader"></div>
-          ) : error ? (
-            <div className="error-message">{error}</div>
-          ) : (
-            <p>{feedContent}</p>
-          )}
-          <button className="close-button" onClick={onClose}>Close</button>
-        </div>
-      </div>
-    );
+
+const FeedPopup = ({ filePath, onClose }) => {
+  // Extract video ID from the YouTube URL
+  const getEmbedUrl = (url) => {
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+    return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : url;
   };
-  
-  export default FeedPopup;
+
+  return (
+    <div className="popup-overlay">
+      <div className="popup-content">
+        <h3>Camera Feed</h3>
+        <iframe
+          width="100%"
+          height="400px"
+          src={getEmbedUrl(filePath)}
+          frameBorder="0"
+          allowFullScreen
+          title="Live Camera Feed"
+        ></iframe>
+        <button className="close-button" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
+
+export default FeedPopup;
