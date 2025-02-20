@@ -6,7 +6,6 @@ import logging
 # from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
-
 # DB
 from core.database import test_db_connection  
 
@@ -15,6 +14,9 @@ from api.auth.routes import router as auth_router
 from api.cameras.routes import router as cameras_router
 from api.alerts.routes import router as alerts_router
 # from api.intrusion.routes import router as intrusion_router
+
+# WebSockets for alerts
+from api.alerts.websocket import router as alert_ws_router
 
 app = FastAPI()
 
@@ -49,6 +51,9 @@ app.include_router(auth_router)
 app.include_router(cameras_router)
 app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
+
+# alert websocket
+app.include_router(alert_ws_router)
 
 @app.get("/")
 async def root():

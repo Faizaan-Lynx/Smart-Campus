@@ -3,17 +3,24 @@ from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
 from api.alerts.schemas import AlertCreate, AlertResponse
+from api.alerts.websocket import send_alert
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 @router.post("/", response_model=AlertResponse)
-def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db)):
-    """Creates a new alert."""
+async def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db)):
+    """Creates a new alert and broadcasts it in real time."""
     alert = Alert(**alert_data.dict())
     db.add(alert)
     db.commit()
     db.refresh(alert)
-    return alert
+
+    alert_response = AlertResponse.model_validate(alert)
+
+    # Broadcast the alert
+    await send_alert(alert_response)
+
+    return alert_response
 
 @router.get("/{alert_id}", response_model=AlertResponse)
 def get_alert(alert_id: int, db: Session = Depends(get_db)):

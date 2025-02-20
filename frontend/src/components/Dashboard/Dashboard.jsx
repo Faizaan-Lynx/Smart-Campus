@@ -58,6 +58,7 @@ const Dashboard = () => {
     setLoading(true);
   };
 
+  // Fetch Cameras
   useEffect(() => {
     const fetchCameras = async () => {
       try {
@@ -74,69 +75,67 @@ const Dashboard = () => {
     fetchCameras();
   }, []);
 
+  // Fetch Alerts 
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const response = await axios.get("http://127.0.0.1:8000/alerts/", {
-          headers: {
-            accept: "application/json",
-          },
+          headers: { accept: "application/json" },
         });
 
         if (response.data && response.data.length > 0) {
-          const newAlerts = response.data.filter(
-            (alert) => !alerts.some((a) => a.id === alert.id)
-          );
-
-          // Show toast messages ONLY after the first load
-          if (!isFirstLoad) {
-            newAlerts.forEach((alert) => {
-              toast(`Alert at Camera ${alert.camera_id}`, {
-                duration: 5000,
-                position: "top-right",
-                style: {
-                  background: "#333",
-                  color: "white",
-                  cursor: "pointer",
-                },
-                onClick: () =>
-                  handleToastClick(alert.file_path, alert.camera_id),
-              });
-            });
-          }
-
-          // Update state with new alerts
-          if (newAlerts.length > 0) {
-            setAlerts((prev) => [...prev, ...newAlerts]);
-          }
+          setAlerts(response.data); // Store initial alerts
         }
 
-        // Mark that initial load is done after first API call
-        if (isFirstLoad) {
-          setIsFirstLoad(false);
-        }
+        // Mark the first load as done
+        setIsFirstLoad(false);
       } catch (error) {
         console.error("Error fetching alerts:", error);
       }
     };
 
-    // Fetch alerts initially
+    // Fetch initial alerts
     fetchAlerts();
 
-    // Set interval to fetch alerts every 5 seconds
-    const interval = setInterval(fetchAlerts, 5000);
+    // Setup WebSocket connection
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/alerts");
 
-    return () => clearInterval(interval);
-  }, [alerts, isFirstLoad]); // Include isFirstLoad in dependency array
+    socket.onopen = () => {
+      console.log("✅ WebSocket Connected");
+    };
 
-  const getYouTubeEmbedUrl = (url) => {
-    const videoIdMatch = url.match(
-      /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
-    );
-    return videoIdMatch
-      ? `https://www.youtube.com/embed/${videoIdMatch[1]}`
-      : null;
-  };
+    socket.onmessage = (event) => {
+      const newAlert = JSON.parse(event.data);
+
+      setAlerts((prevAlerts) => {
+        if (!prevAlerts.some((a) => a.id === newAlert.id)) {
+          // Show toast notification for real-time alerts
+          toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
+            duration: 5000,
+            position: "top-right",
+            style: { background: "#333", color: "white", cursor: "pointer" },
+            onClick: () => handleToastClick(newAlert.file_path, newAlert.camera_id),
+          });
+
+          return [...prevAlerts, newAlert]; // Add the new alert to state
+        }
+        return prevAlerts;
+      });
+    };
+
+    socket.onerror = (error) => {
+      console.error("❌ WebSocket Error:", error);
+    };
+
+    socket.onclose = () => {
+      console.log("⚠️ WebSocket Disconnected");
+    };
+
+    return () => {
+      socket.close(); // Cleanup WebSocket on unmount
+    };
+  }, []); // Runs only once when component mount
+
 
   useEffect(() => {
     if (visitData1) {
