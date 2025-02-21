@@ -7,9 +7,9 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   const [popupActive, setPopupActive] = useState(false);
   const [selectedUrl, setSelectedUrl] = useState(cameras[0]?.url || "");
 
-  console.log("Cameras: ", );
+  // console.log("Cameras: ", );
   useEffect(() => {
-    console.log("Selected Camera:", selectedCamera);
+    // console.log("Selected Camera:", selectedCamera);
     if (selectedCamera) {
       const camera = cameras.find((cam) => cam.id === selectedCamera);
       setSelectedUrl(camera?.url || "");

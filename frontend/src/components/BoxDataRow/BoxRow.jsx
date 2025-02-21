@@ -3,43 +3,46 @@ import "./BoxRow.css";
 import assets from "../../assets";
 
 const BoxRow = ({ alerts }) => {
-  const [stats, setStats] = useState({
-    visits: 4,
-    groups: 1,
-    new: 2,
-    females: 4,
-  });
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
 
-  // useEffect(() => {
-  //   if (visitData) {
-  //     const visits = visitData.length;
-  //     const groups = visitData.filter((visit) => visit.is_group).length;
-  //     const newVisitors = visitData.filter((visit) => visit.is_new).length;
-  //     const females = visitData.filter((visit) => visit.is_female).length;
+  useEffect(() => {
+    const updateAlerts = () => {
+      const now = Date.now(); // Current time in milliseconds
 
-  //     setStats({ visits, groups, new: newVisitors, females });
-  //   }
-  // }, [visitData]);
+      // Filter alerts that happened within the last 5 seconds
+      const updatedAlerts = alerts.filter((alert) => {
+        const secondsAgo = Number(alert.timestamp); // Convert timestamp to a number
+        if (isNaN(secondsAgo)) return false; // Ignore invalid timestamps
 
-  const getLast24HoursAlerts = (alerts) => {
-    const now = new Date();
-    
-    return alerts.filter((alert) => {
-      // Parse "dd mm yyyy" format to a Date object
-      const [day, month, year] = alert.timestamp.split(" ");
-      const alertDate = new Date(`${year}-${month}-${day}`); // Convert to YYYY-MM-DD format
-  
-      // Check if alert happened in the last 24 hours
-      const timeDifference = now - alertDate;
-      return timeDifference <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    }).length;
-  };
-  
+        const alertTime = now - secondsAgo * 1000; // Convert seconds to milliseconds
+        return now - alertTime <= 24 * 60 * 60 * 1000; // Check if within 24 hours
+      });
+
+      setFilteredAlerts(updatedAlerts);
+    };
+
+    updateAlerts(); // Run immediately on mount
+
+    const interval = setInterval(updateAlerts, 10000); // Run every 10 second
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [alerts]);
+
+  // Automatically clear filteredAlerts after 24 hours if no new alerts come in
+  useEffect(() => {
+    if (filteredAlerts.length > 0) {
+      const timeout = setTimeout(() => {
+        setFilteredAlerts([]);
+      }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+      return () => clearTimeout(timeout);
+    }
+  }, [filteredAlerts]);
+
   const statsArray = [
     { label: "Total Alerts", value: alerts.length },
-    { label: "Last 24 Hours", value: getLast24HoursAlerts(alerts) },
+    { label: "Last 24 Hours", value: filteredAlerts.length },
   ];
-  
 
   return (
     <div className="box__main__div">
