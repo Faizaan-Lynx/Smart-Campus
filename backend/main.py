@@ -11,8 +11,9 @@ from core.database import test_db_connection
 # Routers (uncomment when needed)
 from api.auth.routes import router as auth_router  
 from api.cameras.routes import router as cameras_router
-from api.alerts.routes import router as alerts_router
 from api.users.routes import router as users_router
+from api.user_cameras.routes import router as user_cameras_router
+from api.alerts.routes import router as alerts_router
 # from api.intrusion.routes import router as intrusion_router
 
 app = FastAPI()
@@ -39,6 +40,7 @@ def startup_db_check():
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(cameras_router)
+app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
 
