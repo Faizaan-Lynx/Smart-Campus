@@ -43,13 +43,3 @@ app.include_router(cameras_router)
 app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
-
-from core.celery.worker import add
-
-
-@app.get("/")
-async def root():
-    results = add.delay(10, 20)
-    results_get = results.get()
-    return {"message": f"Hello World. This is the Smart Campus project! Celery Check 10+20 = {results_get}"}
-    # return {"message": "Hello World. This is the Smart Campus project!"}

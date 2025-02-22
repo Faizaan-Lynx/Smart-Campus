@@ -1,12 +1,12 @@
+import os
 from celery import Celery
 
-# celery app
-celery_app = Celery('worker', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
-# optional config
-celery_app.conf.result_expires = 3600
+# Create Celery instance
+celery_app = Celery(
+    "worker",
+    broker=os.getenv("REDIS_URL", "redis://redis:6379/0"),
+    backend=os.getenv("REDIS_URL", "redis://redis:6379/0"),
+)
 
-celery_app.autodiscover_tasks(['core.celery.tasks'])
-
-@celery_app.task
-def add(a: int, b: int):
-    return a + b
+# Auto-discover tasks in the `tasks.py` file
+celery_app.autodiscover_tasks(["core.celery"])

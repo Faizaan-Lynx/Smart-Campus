@@ -7,8 +7,9 @@ class AlertBase(BaseModel):
     is_acknowledged: bool = False
     file_path: Optional[str] = None
 
-class AlertCreate(AlertBase):
-    pass  # No extra fields for creation
+class AlertCreate(BaseModel):
+    message: str
+    severity: str
 
 class AlertResponse(AlertBase):
     id: int
