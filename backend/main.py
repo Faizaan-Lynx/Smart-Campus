@@ -18,7 +18,7 @@ from api.alerts.routes import router as alerts_router
 # from api.intrusion.routes import router as intrusion_router
 
 # WebSockets for alerts
-from api.alerts.websocket import router as alert_ws_router
+# from api.alerts.websocket import router as alert_ws_router
 
 app = FastAPI()
 
@@ -57,8 +57,12 @@ app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
 
 # alert websocket
-app.include_router(alert_ws_router)
+# app.include_router(alert_ws_router)
+
+from core.celery.worker import add
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World. This is the Smart Campus project!"}
+    # run celery task here
+    result = add.delay(4, 4)
+    return {"message": "Hello World. This is the Smart Campus project!", "celery_result (4+4)": result.id}
