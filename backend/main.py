@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import logging
 
 # Middleware
-# from middleware.JWTAuth import JWTAuthenticationMiddleware  
+from middleware.JWTAuth import JWTAuthenticationMiddleware  
 # from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -36,7 +36,7 @@ def startup_db_check():
         exit(1)
 
 # Authentication middleware
-# app.add_middleware(JWTAuthenticationMiddleware)
+app.add_middleware(JWTAuthenticationMiddleware)
 # IP middleware
 # app.add_middleware(IPMiddleware)
 # CORS Middleware

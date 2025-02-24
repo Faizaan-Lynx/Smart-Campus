@@ -9,22 +9,23 @@ logger = logging.getLogger(__name__)
 
 class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # if not accessing api routes, skip authentication
-        if not request.url.path.startswith("/api"):
+        """Middleware to enforce JWT authentication except for /auth routes."""
+        
+        # Allow public access to authentication endpoints
+        if request.url.path.startswith("/auth"):
             return await call_next(request)
 
-
-        if request.url.path.startswith("/auth/login") or request.url.path.startswith("/auth/register"):
-            return await call_next(request)  # Skip authentication for login & registration
-
+        # Check for Authorization header
         authorization: str = request.headers.get("Authorization")
         if not authorization or not authorization.startswith("Bearer "):
             return JSONResponse(status_code=401, content={"detail": "Missing or invalid authorization header"})
 
+        # Extract & Verify Token
         token = authorization.split(" ")[1]
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             request.state.user = payload  # Store user data in request state
+            logger.info(f"Authenticated user: {payload}")
         except JWTError:
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
