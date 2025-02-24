@@ -3,17 +3,22 @@ from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
 from api.alerts.schemas import AlertCreate, AlertResponse
+from core.celery.tasks import publish_alert
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
-@router.post("/", response_model=AlertResponse)
-def create_alert(alert_data: AlertCreate, db: Session = Depends(get_db)):
-    """Creates a new alert."""
-    alert = Alert(**alert_data.dict())
-    db.add(alert)
+@router.post("/alerts/", response_model=AlertResponse)
+def create_alert(alert: AlertCreate, db: Session = Depends(get_db)):
+    """Creates a new alert and publishes it via Celery"""
+    db_alert = Alert(**alert.dict())
+    db.add(db_alert)
     db.commit()
-    db.refresh(alert)
-    return alert
+    db.refresh(db_alert)
+
+    # Send alert via Celery
+    publish_alert.delay(alert.dict())
+
+    return db_alert
 
 @router.get("/{alert_id}", response_model=AlertResponse)
 def get_alert(alert_id: int, db: Session = Depends(get_db)):
