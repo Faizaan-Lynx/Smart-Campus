@@ -4,6 +4,7 @@ from typing import List
 from models.users import Users as UserModel
 from api.users.schemas import UserCreate, UserUpdate, User
 from core.database import get_db
+import bcrypt
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -37,6 +38,8 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     for key, value in user.dict(exclude_unset=True).items():
+        if key == "password":  # If the password field is being updated
+            value = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         setattr(db_user, key, value)
 
     db.commit()
