@@ -45,13 +45,27 @@ services:
   # Celery Worker
   celery:
     build: .
-    container_name: celery_worker
+    container_name: core.celery.worker
     command: celery -A ${CELERY_MODULE}.celery_app worker --loglevel=info
     volumes:
       - .:/app
     depends_on:
       - redis
       - postgres-db
+    networks:
+      - backend
+
+  flower:
+    container_name: flower
+    build: .
+    command: celery -A ${CELERY_MODULE}.celery_app flower --port=5555
+    ports:
+      - "5556:5555"
+    depends_on:
+      - redis
+      - postgres-db
+      - celery
+      - app
     networks:
       - backend
 
