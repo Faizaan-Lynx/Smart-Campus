@@ -54,7 +54,7 @@ const Dashboard = () => {
     const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
     setAlertUrl(youtubeEmbedUrl);
     setSelectedCamera(cameraId); // Update selected camera
-    console.log("Selected Camera: ", cameraId);
+    // console.log("Selected Camera: ", cameraId);
     setPopupActive(true);
     setLoading(true);
   };
