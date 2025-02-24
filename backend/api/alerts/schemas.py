@@ -11,6 +11,9 @@ class AlertCreate(BaseModel):
     message: str
     severity: str
 
+class AlertUpdateAcknowledgment(BaseModel):
+    is_acknowledged: bool
+
 class AlertResponse(AlertBase):
     id: int
 

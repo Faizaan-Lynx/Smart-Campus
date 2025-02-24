@@ -2,32 +2,51 @@ import React, { useEffect, useState } from "react";
 import "./BoxRow.css";
 import assets from "../../assets";
 
-const BoxRow = ({ visitData }) => {
-  const [stats, setStats] = useState({
-    visits: 4,
-    groups: 1,
-    new: 2,
-    females: 4,
-  });
+const BoxRow = ({ alerts }) => {
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
 
   useEffect(() => {
-    if (visitData) {
-      const visits = visitData.length;
-      const groups = visitData.filter((visit) => visit.is_group).length;
-      const newVisitors = visitData.filter((visit) => visit.is_new).length;
-      const females = visitData.filter((visit) => visit.is_female).length;
+    const updateAlerts = () => {
+      const now = new Date(); // Current date and time
 
-      setStats({ visits, groups, new: newVisitors, females });
+      // Filter alerts that happened within the last 24 hours
+      const updatedAlerts = alerts.filter((alert) => {
+        if (!alert.timestamp) return false; // Ignore missing timestamps
+
+        // Parse "dd mm yyyy" format to Date object
+        const [day, month, year] = alert.timestamp.split(" ");
+        const alertDate = new Date(`${year}-${month}-${day}`); // Convert to YYYY-MM-DD
+
+        if (isNaN(alertDate)) return false; // Ignore invalid dates
+
+        // Check if the alert is within the last 24 hours
+        return now - alertDate <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      });
+
+      setFilteredAlerts(updatedAlerts);
+      console.log(updatedAlerts);
+    };
+
+    updateAlerts(); // Run immediately on mount
+    const interval = setInterval(updateAlerts, 10000); // Run every 10 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [alerts]);
+
+  // Automatically clear filteredAlerts after 24 hours if no new alerts come in
+  useEffect(() => {
+    if (filteredAlerts.length > 0) {
+      const timeout = setTimeout(() => {
+        setFilteredAlerts([]);
+      }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+      return () => clearTimeout(timeout);
     }
-  }, [visitData]);
+  }, [filteredAlerts]);
 
   const statsArray = [
-    { label: "Total Alerts", value: stats.visits },
-    { label: "Last 24 Hours", value: stats.groups },
-    // { label: "Visits", value: stats.visits },
-    // { label: "Groups", value: stats.groups },
-    // { label: "New", value: stats.new },
-    // { label: "Females", value: stats.females },
+    { label: "Total Alerts", value: alerts.length },
+    { label: "Last 24 Hours", value: filteredAlerts.length },
   ];
 
   return (

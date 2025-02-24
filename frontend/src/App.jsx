@@ -18,31 +18,33 @@ import Contact from "./pages/Contact/Contact";
 // import Home from "./pages/Home/Home";
 import Profile from "./pages/Profile/Profile";
 import NotFound from "./pages/NotFound/NotFound"; // Import your 404 page component
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { jwtDecode } from "jwt-decode";
 import Hosts from "./pages/Hosts/Hosts";
 import Guests from "./pages/Guests/Guests";
 import CCTVPage from "./components/CCTV/CCTVPage";
+import { logout } from "./redux/actions/authActions";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
   // const user = true;
   // const user = false;
-
+  const dispatch = useDispatch();
   // const [userInfo, setUserInfo] = useState(null);
-  // useEffect(() => {
-  //   // Assuming token is stored in localStorage or received from an API
-  //   const token = localStorage.getItem("token");
+  useEffect(() => {
+    // Assuming token is stored in localStorage or received from an API
+    // const token = localStorage.getItem("token");
 
-  //   if (token) {
-  //     try {
-  //       const decoded = jwtDecode(token);
-  //       setUserInfo(decoded);
-  //     } catch (error) {
-  //       console.error("Error decoding token:", error);
-  //     }
-  //   }
-  // }, []);
+    // if (token) {
+    //   try {
+    //     const decoded = jwtDecode(token);
+    //     setUserInfo(decoded);
+    //   } catch (error) {
+    //     console.error("Error decoding token:", error);
+    //   }
+    // }
+    // dispatch(logout());
+  }, []);
 
   return (
     <>

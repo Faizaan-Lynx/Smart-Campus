@@ -2,27 +2,38 @@ import React, { useState, useEffect } from "react";
 import { localurl } from "../../utils";
 import "./CCTVCamList.css";
 
-const CameraList = ({ cameras }) => {
-  const [selectedCamera, setSelectedCamera] = useState(cameras[0]?.id || "");
+const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   const [loading, setLoading] = useState(false);
   const [popupActive, setPopupActive] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState(cameras[0]?.url || "");
 
+  // console.log("Cameras: ", );
   useEffect(() => {
+    // console.log("Selected Camera:", selectedCamera);
     if (selectedCamera) {
-      const img = document.getElementById("camera_feed");
-      img.src = `${localurl}/intrusion_feed/${selectedCamera}`;
-      setLoading(true);
-
-      img.onload = () => setLoading(false);
-      img.onerror = () => setLoading(false);
+      const camera = cameras.find((cam) => cam.id === selectedCamera);
+      setSelectedUrl(camera?.url || "");
+      setLoading(false);
     }
-  }, [selectedCamera]);
+  }, [selectedCamera, cameras]); // Reacts to changes in selectedCamera
+
+  // Function to extract YouTube video ID and return the correct embed URL
+  const getYouTubeEmbedUrl = (url) => {
+    const videoIdMatch = url.match(
+      /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
+    );
+    return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : null;
+  };
+
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(selectedUrl);
+  const isYouTube = !!youtubeEmbedUrl;
 
   const handleImageClick = () => {
     setPopupActive(true);
-    setLoading(true); // Ensure loader appears before fetching image
+    setLoading(false); // Ensure loader appears before fetching image
     const popupImg = document.getElementById("camera_feed_popup");
-    popupImg.src = `${localurl}/intrusion_feed/${selectedCamera}`;
+    // popupImg.src = `${localurl}/intrusion_feed/${selectedCamera}`;
+    
 
     popupImg.onload = () => setLoading(false);
     popupImg.onerror = () => setLoading(false);
@@ -44,20 +55,38 @@ const CameraList = ({ cameras }) => {
             }`}
             onClick={() => setSelectedCamera(camera.id)}
           >
-            <p>{camera.name}</p>
+            <p>Camera {camera.id}</p>
           </div>
         ))}
       </div>
+
       <div className="video-feed" onClick={handleImageClick}>
         {loading && <div className="cctv_camera_loader"></div>}
-        <h1>{selectedCamera}</h1>
-        <div className="video__container">
+
+        {isYouTube ? (
+          <iframe
+            className="camera__feed__image"
+            src={youtubeEmbedUrl}
+            title="YouTube Video Stream"
+            frameBorder="0"
+            allowFullScreen
+            alt="Video Stream"
+          ></iframe>
+        ) : (
+          <img
+            className={`camera__feed__image ${loading ? "hidden" : ""}`}
+            id="camera_feed"
+            src={selectedUrl}
+            alt="Video Stream"
+          />
+        )}
+        {/* <div className="video__container">
           <img
             className={`camera__feed__image ${loading ? "hidden" : ""}`}
             id="camera_feed"
             alt="Video Stream"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Popup Modal */}
@@ -67,15 +96,16 @@ const CameraList = ({ cameras }) => {
             X
           </button>
           {loading && <div className="cctv_popup_loader"></div>}
-          <img
-            className={`camera__feed__image ${loading ? "hidden" : ""}`}
-            id="camera_feed_popup"
-            alt="Video Stream"
-          />
+          <iframe
+            className="camera__feed_iframe"
+            src={youtubeEmbedUrl}
+            title="YouTube Video Stream"
+            frameBorder="0"
+            allowFullScreen
+          ></iframe>
         </div>
       </div>
     </div>
   );
 };
-
 export default CameraList;

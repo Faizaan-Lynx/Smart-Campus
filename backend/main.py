@@ -2,8 +2,9 @@ from fastapi import FastAPI
 import logging
 
 # Middleware
-from middleware.JWTAuth import JWTAuthenticationMiddleware  
-from middleware.ip_middleware import IPMiddleware  
+# from middleware.JWTAuth import JWTAuthenticationMiddleware  
+# from middleware.ip_middleware import IPMiddleware  
+from fastapi.middleware.cors import CORSMiddleware
 
 # DB
 from core.database import test_db_connection  
@@ -15,6 +16,9 @@ from api.users.routes import router as users_router
 from api.user_cameras.routes import router as user_cameras_router
 from api.alerts.routes import router as alerts_router
 # from api.intrusion.routes import router as intrusion_router
+
+# WebSockets for alerts
+from api.alerts.websocket import router as alert_ws_router
 
 app = FastAPI()
 
@@ -35,6 +39,14 @@ def startup_db_check():
 # app.add_middleware(JWTAuthenticationMiddleware)
 # IP middleware
 # app.add_middleware(IPMiddleware)
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change to specific frontend URLs for better security
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Routes
 app.include_router(auth_router)
@@ -43,3 +55,10 @@ app.include_router(cameras_router)
 app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 # app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
+
+# alert websocket
+app.include_router(alert_ws_router)
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World. This is the Smart Campus project!"}
