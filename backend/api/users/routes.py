@@ -7,7 +7,6 @@ from core.database import get_db
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-
 @router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.email == user.email).first()
