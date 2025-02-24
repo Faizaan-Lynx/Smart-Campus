@@ -54,32 +54,37 @@ const columns = [
   // { Header: "Stay", accessor: "stay" },
 ];
 
-const UserAdmin = ({ columns, data }) => {
+const UserAdmin = ({ columns }) => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [tableData, setTableData] = useState([]);
-
   const [showEditSettingsModal, setShowEditSettingsModal] = useState(false);
   const [modalData, setModalData] = useState();
 
-  const extractTime = (fullTime) => {
-    const [time] = fullTime.split(".");
-    return time.substr(0, 5);
-  };
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token"); // Get token from local storage
+        const response = await axios.get("http://127.0.0.1:8000/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+        setTableData(response.data); // Update state with API data
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users");
+      }
+    };
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+    fetchUsers();
+  }, []);
 
   const deleteUser = async (id) => {
     Swal.fire({
       title: "Delete User",
-      text: "Are you sure you want Delete the site?",
+      text: "Are you sure you want to delete this user?",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -88,30 +93,22 @@ const UserAdmin = ({ columns, data }) => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const response = await axios.delete(`${localurl}/users/${id}`, {
+          const token = localStorage.getItem("token");
+          await axios.delete(`http://127.0.0.1:8000/users/${id}`, {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
           });
 
-          toast.dismiss();
           toast.success("User deleted successfully!");
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
+          setTableData((prevData) => prevData.filter((user) => user.id !== id));
         } catch (error) {
           console.error("Error deleting user:", error);
-          if (
-            error.response &&
-            error.response.data &&
-            error.response.data.detail
-          ) {
-            const errorMessage = error.response.data.detail;
-            toast.error(errorMessage);
-          } else {
-            toast.error("An error occurred while deleting the user.");
-          }
+          toast.error(
+            error.response?.data?.detail ||
+              "An error occurred while deleting the user."
+          );
         }
       }
     });
@@ -138,10 +135,7 @@ const UserAdmin = ({ columns, data }) => {
           <TableHead>
             <TableRow>
               {columns.map((column, index) => (
-                <StyledTableCell
-                  key={column.Header}
-                  align={index === 0 ? "left" : "left"} // Align the first column to the left and the rest to the right
-                >
+                <StyledTableCell key={column.Header} align="left">
                   {column.Header}
                 </StyledTableCell>
               ))}
@@ -149,87 +143,67 @@ const UserAdmin = ({ columns, data }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data
+            {tableData
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row, index) => (
                 <StyledTableRow key={index}>
                   {columns.map((column, columnIndex) => (
-                    <StyledTableCell
-                      key={column.accessor}
-                      align={columnIndex === 0 ? "left" : "left"}
-                      component={columnIndex === 0 ? "th" : undefined}
-                      scope={columnIndex === 0 ? "row" : undefined}
-                    >
+                    <StyledTableCell key={column.accessor} align="left">
                       {row[column.accessor]}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
                     <div
                       className="action-icons"
-                      style={{ display: "flex", justifyContent: "center" }}
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        gap: "15px",
+                      }}
                     >
                       <p
                         onClick={() => {
                           setModalData(row);
                           setShowEditSettingsModal(!showEditSettingsModal);
                         }}
-                        style={{ cursor: "pointer", fontSize: "20px" }}
+                        style={{
+                          cursor: "pointer",
+                          fontSize: "20px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
                       >
-                        <i class="bx bx-edit-alt"></i>
+                        <i className="bx bx-edit-alt"></i>
                       </p>
                       <p
                         onClick={() => deleteUser(row.id)}
                         style={{
                           cursor: "pointer",
                           fontSize: "20px",
-                          marginLeft: "5px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        <i class="bx bx-trash"></i>
+                        <i className="bx bx-trash"></i>
                       </p>
-
-                      {/* <img
-                        src={DeleteIcon}
-                        onClick={() => deleteVisit(row.id)}
-                        alt="Delete"
-                        className="icon"
-                      />
-                      <img
-                        src={EditIcon}
-                        onClick={() => EditVisit(row.id)}
-                        alt="Edit"
-                        className="icon"
-                      /> */}
                     </div>
                   </StyledTableCell>
                 </StyledTableRow>
               ))}
-            {/* {rows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
-                <StyledTableRow key={row.name}>
-                  <StyledTableCell component="th" scope="row">
-                    {row.name}
-                  </StyledTableCell>
-                  <StyledTableCell align="right">
-                    {row.calories}
-                  </StyledTableCell>
-                  <StyledTableCell align="right">{row.fat}</StyledTableCell>
-                  <StyledTableCell align="right">{row.carbs}</StyledTableCell>
-                  <StyledTableCell align="right">{row.protein}</StyledTableCell>
-                  <StyledTableCell align="right">{row.protein}</StyledTableCell>
-                </StyledTableRow>
-              ))} */}
           </TableBody>
         </Table>
         <TablePagination
           rowsPerPageOptions={[5, 10, 15, 20, 25]}
           component="div"
-          count={data?.length > 0 ? data.length : 0}
+          count={tableData.length}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(event) =>
+            setRowsPerPage(parseInt(event.target.value, 10))
+          }
         />
       </TableContainer>
       <Toaster />
