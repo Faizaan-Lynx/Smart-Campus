@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
-from api.alerts.websocket import broadcast_alert
+# from api.alerts.websocket import broadcast_alert
 from core.celery.tasks import publish_alert
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
