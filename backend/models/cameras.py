@@ -20,3 +20,5 @@ class Camera(Base):
 
     # Relationship with alerts
     alerts = relationship("Alert", back_populates="camera", cascade="all, delete-orphan")
+
+    intrusions = relationship("Intrusion", back_populates="camera", cascade="all, delete-orphan")
