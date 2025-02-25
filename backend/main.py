@@ -62,3 +62,11 @@ app.include_router(alerts_router)
 @app.get("/")
 async def root():
     return {"message": "Hello World. This is the Smart Campus project!"}
+
+@app.get("/health")
+async def health():
+    result = celery_app.send_task("core.celery.worker.add", (4,4))
+    return  {
+                "status": "OK",
+                "celery_calculation": result.get()
+            }
