@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from config import settings
 import logging
+import redis
 
 # Middleware
 # from middleware.JWTAuth import JWTAuthenticationMiddleware  
@@ -67,8 +69,12 @@ async def root():
 
 @app.get("/health")
 async def health():
-    result = celery_app.send_task("core.celery.worker.add", (4,4))
+    result = celery_app.send_task("core.celery.tasks.add", (4,4))
+    red = redis.Redis(host="redis", port=6379, db=0)
+
     return  {
                 "status": "OK",
-                "celery_calculation": result.get()
+                "celery_calculation": result.get(),
+                "redis_check": red.ping(),
+                "sqlalchemy_check": test_db_connection()
             }
