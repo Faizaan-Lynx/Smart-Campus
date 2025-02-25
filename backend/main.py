@@ -59,10 +59,16 @@ app.include_router(alerts_router)
 # alert websocket
 # app.include_router(alert_ws_router)
 
-from core.celery.worker import add
+from core.celery.worker import celery_app
 
 @app.get("/")
 async def root():
-    # run celery task here
-    result = add.delay(4, 4)
-    return {"message": "Hello World. This is the Smart Campus project!", "celery_result (4+4)": result.id}
+    return {"message": "Hello World. This is the Smart Campus project!"}
+
+@app.get("/health")
+async def health():
+    result = celery_app.send_task("core.celery.worker.add", (4,4))
+    return  {
+                "status": "OK",
+                "celery_calculation": result.get()
+            }
