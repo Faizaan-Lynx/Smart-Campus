@@ -4,11 +4,10 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Modal from "@mui/material/Modal";
 import { TextField } from "@mui/material";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
 import { localurl } from "../../../utils";
-import { useState } from "react";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
@@ -34,68 +33,64 @@ export default function UsersAdminEditModal({
   rowData,
 }) {
   const handleClose = () => setShowEditSettingsModal(false);
-  // console.log(rowData);
+
+  // Initialize only the fields required by the new API
   const [fieldValues, setFieldValues] = useState({
     field1: rowData.username,
     field2: rowData.email,
-    field3: rowData.fullName,
-    field4: "",
-    field5: rowData.status === "Active" ? "Active" : "Disabled",
-    field6: rowData.superuser === "Yes" ? "Yes" : "No",
+    field4: "", // password (hashed_password)
+    field7: rowData.ip_address || "",
+    field6: rowData.is_admin ? "Yes" : "No", // Superuser maps to is_admin
   });
 
   const handleUpdate = async () => {
-    if (
-      field4Ref.current.value.length !== 0 &&
-      field4Ref.current.value.length < 4
-    ) {
+    const newPassword = field4Ref.current.value;
+    if (newPassword.length !== 0 && newPassword.length < 4) {
       toast.dismiss();
       toast.error("Password too short");
       return;
     }
-    // // Get values from refs
-    const newPassword = field4Ref.current.value;
+    // Build the request body according to the API spec
     const newValues = {
       username: fieldValues.field1,
-      email: fieldValues.field2 || null,
-      full_name: fieldValues.field3 || null,
-      ...(newPassword.length > 3 && { password: newPassword }),
-      disabled: fieldValues.field5 === "Active" ? false : true,
-      is_su: fieldValues.field6 === "Yes" ? true : false,
+      email: fieldValues.field2,
+      hashed_password: newPassword, // if empty, your backend may ignore or require a non-empty value
+      is_admin: fieldValues.field6 === "Yes",
+      ip_address: fieldValues.field7,
     };
-    // console.log(newValues);
-    try {
-      const response = await axios.patch(
-        `${localurl}/users/${rowData.id}`,
-        newValues,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      toast.dismiss();
 
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${localurl}/users/${rowData.id}`, newValues, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      toast.dismiss();
       toast.success("User Updated!");
       setTimeout(() => {
         handleClose();
       }, 3000);
       window.location.reload();
     } catch (error) {
-      if (error.response && error.response.data && error.response.data.detail) {
-        const errorMessage = error.response.data.detail;
-        toast.error(errorMessage);
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.detail
+      ) {
+        toast.error(error.response.data.detail);
       } else {
         toast.error("An error occurred while updating the user.");
       }
     }
   };
 
+  // Refs for form fields
   const field1Ref = useRef(null);
   const field2Ref = useRef(null);
-  const field3Ref = useRef(null);
   const field4Ref = useRef(null);
+  const field7Ref = useRef(null);
 
   return (
     <div>
@@ -145,60 +140,37 @@ export default function UsersAdminEditModal({
             }
           />
           <TextField
-            inputRef={field3Ref}
-            value={fieldValues.field3}
-            label="Full Name"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            required
-            onChange={(e) =>
-              setFieldValues({ ...fieldValues, field3: e.target.value })
-            }
-          />
-          <TextField
             inputRef={field4Ref}
-            value={fieldValues.field4}
             label="Password"
             variant="outlined"
             placeholder="Unchanged if empty"
             margin="normal"
             fullWidth
             type="password"
-            required
             onChange={(e) =>
               setFieldValues({ ...fieldValues, field4: e.target.value })
             }
           />
+          <TextField
+            inputRef={field7Ref}
+            label="IP Address"
+            variant="outlined"
+            margin="normal"
+            fullWidth
+            required
+            value={fieldValues.field7}
+            onChange={(e) =>
+              setFieldValues({ ...fieldValues, field7: e.target.value })
+            }
+          />
           <FormControl fullWidth variant="outlined" margin="normal" required>
-            <InputLabel id="gender-label">Account Status</InputLabel>
-            <Select
-              value={fieldValues.field5}
-              labelId="gender-label"
-              id="gender-select"
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  field5: e.target.value,
-                })
-              }
-              label="Disabled"
-            >
-              <MenuItem value="Active">Active</MenuItem>
-              <MenuItem value="Disabled">Disabled</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth variant="outlined" margin="normal" required>
-            <InputLabel id="gender-label">Superuser</InputLabel>
+            <InputLabel id="superuser-label">Superuser</InputLabel>
             <Select
               value={fieldValues.field6}
-              labelId="gender-label"
-              id="gender-select"
+              labelId="superuser-label"
+              id="superuser-select"
               onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  field6: e.target.value,
-                })
+                setFieldValues({ ...fieldValues, field6: e.target.value })
               }
               label="Superuser"
             >
@@ -209,9 +181,6 @@ export default function UsersAdminEditModal({
           <Button variant="contained" color="primary" onClick={handleUpdate}>
             Update
           </Button>
-          {/* <Button variant="contained" color="primary" onClick={handleClose}>
-            Close
-          </Button> */}
         </Box>
       </Modal>
       <Toaster />

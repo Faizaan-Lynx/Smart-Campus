@@ -10,12 +10,6 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=TokenSchema)
 def login(user_credentials: UserLoginSchema, db: Session = Depends(get_db)):
-    """
-    Authenticate user and return a JWT token.
-    - Checks if the user exists.
-    - Verifies the password using bcrypt.
-    - Returns a role-based JWT token.
-    """
     user = db.query(Users).filter(Users.username == user_credentials.username).first()
 
     if not user:
@@ -38,12 +32,6 @@ def login(user_credentials: UserLoginSchema, db: Session = Depends(get_db)):
 
 @router.post("/register")
 def register(user_data: UserCreateSchema, db: Session = Depends(get_db)):
-    """
-    Register a new user.
-    - Checks for duplicate username or email.
-    - Hashes the password securely.
-    - Saves the new user in the database.
-    """
     existing_user = db.query(Users).filter(
         (Users.username == user_data.username) | (Users.email == user_data.email)
     ).first()
