@@ -1,16 +1,25 @@
-import * as React from "react";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import Modal from "@mui/material/Modal";
-import { TextField } from "@mui/material";
-import { useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Typography,
+  Modal,
+  TextField,
+  IconButton,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
 import { localurl } from "../../../utils";
-import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
-import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 
 const style = {
   position: "absolute",
@@ -32,158 +41,148 @@ export default function UsersAdminEditModal({
   setShowEditSettingsModal,
   rowData,
 }) {
-  const handleClose = () => setShowEditSettingsModal(false);
-
-  // Initialize only the fields required by the new API
+  const [activeTab, setActiveTab] = useState("details");
   const [fieldValues, setFieldValues] = useState({
-    field1: rowData.username,
-    field2: rowData.email,
-    field4: "", // password (hashed_password)
-    field7: rowData.ip_address || "",
-    field6: rowData.is_admin ? "Yes" : "No", // Superuser maps to is_admin
+    username: rowData.username,
+    email: rowData.email,
+    password: "",
+    ip_address: rowData.ip_address || "",
+    is_admin: rowData.is_admin ? "Yes" : "No",
   });
 
-  const handleUpdate = async () => {
-    const newPassword = field4Ref.current.value;
-    if (newPassword.length !== 0 && newPassword.length < 4) {
-      toast.dismiss();
-      toast.error("Password too short");
-      return;
-    }
-    // Build the request body according to the API spec
-    const newValues = {
-      username: fieldValues.field1,
-      email: fieldValues.field2,
-      hashed_password: newPassword, // if empty, your backend may ignore or require a non-empty value
-      is_admin: fieldValues.field6 === "Yes",
-      ip_address: fieldValues.field7,
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameras, setSelectedCameras] = useState(rowData.assigned_cameras || []);
+
+  useEffect(() => {
+    const fetchCameras = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("Fetching cameras...");
+        const response = await axios.get("http://127.0.0.1:8000/camera/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log("Camera API Response:", response.data);
+        setCameras(response.data);
+      } catch (error) {
+        console.error("Error fetching cameras:", error);
+      }
     };
 
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(`${localurl}/users/${rowData.id}`, newValues, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      toast.dismiss();
-      toast.success("User Updated!");
-      setTimeout(() => {
-        handleClose();
-      }, 3000);
-      window.location.reload();
-    } catch (error) {
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.detail
-      ) {
-        toast.error(error.response.data.detail);
-      } else {
-        toast.error("An error occurred while updating the user.");
-      }
-    }
+    fetchCameras();
+  }, []);
+
+  const handleCameraSelect = (cameraId) => {
+    setSelectedCameras((prevSelected) =>
+      prevSelected.includes(cameraId)
+        ? prevSelected.filter((id) => id !== cameraId)
+        : [...prevSelected, cameraId]
+    );
   };
 
-  // Refs for form fields
-  const field1Ref = useRef(null);
-  const field2Ref = useRef(null);
-  const field4Ref = useRef(null);
-  const field7Ref = useRef(null);
+  const handleUpdate = async () => {
+    try {
+      const token = localStorage.getItem("token");
+  
+      // Update User First
+      await axios.put(
+        `${localurl}/users/${rowData.id}`,
+        {
+          ...fieldValues,
+          is_admin: fieldValues.is_admin === "Yes",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        }
+      );
+  
+      // Assign Selected Cameras (POST each selected camera)
+      await Promise.all(
+        selectedCameras.map(async (cameraId) => {
+          try {
+            await axios.post(
+              "http://127.0.0.1:8000/user-cameras/",
+              {
+                user_id: rowData.id,
+                camera_id: cameraId,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              }
+            );
+          } catch (error) {
+            console.error(`Error assigning camera ${cameraId}:`, error);
+          }
+        })
+      );
+  
+      toast.success("User Updated & Cameras Assigned!");
+      setShowEditSettingsModal(false);
+      window.location.reload();
+    } catch (error) {
+      toast.error("Error updating user");
+    }
+  };
+  
 
   return (
-    <div>
-      <Modal
-        open={showEditSettingsModal}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <IconButton
-            aria-label="close"
-            onClick={handleClose}
-            sx={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Edit User Data
-          </Typography>
-          <TextField
-            inputRef={field1Ref}
-            label="Username"
-            variant="outlined"
-            value={fieldValues.field1}
-            margin="normal"
-            fullWidth
-            required
-            onChange={(e) =>
-              setFieldValues({ ...fieldValues, field1: e.target.value })
-            }
-          />
-          <TextField
-            inputRef={field2Ref}
-            label="Email"
-            value={fieldValues.field2}
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            required
-            onChange={(e) =>
-              setFieldValues({ ...fieldValues, field2: e.target.value })
-            }
-          />
-          <TextField
-            inputRef={field4Ref}
-            label="Password"
-            variant="outlined"
-            placeholder="Unchanged if empty"
-            margin="normal"
-            fullWidth
-            type="password"
-            onChange={(e) =>
-              setFieldValues({ ...fieldValues, field4: e.target.value })
-            }
-          />
-          <TextField
-            inputRef={field7Ref}
-            label="IP Address"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            required
-            value={fieldValues.field7}
-            onChange={(e) =>
-              setFieldValues({ ...fieldValues, field7: e.target.value })
-            }
-          />
-          <FormControl fullWidth variant="outlined" margin="normal" required>
-            <InputLabel id="superuser-label">Superuser</InputLabel>
-            <Select
-              value={fieldValues.field6}
-              labelId="superuser-label"
-              id="superuser-select"
-              onChange={(e) =>
-                setFieldValues({ ...fieldValues, field6: e.target.value })
-              }
-              label="Superuser"
-            >
-              <MenuItem value="Yes">Yes</MenuItem>
-              <MenuItem value="No">No</MenuItem>
-            </Select>
-          </FormControl>
-          <Button variant="contained" color="primary" onClick={handleUpdate}>
-            Update
+    <Modal open={showEditSettingsModal} onClose={() => setShowEditSettingsModal(false)}>
+      <Box sx={style}>
+        <IconButton onClick={() => setShowEditSettingsModal(false)} sx={{ position: "absolute", top: 0, right: 0 }}>
+          <CloseIcon />
+        </IconButton>
+        <Typography variant="h6">Edit User</Typography>
+
+        <div style={{ display: "flex", marginBottom: "10px" }}>
+          <Button onClick={() => setActiveTab("details")} variant={activeTab === "details" ? "contained" : "outlined"}>
+            Details
           </Button>
-        </Box>
-      </Modal>
-      <Toaster />
-    </div>
+          <Button onClick={() => setActiveTab("cameras")} variant={activeTab === "cameras" ? "contained" : "outlined"}>
+            Assigned Cameras
+          </Button>
+        </div>
+
+        {activeTab === "details" && (
+          <>
+            <TextField label="Username" fullWidth margin="normal" value={fieldValues.username} 
+              onChange={(e) => setFieldValues({ ...fieldValues, username: e.target.value })} />
+            <TextField label="Email" fullWidth margin="normal" value={fieldValues.email} 
+              onChange={(e) => setFieldValues({ ...fieldValues, email: e.target.value })} />
+            <TextField label="Password" fullWidth margin="normal" type="password" placeholder="Leave empty to keep unchanged" 
+              onChange={(e) => setFieldValues({ ...fieldValues, password: e.target.value })} />
+            <TextField label="IP Address" fullWidth margin="normal" value={fieldValues.ip_address} 
+              onChange={(e) => setFieldValues({ ...fieldValues, ip_address: e.target.value })} />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Superuser</InputLabel>
+              <Select value={fieldValues.is_admin} onChange={(e) => setFieldValues({ ...fieldValues, is_admin: e.target.value })}>
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </Select>
+            </FormControl>
+          </>
+        )}
+
+        {activeTab === "cameras" && (
+          <List>
+            {cameras.length > 0 ? (
+              cameras.map((camera) => (
+                <ListItem key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
+                  <ListItemIcon>
+                    <Checkbox checked={selectedCameras.includes(camera.id)} />
+                  </ListItemIcon>
+                  <ListItemText primary={`Camera ${camera.id}`} />
+                </ListItem>
+              ))
+            ) : (
+              <Typography>No cameras available</Typography>
+            )}
+          </List>
+        )}
+
+        <Button variant="contained" color="primary" fullWidth onClick={handleUpdate} sx={{ mt: 2 }}>
+          Update
+        </Button>
+        <Toaster />
+      </Box>
+    </Modal>
   );
 }
