@@ -1,8 +1,5 @@
 FROM python:3.12-slim
 
-# postgresql dependencies
-RUN apt-get update && apt-get install -y libpq-dev
-
 # requirements
 WORKDIR /app
 COPY requirements.txt .

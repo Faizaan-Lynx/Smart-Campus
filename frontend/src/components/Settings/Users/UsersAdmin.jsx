@@ -15,6 +15,7 @@ import "sweetalert2/src/sweetalert2.scss";
 import { toast, Toaster } from "react-hot-toast";
 import axios from "axios";
 import UsersAdminEditModal from "./UsersAdminEditModal";
+import UserAdminAddModal from "./UserAdminAddModal";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -59,6 +60,7 @@ const UserAdmin = ({ columns }) => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [tableData, setTableData] = useState([]);
   const [showEditSettingsModal, setShowEditSettingsModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [modalData, setModalData] = useState();
 
   useEffect(() => {
@@ -117,7 +119,20 @@ const UserAdmin = ({ columns }) => {
   return (
     <div className="foottable__div__main">
       <div className="footfall__content__div">
-        <p>All Users</p>
+        <p
+          style={{
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          All Users
+          <i
+            onClick={() => setShowAddModal(!showAddModal)}
+            style={{ fontSize: "27px", cursor: "pointer" }}
+            className="bx bxs-plus-square"
+          ></i>
+        </p>
       </div>
       {showEditSettingsModal && (
         <UsersAdminEditModal
@@ -126,6 +141,13 @@ const UserAdmin = ({ columns }) => {
           rowData={modalData}
         />
       )}
+      {showAddModal && (
+        <UserAdminAddModal
+          showAddUserModal={showAddModal} // Fix prop name
+          setShowAddUserModal={setShowAddModal} // Fix function to update state
+        />
+      )}
+
       <TableContainer
         component={Paper}
         sx={{ borderRadius: "11px" }}
@@ -149,8 +171,12 @@ const UserAdmin = ({ columns }) => {
                 <StyledTableRow key={index}>
                   {columns.map((column, columnIndex) => (
                     <StyledTableCell key={column.accessor} align="left">
-                      {row[column.accessor]}
+                    {column.accessor === "cameras"
+                      ? row[column.accessor]?.map((camera) => camera.id).join(", ") || "No Cameras Assigned"
+                      : row[column.accessor]}
                     </StyledTableCell>
+                  
+                    
                   ))}
                   <StyledTableCell align="center">
                     <div
