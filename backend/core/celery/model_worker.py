@@ -2,12 +2,12 @@
 # celery -A core.celery.worker worker --loglevel=info --queues=unprocessed_queue
 
 from celery import Celery
-from celery import shared_task
+from celery import task
 from config import settings
 import time
 from ultralytics import YOLO
 
-app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 # global model
 model = None
@@ -23,7 +23,7 @@ def load_model():
 
 
 # frame processing task
-@shared_task
+@model_worker_app.task
 def process_frame(stream_id, frame_data):
     """
 

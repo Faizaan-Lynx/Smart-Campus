@@ -78,3 +78,15 @@ async def health():
                 "redis_check": red.ping(),
                 "sqlalchemy_check": test_db_connection()
             }
+
+
+@app.get("/worker_name")
+async def worker_name():
+    result = celery_app.send_task("core.celery.tasks.name_checker")
+    return {"worker_name": result.get()}
+
+
+@app.get("/random_name")
+async def worker_name():
+    result = celery_app.send_task("core.celery.tasks.print_process_id")
+    return {"worker_name": result.get()}

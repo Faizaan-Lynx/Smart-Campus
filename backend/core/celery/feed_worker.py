@@ -3,7 +3,7 @@ import cv2
 import logging
 from celery import Celery
 from config import settings
-from celery import shared_task
+from celery import task
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
@@ -11,7 +11,7 @@ from celery.signals import task_prerun
 import time
 
 
-app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 
 capture_objects = {}
@@ -86,7 +86,7 @@ def process_frame(frame, camera: Camera):
     return frame
 
 
-@shared_task
+@feed_worker_app.task
 def push_frame_to_queue(camera_id, frame):
     """
     Push the processed frame to the unprocessed queue.
