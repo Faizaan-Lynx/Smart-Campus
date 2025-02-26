@@ -29,7 +29,6 @@ def name_checker():
         "args": args
     }
 
-
 @celery_app.task
 def print_process_id():
     process_id = current_process().index

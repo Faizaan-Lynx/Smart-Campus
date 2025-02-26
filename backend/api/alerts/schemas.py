@@ -16,6 +16,5 @@ class AlertUpdateAcknowledgment(BaseModel):
 
 class AlertResponse(AlertBase):
     id: int
-
     class Config:
-        from_attributes = True  # ✅ Pydantic v2: Replaces `orm_mode`
+        from_attributes = True  

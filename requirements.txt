@@ -1,17 +1,34 @@
-aioredis
-alembic
-celery[redis]
+# Core Framework & Web Server
 fastapi[all]
-flower
-httpx 
-jwt
-passlib[bcrypt]
-psycopg2-binary
-pytest 
-python-jose[cryptography]
-python-multipart
-redis
-sqlmodel
-sqlalchemy
-ultralytics
 uvicorn[standard]
+httpx
+
+# Database & ORM
+sqlalchemy
+sqlmodel
+psycopg2-binary
+alembic
+
+# Background Tasks & Message Broker
+celery
+flower
+redis
+aioredis
+
+# Security & Authentication
+jwt
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Testing
+pytest
+
+# CLI & Plugins
+click
+click-didyoumean
+click-plugins
+click-repl
+
+# Machine Learning (If Needed)
+ultralytics
+python-multipart
