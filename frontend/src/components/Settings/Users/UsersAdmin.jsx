@@ -108,7 +108,25 @@ const UserAdmin = ({ columns }) => {
     });
   };
 
+  //User Update
   const handleUserUpdate = (updatedUser) => {
+    setTableData((prevData) =>
+      prevData.map((user) =>
+        user.id === updatedUser.id ? { ...user, ...updatedUser } : user
+      )
+    );
+  
+    // If the edited user is the one currently in the modal, update modalData
+    if (modalData?.id === updatedUser.id) {
+      setModalData((prev) => ({
+        ...prev,
+        ...updatedUser,
+      }));
+    }
+  };
+  
+  //Camera Update
+  const handleCameraUpdate = (updatedUser) => {
     setTableData((prevData) =>
       prevData.map((user) =>
         user.id === updatedUser.id
@@ -121,7 +139,7 @@ const UserAdmin = ({ columns }) => {
     if (modalData?.id === updatedUser.id) {
       setModalData((prev) => ({
         ...prev,
-        cameras: updatedUser.cameras,
+        cameras: updatedUser.came,
       }));
     }
   };
@@ -151,6 +169,7 @@ const UserAdmin = ({ columns }) => {
           setShowEditSettingsModal={setShowEditSettingsModal}
           rowData={modalData} // Ensure modal gets the latest data
           onUpdateUser={handleUserUpdate}
+          onUpdateCameras={handleCameraUpdate}
         />
       )}
 

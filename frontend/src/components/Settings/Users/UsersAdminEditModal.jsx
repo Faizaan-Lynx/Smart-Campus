@@ -40,6 +40,7 @@ export default function UsersAdminEditModal({
   showEditSettingsModal,
   setShowEditSettingsModal,
   rowData,
+  onUpdateCameras,
   onUpdateUser
 }) {
   const [activeTab, setActiveTab] = useState("details");
@@ -95,11 +96,17 @@ export default function UsersAdminEditModal({
       );
   
       toast.success("User details updated successfully!");
+  
+      // Update the user in the table immediately
+      const updatedUser = { ...rowData, ...requestBody };
+      onUpdateUser(updatedUser);
+      setShowEditSettingsModal(false);
     } catch (error) {
       toast.error("Error updating user");
       console.error("Update user error:", error);
     }
   };
+  
   
 
   const handleUpdateCameras = async () => {
@@ -118,7 +125,7 @@ export default function UsersAdminEditModal({
   
       // Update the user in the table immediately
       const updatedUser = { ...rowData, cameras: [...selectedCameras] };
-      onUpdateUser(updatedUser);  
+      onUpdateCameras(updatedUser);  
       setShowEditSettingsModal(false);
     } catch (error) {
       toast.error("Error updating cameras");

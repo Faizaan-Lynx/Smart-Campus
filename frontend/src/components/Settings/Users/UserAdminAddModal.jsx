@@ -32,13 +32,13 @@ export default function UserAdminAddModal({ showAddUserModal, setShowAddUserModa
   const [fieldValues, setFieldValues] = useState({
     username: "",
     email: "",
-    hashed_password: "",
+    password: "",
     is_admin: "No",
     ip_address: "",
   });
 
   const handleAddUser = async () => {
-    if (fieldValues.hashed_password.length < 4) {
+    if (fieldValues.password.length < 4) {
       toast.error("Password too short");
       return;
     }
@@ -46,7 +46,7 @@ export default function UserAdminAddModal({ showAddUserModal, setShowAddUserModa
     const newUser = {
       username: fieldValues.username,
       email: fieldValues.email,
-      hashed_password: fieldValues.hashed_password,
+      password: fieldValues.password,
       is_admin: fieldValues.is_admin === "Yes",
       ip_address: fieldValues.ip_address,
     };
@@ -103,8 +103,8 @@ export default function UserAdminAddModal({ showAddUserModal, setShowAddUserModa
             variant="outlined"
             fullWidth
             margin="normal"
-            value={fieldValues.hashed_password}
-            onChange={(e) => setFieldValues({ ...fieldValues, hashed_password: e.target.value })}
+            value={fieldValues.password}
+            onChange={(e) => setFieldValues({ ...fieldValues, password: e.target.value })}
           />
           <TextField
             label="IP Address"
