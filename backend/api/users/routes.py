@@ -4,6 +4,7 @@ from typing import List
 from models.users import Users as UserModel
 from api.users.schemas import UserCreate, UserUpdate, User
 from core.database import get_db
+import bcrypt
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

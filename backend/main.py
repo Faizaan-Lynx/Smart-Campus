@@ -16,6 +16,8 @@ from api.users.routes import router as users_router
 from api.user_cameras.routes import router as user_cameras_router
 from api.alerts.routes import router as alerts_router
 
+from api.intrusion.routes import router as intrusion_router
+
 # WebSockets for alerts
 from api.alerts.routes import router as alerts_router;
 
@@ -54,10 +56,13 @@ app.include_router(users_router)
 app.include_router(cameras_router)
 app.include_router(user_cameras_router)
 app.include_router(alerts_router)
+app.include_router(intrusion_router)
 
 # alert websocket
 app.include_router(alerts_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World. This is the Smart Campus project!"}
+    # run celery task here
+    result = add.delay(4, 4)
+    return {"message": "Hello World. This is the Smart Campus project!", "celery_result (4+4)": result.id}
