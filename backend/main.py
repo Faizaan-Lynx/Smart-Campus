@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from config import settings
 import logging
+import redis
 
 # Middleware
 from middleware.JWTAuth import JWTAuthenticationMiddleware  
@@ -58,11 +60,33 @@ app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 app.include_router(intrusion_router)
 
-# alert websocket
+from core.celery.worker import celery_app
 app.include_router(alerts_router)
 
 @app.get("/")
 async def root():
-    # run celery task here
-    result = add.delay(4, 4)
-    return {"message": "Hello World. This is the Smart Campus project!", "celery_result (4+4)": result.id}
+    return {"message": "Hello World. This is the Smart Campus project!"}
+
+@app.get("/health")
+async def health():
+    result = celery_app.send_task("core.celery.tasks.add", (4,4))
+    red = redis.Redis(host="redis", port=6379, db=0)
+
+    return  {
+                "status": "OK",
+                "celery_calculation": result.get(),
+                "redis_check": red.ping(),
+                "sqlalchemy_check": test_db_connection()
+            }
+
+
+@app.get("/worker_name")
+async def worker_name():
+    result = celery_app.send_task("core.celery.tasks.name_checker")
+    return {"worker_name": result.get()}
+
+
+@app.get("/random_name")
+async def worker_name():
+    result = celery_app.send_task("core.celery.tasks.print_process_id")
+    return {"worker_name": result.get()}

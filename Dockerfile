@@ -1,19 +1,19 @@
 FROM python:3.12-slim
 
-# postgresql dependencies
-RUN apt-get update && apt-get install -y libpq-dev
-
 # requirements
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --cache-dir=/root/.cache/pip -r requirements.txt
 
 # copy the backend code and environment variables
 COPY backend/ ./backend
 COPY .env /app/.env
 
-# get the wait-for-it script and make it executable
+# get the bash scripts and make them executable
+COPY start_workers.sh /app/start_workers.sh
+RUN chmod +x /app/start_workers.sh
+
 COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
