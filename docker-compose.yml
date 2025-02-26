@@ -51,8 +51,12 @@ services:
   # Celery Worker
   celery:
     build: .
-    container_name: core.celery.worker
-    command: celery -A ${CELERY_MODULE}.celery_app worker --loglevel=info
+    # container_name: celery_worker
+    hostname: worker1
+    # command: celery -A ${CELERY_MODULE}.celery_app worker -n worker@%h --loglevel=info
+    command: /app/start_workers.sh ${CELERY_WORKERS}
+    environment:
+      - CELERY_MODULE=${CELERY_MODULE}
     volumes:
       - .:/app
     depends_on:

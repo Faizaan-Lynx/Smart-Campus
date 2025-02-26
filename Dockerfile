@@ -10,7 +10,10 @@ RUN pip install --cache-dir=/root/.cache/pip -r requirements.txt
 COPY backend/ ./backend
 COPY .env /app/.env
 
-# get the wait-for-it script and make it executable
+# get the bash scripts and make them executable
+COPY start_workers.sh /app/start_workers.sh
+RUN chmod +x /app/start_workers.sh
+
 COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
