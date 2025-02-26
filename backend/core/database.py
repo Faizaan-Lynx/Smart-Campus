@@ -8,8 +8,8 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # use DATABASE_URL for local development and DATABASE_DOCKER_URL for if postgres is running in a docker container
-# DATABASE_URL = settings.DATABASE_URL
-DATABASE_URL = settings.DATABASE_DOCKER_URL
+DATABASE_URL = settings.DATABASE_URL
+# DATABASE_URL = settings.DATABASE_DOCKER_URL
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
