@@ -202,7 +202,7 @@ export default function UsersAdminEditModal({
   
         {/* Show Update Cameras button only in Cameras tab */}
         {activeTab === "cameras" && (
-          <Button variant="contained" color="secondary" fullWidth onClick={handleUpdateCameras} sx={{ mt: 2 }}>
+          <Button variant="contained" color="primary" fullWidth onClick={handleUpdateCameras} sx={{ mt: 2 }}>
             Update Cameras
           </Button>
         )}

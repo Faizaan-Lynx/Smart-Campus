@@ -117,7 +117,7 @@ function App() {
 
               {/* Route For user routing */}
 
-              {/* <Route path="/userDashboard/:siteId" element=<Dashboard /> /> */}
+              <Route path="/userDashboard/" element=<Dashboard /> />
               {/* <Route
                 path="/host/:hostId/visits/:siteId"
                 element={
