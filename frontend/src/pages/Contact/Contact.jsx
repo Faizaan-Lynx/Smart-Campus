@@ -32,25 +32,43 @@ const Contact = () => {
       toast.dismiss();
       toast.error("Please enter a valid email!");
     } else {
+      // emailjs
+      //   .send("service_sn1bsmj", "template_3n82dg4", {
+      //     name: nameRef.current.value,
+      //     email: emailRef.current.value,
+      //     message: textRef.current.value,
+      //   })
+      //   .then(
+      //     (response) => {
+      //       toast.dismiss();
+      //       toast.success("Email sent! We will contact you soon.");
+      //       nameRef.current.value = "";
+      //       emailRef.current.value = "";
+      //       textRef.current.value = "";
+      //     },
+      //     (error) => {
+      //       toast.dismiss();
+      //       toast.error("Failed to send email!");
+      //     }
+      //   );
+    
       emailjs
-        .send("service_sn1bsmj", "template_3n82dg4", {
-          name: nameRef.current.value,
-          email: emailRef.current.value,
-          message: textRef.current.value,
-        })
-        .then(
-          (response) => {
-            toast.dismiss();
-            toast.success("Email sent! We will contact you soon.");
-            nameRef.current.value = "";
-            emailRef.current.value = "";
-            textRef.current.value = "";
-          },
-          (error) => {
-            toast.dismiss();
-            toast.error("Failed to send email!");
-          }
-        );
+      .send("service_sn1bsmj", "template_3n82dg4", {
+        name: nameRef.current.value,
+        email: emailRef.current.value,
+        message: textRef.current.value,
+      })
+      .then(
+        (response) => {
+          console.log("✅ Email sent successfully:", response);
+          toast.success("Email sent! We will contact you soon.");
+        },
+        (error) => {
+          console.error("❌ Failed to send email:", error);
+          toast.error("Failed to send email! Check console.");
+        }
+      );
+    
     }
   };
 
