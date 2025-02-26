@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 class UserCameraBase(BaseModel):
     user_id: int
@@ -10,3 +11,5 @@ class UserCameraCreate(UserCameraBase):
 class UserCameraResponse(UserCameraBase):
     class Config:
         orm_mode = True
+class UserCameraUpdate(BaseModel):
+    camera_ids: List[int]

@@ -44,25 +44,25 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return User.from_orm(user)
 
-
 @router.put("/{user_id}", response_model=User)
 def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Rehash password if provided
-    user.process_password()
+    # Hash password if provided
+    if user.password:
+        hashed_password = bcrypt.hashpw(user.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        db_user.hashed_password = hashed_password
 
+    # Update other fields
     for key, value in user.dict(exclude_unset=True).items():
-        if key == "password":
-            db_user.hashed_password = value  # Store hashed password
-        else:
+        if key != "password":  # Password already handled separately
             setattr(db_user, key, value)
 
     db.commit()
     db.refresh(db_user)
-    return User.from_orm(db_user)
+    return db_user 
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

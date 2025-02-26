@@ -40,6 +40,7 @@ export default function UsersAdminEditModal({
   showEditSettingsModal,
   setShowEditSettingsModal,
   rowData,
+  onUpdateUser
 }) {
   const [activeTab, setActiveTab] = useState("details");
   const [fieldValues, setFieldValues] = useState({
@@ -51,78 +52,89 @@ export default function UsersAdminEditModal({
   });
 
   const [cameras, setCameras] = useState([]);
-  const [selectedCameras, setSelectedCameras] = useState(rowData.assigned_cameras || []);
+  const [selectedCameras, setSelectedCameras] = useState(rowData.cameras || []);
 
   useEffect(() => {
     const fetchCameras = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log("Fetching cameras...");
         const response = await axios.get("http://127.0.0.1:8000/camera/", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Camera API Response:", response.data);
         setCameras(response.data);
       } catch (error) {
         console.error("Error fetching cameras:", error);
       }
     };
-
     fetchCameras();
   }, []);
 
-  const handleCameraSelect = (cameraId) => {
-    setSelectedCameras((prevSelected) =>
-      prevSelected.includes(cameraId)
-        ? prevSelected.filter((id) => id !== cameraId)
-        : [...prevSelected, cameraId]
-    );
-  };
-
-  const handleUpdate = async () => {
+  const handleUpdateUser = async () => {
     try {
       const token = localStorage.getItem("token");
   
-      // Update User First
+      // Create a request body excluding empty password
+      const requestBody = {
+        username: fieldValues.username,
+        email: fieldValues.email,
+        ip_address: fieldValues.ip_address,
+        is_admin: fieldValues.is_admin === "Yes",
+      };
+  
+      // Only include password if it's not empty
+      if (fieldValues.password.trim()) {
+        requestBody.password = fieldValues.password;
+      }
+  
       await axios.put(
         `${localurl}/users/${rowData.id}`,
-        {
-          ...fieldValues,
-          is_admin: fieldValues.is_admin === "Yes",
-        },
+        requestBody,
         {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         }
       );
   
-      // Assign Selected Cameras (POST each selected camera)
-      await Promise.all(
-        selectedCameras.map(async (cameraId) => {
-          try {
-            await axios.post(
-              "http://127.0.0.1:8000/user-cameras/",
-              {
-                user_id: rowData.id,
-                camera_id: cameraId,
-              },
-              {
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-              }
-            );
-          } catch (error) {
-            console.error(`Error assigning camera ${cameraId}:`, error);
-          }
-        })
-      );
-  
-      toast.success("User Updated & Cameras Assigned!");
-      setShowEditSettingsModal(false);
-      window.location.reload();
+      toast.success("User details updated successfully!");
     } catch (error) {
       toast.error("Error updating user");
+      console.error("Update user error:", error);
     }
   };
   
+
+  const handleUpdateCameras = async () => {
+    try {
+      const token = localStorage.getItem("token");
+  
+      await axios.put(
+        `http://127.0.0.1:8000/user-cameras/${rowData.id}`,
+        { camera_ids: selectedCameras },
+        {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        }
+      );
+  
+      toast.success("Cameras updated successfully!");
+  
+      // Update the user in the table immediately
+      const updatedUser = { ...rowData, cameras: [...selectedCameras] };
+      onUpdateUser(updatedUser);  
+      setShowEditSettingsModal(false);
+    } catch (error) {
+      toast.error("Error updating cameras");
+      console.error(error);
+    }
+  };
+  
+  
+  
+  const handleCameraSelect = (cameraId) => {
+    setSelectedCameras((prevSelected) =>
+      prevSelected.includes(cameraId)
+        ? prevSelected.filter((id) => id !== cameraId)
+        : [...prevSelected, parseInt(cameraId, 10)]
+    );
+  };
 
   return (
     <Modal open={showEditSettingsModal} onClose={() => setShowEditSettingsModal(false)}>
@@ -131,7 +143,7 @@ export default function UsersAdminEditModal({
           <CloseIcon />
         </IconButton>
         <Typography variant="h6">Edit User</Typography>
-
+  
         <div style={{ display: "flex", marginBottom: "10px" }}>
           <Button onClick={() => setActiveTab("details")} variant={activeTab === "details" ? "contained" : "outlined"}>
             Details
@@ -140,7 +152,7 @@ export default function UsersAdminEditModal({
             Assigned Cameras
           </Button>
         </div>
-
+  
         {activeTab === "details" && (
           <>
             <TextField label="Username" fullWidth margin="normal" value={fieldValues.username} 
@@ -160,29 +172,37 @@ export default function UsersAdminEditModal({
             </FormControl>
           </>
         )}
-
+  
         {activeTab === "cameras" && (
           <List>
-            {cameras.length > 0 ? (
-              cameras.map((camera) => (
-                <ListItem key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
-                  <ListItemIcon>
-                    <Checkbox checked={selectedCameras.includes(camera.id)} />
-                  </ListItemIcon>
-                  <ListItemText primary={`Camera ${camera.id}`} />
-                </ListItem>
-              ))
-            ) : (
-              <Typography>No cameras available</Typography>
-            )}
+            {cameras.map((camera) => (
+              <ListItem key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
+                <ListItemIcon>
+                  <Checkbox checked={selectedCameras.includes(camera.id)} />
+                </ListItemIcon>
+                <ListItemText primary={`Camera ${camera.id}`} />
+              </ListItem>
+            ))}
           </List>
         )}
-
-        <Button variant="contained" color="primary" fullWidth onClick={handleUpdate} sx={{ mt: 2 }}>
-          Update
-        </Button>
+  
+        {/* Show Update User button only in Details tab */}
+        {activeTab === "details" && (
+          <Button variant="contained" color="primary" fullWidth onClick={handleUpdateUser} sx={{ mt: 2 }}>
+            Update User
+          </Button>
+        )}
+  
+        {/* Show Update Cameras button only in Cameras tab */}
+        {activeTab === "cameras" && (
+          <Button variant="contained" color="secondary" fullWidth onClick={handleUpdateCameras} sx={{ mt: 2 }}>
+            Update Cameras
+          </Button>
+        )}
+  
         <Toaster />
       </Box>
     </Modal>
   );
+  
 }
