@@ -34,7 +34,6 @@ function App() {
   useEffect(() => {
     // Assuming token is stored in localStorage or received from an API
     // const token = localStorage.getItem("token");
-
     // if (token) {
     //   try {
     //     const decoded = jwtDecode(token);
@@ -117,7 +116,8 @@ function App() {
 
               {/* Route For user routing */}
 
-              <Route path="/userDashboard/" element=<Dashboard /> />
+              <Route path="/userDashboard" element=<Dashboard /> />
+            
               {/* <Route
                 path="/host/:hostId/visits/:siteId"
                 element={
