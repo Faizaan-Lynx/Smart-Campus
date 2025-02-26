@@ -1,14 +1,21 @@
 import React from "react";
 import "./Navbar.css";
 import assets from "../../assets";
+import { jwtDecode } from "jwt-decode";  // ✅ Correct way for ESM modules
 
 const Navbar = () => {
-  const userDataString = localStorage.getItem("userData");
+  const token = localStorage.getItem("token"); // Get JWT token from localStorage
+  let username = "Username"; // Default username if not found
 
-  const userData = JSON.parse(userDataString);
-
-  // Get the username attribute from the userData object
-  const username = userData ? userData.username : "Username";
+  if (token) {
+    try {
+      const decodedToken = jwtDecode(token); // Decode JWT
+      username = decodedToken.sub || "Username"; // Extract username from token
+    } catch (error) {
+      console.error("Invalid token:", error);
+      localStorage.removeItem("token"); // Remove token if it's invalid
+    }
+  }
 
   return (
     <>
@@ -24,9 +31,6 @@ const Navbar = () => {
                 Hi, <span className="bold__font">{username}</span>
               </p>
             </div>
-            {/* <div className="name__div">
-              <img src={assets.logo} alt="profile" />
-            </div> */}
           </div>
         </nav>
       </header>

@@ -4,8 +4,8 @@ import logging
 import redis
 
 # Middleware
-# from middleware.JWTAuth import JWTAuthenticationMiddleware  
-# from middleware.ip_middleware import IPMiddleware  
+from middleware.JWTAuth import JWTAuthenticationMiddleware  
+from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
 # DB
@@ -17,10 +17,11 @@ from api.cameras.routes import router as cameras_router
 from api.users.routes import router as users_router
 from api.user_cameras.routes import router as user_cameras_router
 from api.alerts.routes import router as alerts_router
-# from api.intrusion.routes import router as intrusion_router
+
+from api.intrusion.routes import router as intrusion_router
 
 # WebSockets for alerts
-# from api.alerts.websocket import router as alert_ws_router
+from api.alerts.routes import router as alerts_router;
 
 app = FastAPI()
 
@@ -37,10 +38,11 @@ def startup_db_check():
         logger.error("❌ Database connection failed on startup. Exiting...")
         exit(1)
 
-# Authentication middleware
-# app.add_middleware(JWTAuthenticationMiddleware)
 # IP middleware
-# app.add_middleware(IPMiddleware)
+app.add_middleware(IPMiddleware)
+# Authentication middleware
+app.add_middleware(JWTAuthenticationMiddleware)
+
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
@@ -56,12 +58,10 @@ app.include_router(users_router)
 app.include_router(cameras_router)
 app.include_router(user_cameras_router)
 app.include_router(alerts_router)
-# app.include_router(intrusion_router, prefix="/intrusion", tags=["intrusion"])
-
-# alert websocket
-# app.include_router(alert_ws_router)
+app.include_router(intrusion_router)
 
 from core.celery.worker import celery_app
+app.include_router(alerts_router)
 
 @app.get("/")
 async def root():

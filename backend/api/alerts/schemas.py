@@ -7,7 +7,7 @@ class AlertBase(BaseModel):
     is_acknowledged: bool = False
     file_path: Optional[str] = None
 
-class AlertCreate(BaseModel):
+class AlertCreate(AlertBase):
     message: str
     severity: str
 

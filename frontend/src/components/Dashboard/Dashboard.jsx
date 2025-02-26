@@ -62,8 +62,15 @@ const Dashboard = () => {
   // Fetch Cameras
   useEffect(() => {
     const fetchCameras = async () => {
+
+      const token = localStorage.getItem("token");
       try {
-        const response = await axios.get("http://127.0.0.1:8000/camera/");
+        const response = await axios.get("http://127.0.0.1:8000/camera/", {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         setCameras(response.data);
         setSelectedCamera(response.data[0].id); // Set first camera as selected
       } catch (error) {
@@ -79,9 +86,12 @@ const Dashboard = () => {
   // Fetch Alerts
   useEffect(() => {
     const fetchAlerts = async () => {
+      const token = localStorage.getItem("token");
+
       try {
         const response = await axios.get("http://127.0.0.1:8000/alerts/", {
           headers: { accept: "application/json" },
+          Authorization: `Bearer ${token}`,
         });
   
         if (response.data && response.data.length > 0) {
