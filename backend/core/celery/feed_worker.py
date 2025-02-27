@@ -3,46 +3,42 @@ import cv2
 import logging
 from celery import Celery
 from config import settings
-from celery import task
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
 from celery.signals import task_prerun
 import time
 
-
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
-
 
 capture_objects = {}
 
-# extract the name of the queue
-@task_prerun.connect
-def task_prerun_handler(task_id, task, *args, **kwargs):
-    print(f"Task {task_id} is about to be executed: {task.name}")
-
-
-def fetch_and_process_cameras(db: Session, worker_id: int):
+@feed_worker_app.task
+def fetch_and_process_cameras():
     """
     Fetch cameras assigned to this worker and continuously capture frames.
     This worker will fetch cameras by ID ranges based on worker_id.
     """
+    worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
+    # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
+    worker_id = int(worker_name.split('r')[-1])
+
     start_camera_id = (worker_id - 1) * 10 + 1  # Worker 1: 1-10, Worker 2: 11-20, etc.
     end_camera_id = start_camera_id + 9
 
-    cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    # cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
 
-    if not cameras:
-        logging.warning(f"No cameras found for worker {worker_id}.")
-        return
+    # if not cameras:
+    #     logging.warning(f"No cameras found for worker {worker_id}.")
+    #     return
 
     logging.info(f"Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
-
-    while True:
-        for camera in cameras:
-            logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
-            capture_video_frames(camera)
-
+    return {"worker_id": worker_id, "start_camera_id": start_camera_id, "end_camera_id": end_camera_id}
+    # while True:
+    #     for camera in cameras:
+    #         logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
+    #         capture_video_frames(camera)
+            
 
 def capture_video_frames(camera: Camera):
     """
@@ -67,7 +63,6 @@ def capture_video_frames(camera: Camera):
         return
 
     frame = process_frame(frame, camera)
-
     push_frame_to_queue(camera.id, frame)
 
 
@@ -75,6 +70,7 @@ def process_frame(frame, camera: Camera):
     """
     Process the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
     """
+
     if camera.resize_dims:
         width, height = map(int, camera.resize_dims.split('x'))
         frame = cv2.resize(frame, (width, height))
@@ -113,7 +109,7 @@ if __name__ == "__main__":
 
     # Start processing the cameras for this worker
     with get_db() as db:
-        fetch_and_process_cameras(db, worker_id)
+        fetch_and_process_cameras()
 
     # Release all capture objects after processing is done
     release_capture_objects()

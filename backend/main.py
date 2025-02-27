@@ -5,7 +5,7 @@ import redis
 
 # Middleware
 from middleware.JWTAuth import JWTAuthenticationMiddleware  
-from middleware.ip_middleware import IPMiddleware  
+# from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
 # DB
@@ -39,9 +39,9 @@ def startup_db_check():
         exit(1)
 
 # IP middleware
-app.add_middleware(IPMiddleware)
+# app.add_middleware(IPMiddleware)
 # Authentication middleware
-app.add_middleware(JWTAuthenticationMiddleware)
+# app.add_middleware(JWTAuthenticationMiddleware)
 
 # CORS Middleware
 app.add_middleware(
@@ -61,6 +61,7 @@ app.include_router(alerts_router)
 app.include_router(intrusion_router)
 
 from core.celery.worker import celery_app
+from core.celery.feed_worker import feed_worker_app
 app.include_router(alerts_router)
 
 @app.get("/")
@@ -87,7 +88,7 @@ async def worker_name():
     return {"worker_name": result.get()}
 
 
-@app.get("/random_name")
-async def worker_name():
-    result = celery_app.send_task("core.celery.tasks.print_process_id")
+@app.get("/feed_worker_test")
+async def feed_worker_test():
+    result = feed_worker_app.send_task("core.celery.feed_worker.fetch_and_process_cameras")
     return {"worker_name": result.get()}

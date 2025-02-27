@@ -8,19 +8,18 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
-import { color1, localurl } from "../../../utils";
+import { color1 } from "../../../utils";
 import "../../FootTable/FootTable.css";
 import Swal from "sweetalert2/dist/sweetalert2.js";
 import "sweetalert2/src/sweetalert2.scss";
 import { toast, Toaster } from "react-hot-toast";
 import axios from "axios";
 import UsersAdminEditModal from "./UsersAdminEditModal";
+import UserAdminAddModal from "./UserAdminAddModal";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     fontSize: "20px",
-    // backgroundColor: "#367f2b",
-    // backgroundColor: "#9F9FED",
     backgroundColor: color1,
     color: theme.palette.common.white,
     fontWeight: "bold",
@@ -34,11 +33,9 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
     backgroundColor: "#fff",
   },
-
   "&:nth-of-type(odd)": {
     backgroundColor: theme.palette.action.hover,
   },
-  // hide last border
   "&:last-child td, &:last-child th": {
     border: 0,
   },
@@ -50,36 +47,36 @@ const columns = [
   { Header: "Group", accessor: "group" },
   { Header: "New", accessor: "new" },
   { Header: "Time In", accessor: "timeIn" },
-  // { Header: "Time Out", accessor: "timeOut" },
-  // { Header: "Stay", accessor: "stay" },
 ];
 
 const UserAdmin = ({ columns }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [tableData, setTableData] = useState([]);
+  const [userData, setUserData] = useState([]);
   const [showEditSettingsModal, setShowEditSettingsModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [modalData, setModalData] = useState();
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token"); // Get token from local storage
+        const token = localStorage.getItem("token");
         const response = await axios.get("http://127.0.0.1:8000/users", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         });
-        setTableData(response.data); // Update state with API data
+        setTableData(response.data);
+        console.log("Users:", response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
         toast.error("Failed to load users");
       }
     };
-
     fetchUsers();
-  }, []);
+  },[]);
 
   const deleteUser = async (id) => {
     Swal.fire({
@@ -105,27 +102,84 @@ const UserAdmin = ({ columns }) => {
           setTableData((prevData) => prevData.filter((user) => user.id !== id));
         } catch (error) {
           console.error("Error deleting user:", error);
-          toast.error(
-            error.response?.data?.detail ||
-              "An error occurred while deleting the user."
-          );
+          toast.error("An error occurred while deleting the user.");
         }
       }
     });
   };
 
+  //User Update
+  const handleUserUpdate = (updatedUser) => {
+    setTableData((prevData) =>
+      prevData.map((user) =>
+        user.id === updatedUser.id ? { ...user, ...updatedUser } : user
+      )
+    );
+  
+    // If the edited user is the one currently in the modal, update modalData
+    if (modalData?.id === updatedUser.id) {
+      setModalData((prev) => ({
+        ...prev,
+        ...updatedUser,
+      }));
+    }
+  };
+  
+  //Camera Update
+  const handleCameraUpdate = (updatedUser) => {
+    setTableData((prevData) =>
+      prevData.map((user) =>
+        user.id === updatedUser.id
+          ? { ...user, cameras: updatedUser.cameras }
+          : user
+      )
+    );
+
+    // If the edited user is the one currently in the modal, update modalData
+    if (modalData?.id === updatedUser.id) {
+      setModalData((prev) => ({
+        ...prev,
+        cameras: updatedUser.came,
+      }));
+    }
+  };
+
   return (
     <div className="foottable__div__main">
       <div className="footfall__content__div">
-        <p>All Users</p>
+        <p
+          style={{
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          All Users
+          <i
+            onClick={() => setShowAddModal(!showAddModal)}
+            style={{ fontSize: "27px", cursor: "pointer" }}
+            className="bx bxs-plus-square"
+          ></i>
+        </p>
       </div>
+
       {showEditSettingsModal && (
         <UsersAdminEditModal
           showEditSettingsModal={showEditSettingsModal}
           setShowEditSettingsModal={setShowEditSettingsModal}
-          rowData={modalData}
+          rowData={modalData} // Ensure modal gets the latest data
+          onUpdateUser={handleUserUpdate}
+          onUpdateCameras={handleCameraUpdate}
         />
       )}
+
+      {showAddModal && (
+        <UserAdminAddModal
+          showAddUserModal={showAddModal}
+          setShowAddUserModal={setShowAddModal}
+        />
+      )}
+
       <TableContainer
         component={Paper}
         sx={{ borderRadius: "11px" }}
@@ -134,7 +188,7 @@ const UserAdmin = ({ columns }) => {
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
             <TableRow>
-              {columns.map((column, index) => (
+              {columns.map((column) => (
                 <StyledTableCell key={column.Header} align="left">
                   {column.Header}
                 </StyledTableCell>
@@ -145,11 +199,14 @@ const UserAdmin = ({ columns }) => {
           <TableBody>
             {tableData
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, index) => (
-                <StyledTableRow key={index}>
-                  {columns.map((column, columnIndex) => (
+              .map((row) => (
+                <StyledTableRow key={row.id}>
+                  {columns.map((column) => (
                     <StyledTableCell key={column.accessor} align="left">
-                      {row[column.accessor]}
+                      {column.accessor === "cameras"
+                        ? row[column.accessor]?.join(", ") ||
+                          "No Cameras Assigned"
+                        : row[column.accessor]}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
@@ -164,7 +221,7 @@ const UserAdmin = ({ columns }) => {
                       <p
                         onClick={() => {
                           setModalData(row);
-                          setShowEditSettingsModal(!showEditSettingsModal);
+                          setShowEditSettingsModal(true);
                         }}
                         style={{
                           cursor: "pointer",

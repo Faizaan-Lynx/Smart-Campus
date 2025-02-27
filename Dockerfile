@@ -4,7 +4,10 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install --cache-dir=/root/.cache/pip -r requirements.txt
+RUN pip install --cache-dir=/root/.cache/pip --prefer-binary -r requirements.txt
+
+# cv2 requirements
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
 
 # copy the backend code and environment variables
 COPY backend/ ./backend

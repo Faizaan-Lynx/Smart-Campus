@@ -22,7 +22,6 @@ def load_model():
     print("Model loaded successfully.")
 
 
-# frame processing task
 @model_worker_app.task
 def process_frame(stream_id, frame_data):
     """

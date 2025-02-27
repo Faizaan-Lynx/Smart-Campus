@@ -19,6 +19,9 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
         # Allow public access to authentication endpoints
         if request.url.path.startswith("/docs"):
             return await call_next(request)
+        
+        if request.url.path.startswith("/docs") or request.url.path.startswith("/redoc") or request.url.path.startswith("/openapi.json"):
+            return await call_next(request)
 
         # Check for Authorization header
         authorization: str = request.headers.get("Authorization")
