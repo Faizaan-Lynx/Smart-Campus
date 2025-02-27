@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ✅ Allow only these IPs
-ALLOWED_IPS = []  # Add your trusted IPs
+ALLOWED_IPS = ["::1"]  # Add your trusted IPs
 
 class IPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

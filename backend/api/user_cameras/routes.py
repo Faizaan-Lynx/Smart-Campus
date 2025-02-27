@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.user_cameras import user_cameras
+from sqlalchemy import delete, insert
 from models.users import Users
 from models.cameras import Camera
 from core.database import get_db
-from api.user_cameras.schemas import UserCameraCreate, UserCameraResponse
+from api.user_cameras.schemas import UserCameraCreate, UserCameraResponse, UserCameraUpdate
 
 router = APIRouter(prefix="/user-cameras", tags=["User Cameras"])
 
@@ -46,3 +47,23 @@ def remove_camera_from_user(user_camera: UserCameraCreate, db: Session = Depends
     ))
     db.commit()
     return None
+
+@router.put("/{user_id}", response_model=list[UserCameraResponse])
+def update_user_cameras(user_id: int, user_camera_update: UserCameraUpdate, db: Session = Depends(get_db)):
+    user = db.query(Users).filter(Users.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Validate that all provided camera IDs exist
+    cameras = db.query(Camera).filter(Camera.id.in_(user_camera_update.camera_ids)).all()
+    if len(cameras) != len(user_camera_update.camera_ids):
+        raise HTTPException(status_code=404, detail="One or more cameras not found")
+
+    # Remove all existing camera assignments for the user
+    db.execute(delete(user_cameras).where(user_cameras.c.user_id == user_id))
+
+    # Insert new camera assignments
+    db.execute(insert(user_cameras), [{"user_id": user_id, "camera_id": camera_id} for camera_id in user_camera_update.camera_ids])
+
+    db.commit()
+    return [{"user_id": user_id, "camera_id": camera_id} for camera_id in user_camera_update.camera_ids]

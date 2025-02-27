@@ -21,6 +21,7 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
 
     # Broadcast the alert
     await broadcast_alert(alert_response)
+    await broadcast_alert(alert_response)
 
     return alert_response
 

@@ -151,14 +151,14 @@ const Sidebar = () => {
               </a>
             </li>
 
-            {/* {userInfo?.is_superuser && (*/}
+            {userInfo?.is_superuser && (
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>
                 <i className="bx bx-cog icon"></i>
                 <span className="text nav-text">Users</span>
               </a>
             </li>
-            {/*)}*/}
+            )}
           </ul>
         </div>
         <div className="bottom-content">

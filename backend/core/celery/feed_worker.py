@@ -42,7 +42,7 @@ def fetch_and_process_cameras(db: Session, worker_id: int):
         for camera in cameras:
             logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
             capture_video_frames(camera)
-
+            
 
 def capture_video_frames(camera: Camera):
     """
@@ -67,7 +67,6 @@ def capture_video_frames(camera: Camera):
         return
 
     frame = process_frame(frame, camera)
-
     push_frame_to_queue(camera.id, frame)
 
 
@@ -75,6 +74,7 @@ def process_frame(frame, camera: Camera):
     """
     Process the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
     """
+
     if camera.resize_dims:
         width, height = map(int, camera.resize_dims.split('x'))
         frame = cv2.resize(frame, (width, height))

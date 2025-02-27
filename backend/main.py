@@ -5,7 +5,7 @@ import redis
 
 # Middleware
 from middleware.JWTAuth import JWTAuthenticationMiddleware  
-from middleware.ip_middleware import IPMiddleware  
+# from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
 # DB
@@ -39,7 +39,7 @@ def startup_db_check():
         exit(1)
 
 # IP middleware
-app.add_middleware(IPMiddleware)
+# app.add_middleware(IPMiddleware)
 # Authentication middleware
 app.add_middleware(JWTAuthenticationMiddleware)
 
