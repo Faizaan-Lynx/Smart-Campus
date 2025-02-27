@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")    
 
 class UserBase(BaseModel):
-    id: int
+    id: int  # Add ID field here
     username: str
     email: EmailStr
     is_admin: Optional[bool] = False
@@ -19,7 +19,7 @@ class UserBase(BaseModel):
     def from_orm(cls, obj):
         """Convert ORM model to schema, extracting camera IDs"""
         return cls(
-            id=obj.id,
+            id=obj.id,  # Ensure ID is included in the response
             username=obj.username,
             email=obj.email,
             is_admin=obj.is_admin,
@@ -28,17 +28,26 @@ class UserBase(BaseModel):
         )
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
     password: str
+    is_admin: Optional[bool] = False
+    ip_address: Optional[str] = None
+    cameras: List[int] = []
 
     def hash_password(self):
         """Hash the password before storing"""
         self.password = pwd_context.hash(self.password)
 
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):  # No need to inherit from UserBase to keep fields optional
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     is_admin: Optional[bool] = None
     ip_address: Optional[str] = None
+    cameras: Optional[List[int]] = None  # Make cameras optional
+
+    class Config:
+        orm_mode = True
