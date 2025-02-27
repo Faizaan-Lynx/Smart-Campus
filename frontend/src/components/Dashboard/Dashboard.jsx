@@ -14,6 +14,7 @@ import { useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import FootFall from "../FootFall/FootFall";
 import FeedPopup from "../FootTable/FeedPopUp";
+import { jwtDecode } from "jwt-decode";
 
 const Dashboard = () => {
   const selectedOptionRedux = useSelector((state) => state.auth.selectedOption);
@@ -59,29 +60,100 @@ const Dashboard = () => {
     setLoading(true);
   };
 
-  // Fetch Cameras
-  useEffect(() => {
-    const fetchCameras = async () => {
+  
 
-      const token = localStorage.getItem("token");
+  // Fetch Cameras
+
+  const fetchCameraDetails = async (cameraIds, token) => {
+    const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/camera/", {
+        const response = await axios.get(`http://127.0.0.1:8000/camera/${cameraId}`, {
           headers: {
             accept: "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
-        setCameras(response.data);
-        setSelectedCamera(response.data[0].id); // Set first camera as selected
+        return response.data;
       } catch (error) {
-        toast.error("Failed to fetch camera list. Please try again later.");
+        console.error(`Failed to fetch camera ${cameraId}`, error);
+        return null;
+      }
+    });
+  
+    const cameras = await Promise.all(cameraPromises);
+    return cameras.filter((camera) => camera !== null); // Remove failed fetches
+  };
+
+
+  useEffect(() => {
+    const fetchCameras = async () => {
+      const token = localStorage.getItem("token");
+      console.log("API Call, Token:", token);
+
+      if (!token) {
+        toast.error("No authentication token found!");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const decodedToken = jwtDecode(token);
+        console.log("Decoded Token:", decodedToken);
+
+        const isAdmin = decodedToken.role === "admin";
+        console.log("Is Admin:", isAdmin);
+
+        if (isAdmin) {
+          console.log("Fetching all cameras...");
+          const response = await axios.get("http://127.0.0.1:8000/camera/", {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          console.log("Cameras fetched (Admin):", response.data);
+          setCameras(response.data);
+          setSelectedCamera(response.data[0].id); // Set first camera as selected
+
+        } else {
+          const userId = decodedToken.id;
+          console.log(`Fetching user data for ID: ${userId}`);
+
+          const userResponse = await axios.get(`http://127.0.0.1:8000/users/${userId}`, {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          console.log("User Data Response:", userResponse.data);
+          const user = userResponse.data;
+
+          if (!user || !user.cameras.length) {
+            toast.error("No cameras assigned to this user.");
+            setLoading(false);
+            return;
+          }
+
+          // Fetch details for each assigned camera
+          console.log("Fetching assigned cameras...");
+          const userCameras = await fetchCameraDetails(user.cameras, token);
+          console.log("Fetched User Cameras:", userCameras);
+          setCameras(userCameras);
+          setSelectedCamera(userCameras[0].id);
+        }
+
+      } catch (error) {
+        console.error("Error fetching cameras:", error);
+        toast.error("Failed to fetch cameras. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchCameras();
   }, []);
+
 
   // Fetch Alerts
   useEffect(() => {

@@ -84,7 +84,7 @@ export default function UsersAdminEditModal({
   
       // Only include password if it's not empty
       if (fieldValues.password.trim()) {
-        requestBody.password = fieldValues.password;
+        requestBody.hashed_password = fieldValues.password;
       }
   
       await axios.put(

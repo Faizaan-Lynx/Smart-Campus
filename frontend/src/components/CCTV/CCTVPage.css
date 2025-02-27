@@ -3,7 +3,8 @@
     text-align: center;
     background-color: #f8f8ff; /* Light purple-white background */
     color: #4b0082; /* Deep purple text */
-    padding: 76px;
+    padding: 50px;
+    margin-top: 60px;
     min-height: 100vh;
     transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
   }
