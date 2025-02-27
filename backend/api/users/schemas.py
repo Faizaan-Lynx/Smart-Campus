@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")    
 
 class UserBase(BaseModel):
+    id: int
     username: str
     email: EmailStr
     is_admin: Optional[bool] = False
@@ -18,6 +19,7 @@ class UserBase(BaseModel):
     def from_orm(cls, obj):
         """Convert ORM model to schema, extracting camera IDs"""
         return cls(
+            id=obj.id,
             username=obj.username,
             email=obj.email,
             is_admin=obj.is_admin,
