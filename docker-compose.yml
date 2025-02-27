@@ -54,7 +54,7 @@ services:
     # container_name: celery_worker
     hostname: worker1
     # command: celery -A ${CELERY_MODULE}.celery_app worker -n worker@%h --loglevel=info
-    command: /app/start_workers.sh ${CELERY_WORKERS}
+    command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${MODEL_WORKERS}
     environment:
       - CELERY_MODULE=${CELERY_MODULE}
     volumes:
@@ -65,10 +65,23 @@ services:
     networks:
       - backend
 
+  # feed_worker:
+  #   build: .
+  #   command: celery -A ${CELERY_MODULE}.feed_worker.feed_worker_app worker -n feed_worker@%h --loglevel=info
+  #   environment:
+  #     - CELERY_MODULE=${CELERY_MODULE}
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     - redis
+  #     - postgres-db
+  #   networks:
+  #     - backend
+
   flower:
     container_name: flower
     build: .
-    command: celery -A ${CELERY_MODULE}.celery_app flower --port=5555
+    command: celery -A ${CELERY_MODULE}.worker.celery_app flower --port=5555
     ports:
       - "5556:5555"
     depends_on:
