@@ -13,7 +13,6 @@ def publish_alert(alert_data):
     redis_client.publish("alerts_channel", json.dumps(alert_data))
     return "Alert published successfully"
 
-
 @celery_app.task
 def add(x, y):
     return x + y

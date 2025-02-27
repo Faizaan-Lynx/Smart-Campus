@@ -1,13 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
-
+from api.alerts.websocket import websocket_manager
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
-# from api.alerts.websocket import broadcast_alert
-from core.celery.tasks import publish_alert
+from core.celery.alert_tasks import publish_alert, broadcast_alert  
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
+
+@router.websocket("/ws/alerts/{camera_id}")
+async def websocket_alerts(camera_id: str, websocket: WebSocket):
+    """Handle WebSocket connections for real-time alerts."""
+    await websocket_manager.connect(camera_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()  # Keep connection alive
+    except WebSocketDisconnect:
+        await websocket_manager.disconnect(camera_id, websocket)
 
 @router.post("/", response_model=AlertResponse)
 async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
@@ -19,9 +28,9 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
 
     alert_response = AlertResponse.model_validate(alert)
 
-    # Broadcast the alert
-    await broadcast_alert(alert_response)
-    await broadcast_alert(alert_response)
+    # Trigger Celery tasks asynchronously
+    publish_alert.delay(alert_response.dict())  # Publish alert to Redis
+    broadcast_alert.delay(alert_response.dict())  # Send alert via WebSockets
 
     return alert_response
 
