@@ -8,6 +8,7 @@ import axios from "axios";
 import { localurl } from "../../utils";
 import EditProfileModal from "./EditProfileModal";
 import { useNavigate } from "react-router-dom";
+import UserAdmin from "../../components/Settings/Users/UsersAdmin";
 
 const Profile = () => {
   const [userData, setUserData] = useState(null);
@@ -149,9 +150,10 @@ const Profile = () => {
           <button>Subscribe</button>
         </div> */}
       </div>
-      <div className="sites__table__profile__div">
+      {/* <div className="sites__table__profile__div">
         <SitesTableProfile columns={columns} data={data} />
-      </div>
+        <UserAdmin columns={columns} />
+      </div> */}
     </div>
   );
 };

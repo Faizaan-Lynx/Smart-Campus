@@ -112,12 +112,12 @@ const Sidebar = () => {
               </a>
             </li>
 
-            <li className="nav-link">
+            {/* <li className="nav-link">
               <a onClick={() => navigate("/profile")}>
                 <i className="bx bx-user icon"></i>
                 <span className="text nav-text">Profile</span>
               </a>
-            </li>
+            </li> */}
             {/* <li className="nav-link sites__link"> */}
 
             {!isSidebarClosed && (
@@ -147,22 +147,27 @@ const Sidebar = () => {
             </li>
 
             {/* CCTV */}
-            <li className="nav-link">
+            {/* <li className="nav-link">
               <a onClick={() => navigate("/CCTV")}>
                 <i className="bx bx-camera icon"></i>
                 <span className="text nav-text">CCTV</span>
               </a>
-            </li>
+            </li> */}
 
-            {userInfo?.role === "admin" && (
+            {/* {userInfo?.role === "admin" && (
               <li className="nav-link">
                 <a onClick={() => navigate("/settings")}>
                   <i className="bx bx-cog icon"></i>
                   <span className="text nav-text">Users</span>
                 </a>
               </li>
-            )}
-
+            )} */}
+            <li className="nav-link">
+              <a onClick={() => navigate("/settings")}>
+                <i className="bx bx-cog icon"></i>
+                <span className="text nav-text">Users</span>
+              </a>
+            </li>
             {/* 
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>
