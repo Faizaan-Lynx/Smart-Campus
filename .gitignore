@@ -8,6 +8,11 @@ __pycache__
 __pycache__/*
 *.pyc
 
+# model files
+*.pt
+*.pth
+*.h5
+
 # data files
 data
 *.jpg

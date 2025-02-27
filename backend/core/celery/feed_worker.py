@@ -3,7 +3,7 @@ import cv2
 import logging
 from celery import Celery
 from config import settings
-from celery import shared_task
+from celery import task
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
@@ -11,7 +11,7 @@ from celery.signals import task_prerun
 import time
 
 
-app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 
 capture_objects = {}
@@ -42,9 +42,7 @@ def fetch_and_process_cameras(db: Session, worker_id: int):
         for camera in cameras:
             logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
             capture_video_frames(camera)
-
-            time.sleep(1)  # Adjust the sleep time based on your use case (for example, 1 second)
-
+            
 
 def capture_video_frames(camera: Camera):
     """
@@ -58,7 +56,6 @@ def capture_video_frames(camera: Camera):
             logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
             return
 
-        # Store the capture object for reuse
         capture_objects[camera.id] = cap
     else:
         cap = capture_objects[camera.id]
@@ -69,10 +66,7 @@ def capture_video_frames(camera: Camera):
         logging.warning(f"Failed to read frame from camera {camera.id}, URL {camera.url}")
         return
 
-    # Resize or process the frame if needed (based on the camera settings)
     frame = process_frame(frame, camera)
-
-    # Push the frame to the Celery queue
     push_frame_to_queue(camera.id, frame)
 
 
@@ -80,12 +74,11 @@ def process_frame(frame, camera: Camera):
     """
     Process the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
     """
-    # Example: Resize the frame if `resize_dims` is set (assuming it's a string like "640x480")
+
     if camera.resize_dims:
         width, height = map(int, camera.resize_dims.split('x'))
         frame = cv2.resize(frame, (width, height))
 
-    # Example: Crop the frame if `crop_region` is set (assuming it's a string like "x1,y1,x2,y2")
     if camera.crop_region:
         x1, y1, x2, y2 = map(int, camera.crop_region.split(','))
         frame = frame[y1:y2, x1:x2]
@@ -93,7 +86,7 @@ def process_frame(frame, camera: Camera):
     return frame
 
 
-@shared_task
+@feed_worker_app.task
 def push_frame_to_queue(camera_id, frame):
     """
     Push the processed frame to the unprocessed queue.

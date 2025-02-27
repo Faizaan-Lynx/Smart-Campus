@@ -11,8 +11,3 @@ celery_app = Celery(
 
 # Auto-discover tasks in the `tasks.py` file
 celery_app.autodiscover_tasks(["core.celery"])
-
-
-# @celery_app.task
-# def add(x, y):
-#     return x + y
