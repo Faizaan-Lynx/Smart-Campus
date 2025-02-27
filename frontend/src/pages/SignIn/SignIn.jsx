@@ -146,6 +146,7 @@ const SignIn = () => {
         });
 
         const { access_token, token_type } = response.data;
+        console.log("Access token", access_token)
 
         // Store token in localStorage
         localStorage.setItem("token", access_token);

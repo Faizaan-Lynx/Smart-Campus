@@ -16,19 +16,22 @@ const Sidebar = () => {
   const [siteData, setSiteData] = useState([]);
 
   useEffect(() => {
-    // Assuming token is stored in localStorage or received from an API
     const token = localStorage.getItem("token");
-
+    console.log("Sidebar", token);
     if (token) {
       try {
         const decoded = jwtDecode(token);
+        console.log("Decoded...", decoded);
         setUserInfo(decoded);
-        // console.log(userInfo);
       } catch (error) {
         console.error("Error decoding token:", error);
       }
     }
   }, []);
+
+  useEffect(() => {
+    console.log("Updated User Info", userInfo);
+  }, [userInfo]); // This will log when `userInfo` updates
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("userData"));
@@ -151,14 +154,22 @@ const Sidebar = () => {
               </a>
             </li>
 
-            {userInfo?.is_superuser && (
+            {userInfo?.role === "admin" && (
+              <li className="nav-link">
+                <a onClick={() => navigate("/settings")}>
+                  <i className="bx bx-cog icon"></i>
+                  <span className="text nav-text">Users</span>
+                </a>
+              </li>
+            )}
+
+            {/* 
             <li className="nav-link">
               <a onClick={() => navigate("/settings")}>
                 <i className="bx bx-cog icon"></i>
                 <span className="text nav-text">Users</span>
               </a>
-            </li>
-            )}
+            </li> */}
           </ul>
         </div>
         <div className="bottom-content">
