@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # use DATABASE_URL for local development and DATABASE_DOCKER_URL for if postgres is running in a docker container
 # DATABASE_URL = settings.DATABASE_URL
-DATABASE_URL = f"postgresql://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{os.getenv('DATABASE_NAME')}"
+DATABASE_URL = settings.DATABASE_DOCKER_URL
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

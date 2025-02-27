@@ -4,7 +4,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install --cache-dir=/root/.cache/pip --no-deps -r requirements.txt
+RUN pip install --cache-dir=/root/.cache/pip -r requirements.txt
 
 # copy the backend code and environment variables
 COPY backend/ ./backend

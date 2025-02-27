@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ✅ Allow only these IPs
-ALLOWED_IPS = []  # Add your trusted IPs
+ALLOWED_IPS = ["*"]  # Add your trusted IPs
 
 class IPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -23,9 +23,9 @@ class IPMiddleware(BaseHTTPMiddleware):
         logger.info(f"🔍 Incoming request from IP: {client_ip}")
 
         # Block if IP is NOT in the allowed list
-        if client_ip not in ALLOWED_IPS:
-            logger.warning(f"🚫 BLOCKED IP: {client_ip}")
-            return Response("Access Denied: Your IP is not allowed", status_code=403)
+        if "*" in ALLOWED_IPS or client_ip in ALLOWED_IPS:
+            logger.info(f"✅ Allowed IP: {client_ip}")
+            return await call_next(request)
 
         logger.info(f"✅ Allowed IP: {client_ip}")
         return await call_next(request)
