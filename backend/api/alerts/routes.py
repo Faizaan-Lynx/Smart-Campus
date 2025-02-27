@@ -2,21 +2,27 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
-from api.alerts.websocket import websocket_manager
+from api.alerts.websocket import websocket_manager  
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
 from core.celery.alert_tasks import publish_alert, broadcast_alert  
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 @router.websocket("/ws/alerts/{camera_id}")
-async def websocket_alerts(camera_id: str, websocket: WebSocket):
-    """Handle WebSocket connections for real-time alerts."""
-    await websocket_manager.connect(camera_id, websocket)
+async def websocket_endpoint(camera_id: int, websocket: WebSocket):
+    """WebSocket connection per camera ID."""
+    await websocket.accept()  # Accept connection first
+
+    await websocket_manager.connect(camera_id, websocket)  # Then add to manager
+    
     try:
         while True:
             await websocket.receive_text()  # Keep connection alive
-    except WebSocketDisconnect:
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
         await websocket_manager.disconnect(camera_id, websocket)
+
 
 @router.post("/", response_model=AlertResponse)
 async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):

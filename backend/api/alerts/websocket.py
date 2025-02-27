@@ -1,39 +1,34 @@
 from fastapi import WebSocket, WebSocketDisconnect
-import redis
-import json
-import asyncio
+from typing import Dict, List
 
-# Redis client for subscribing to alert messages
-redis_client = redis.Redis(host="redis", port=6379, db=0)
-pubsub = redis_client.pubsub()
-pubsub.subscribe("alerts_channel")
+class WebSocketManager:
+    """Manages WebSocket connections per camera."""
+    
+    def __init__(self):
+        self.active_connections: Dict[int, List[WebSocket]] = {}
 
-active_connections = set()
+    async def connect(self, camera_id: int, websocket: WebSocket):
+        """Accepts a WebSocket connection for a given camera ID."""
+        await websocket.accept()
+        if camera_id not in self.active_connections:
+            self.active_connections[camera_id] = []
+        self.active_connections[camera_id].append(websocket)
 
-async def redis_listener():
-    """Continuously listens for messages on the Redis pub/sub channel."""
-    while True:
-        message = pubsub.get_message(timeout=1.0)
-        if message and message["type"] == "message":
-            alert_data = message["data"].decode("utf-8")
-            await broadcast_alert(alert_data)
-        await asyncio.sleep(0.5)
+    async def disconnect(self, camera_id: int, websocket: WebSocket):
+        """Removes a WebSocket connection."""
+        if camera_id in self.active_connections:
+            self.active_connections[camera_id].remove(websocket)
+            if not self.active_connections[camera_id]:  # Remove if empty
+                del self.active_connections[camera_id]
 
-async def broadcast_alert(alert_data: str):
-    """Sends alert messages to all active WebSocket clients."""
-    for connection in active_connections:
-        try:
-            await connection.send_text(alert_data)
-        except:
-            active_connections.remove(connection)
+    async def broadcast(self, camera_id: int, message: dict):
+        """Broadcasts an alert message to all users watching a specific camera."""
+        if camera_id in self.active_connections:
+            for ws in self.active_connections[camera_id]:
+                try:
+                    await ws.send_json(message)
+                except WebSocketDisconnect:
+                    await self.disconnect(camera_id, ws)
 
-async def websocket_alerts(websocket: WebSocket):
-    """Handles WebSocket connections for live alerts."""
-    await websocket.accept()
-    active_connections.add(websocket)
-
-    try:
-        while True:
-            await websocket.receive_text()  # Keep connection alive
-    except WebSocketDisconnect:
-        active_connections.remove(websocket)
+# Create a global instance of WebSocketManager
+websocket_manager = WebSocketManager()

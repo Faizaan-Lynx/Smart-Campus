@@ -4,7 +4,7 @@ import logging
 import redis
 
 # Middleware
-from middleware.JWTAuth import JWTAuthenticationMiddleware  
+# from middleware.JWTAuth import JWTAuthenticationMiddleware  
 # from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -62,7 +62,6 @@ app.include_router(intrusion_router)
 
 from core.celery.worker import celery_app
 from core.celery.feed_worker import feed_worker_app
-app.include_router(alerts_router)
 
 @app.get("/")
 async def root():
