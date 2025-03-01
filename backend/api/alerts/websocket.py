@@ -1,39 +1,59 @@
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import redis
-import json
 import asyncio
+from collections import defaultdict
 
-# Redis client for subscribing to alert messages
-redis_client = redis.Redis(host="redis", port=6379, db=0)
-pubsub = redis_client.pubsub()
-pubsub.subscribe("alerts_channel")
+# Redis client setup
+redis_client = redis.Redis(host="redis", port="6379", db=0, decode_responses=True)
 
-active_connections = set()
+# WebSocket router
+router = APIRouter()
+
+# Dictionary to manage WebSocket connections per camera
+camera_connections = defaultdict(set)
 
 async def redis_listener():
-    """Continuously listens for messages on the Redis pub/sub channel."""
-    while True:
-        message = pubsub.get_message(timeout=1.0)
-        if message and message["type"] == "message":
-            alert_data = message["data"].decode("utf-8")
-            await broadcast_alert(alert_data)
-        await asyncio.sleep(0.5)
+    pubsub = redis_client.pubsub()
+    pubsub.psubscribe("camera_alerts:*")
 
-async def broadcast_alert(alert_data: str):
-    """Sends alert messages to all active WebSocket clients."""
-    for connection in active_connections:
+    while True:
+        message = pubsub.get_message(ignore_subscribe_messages=True)
+        if message:
+            channel = message["channel"]
+            alert_data = message["data"]
+            camera_id = channel.split(":")[-1]
+            await broadcast_alert(camera_id, alert_data)
+
+        await asyncio.sleep(0.1)  # Prevent CPU overload
+
+async def broadcast_alert(camera_id: str, alert_data: str):
+    """Sends alert messages to all WebSocket clients subscribed to a specific camera."""
+    to_remove = set()
+    
+    for connection in camera_connections[camera_id]:
         try:
             await connection.send_text(alert_data)
         except:
-            active_connections.remove(connection)
+            to_remove.add(connection)  # Mark disconnected clients
+    
+    for conn in to_remove:
+        camera_connections[camera_id].remove(conn)  # Remove disconnected clients safely
 
-async def websocket_alerts(websocket: WebSocket):
-    """Handles WebSocket connections for live alerts."""
+@router.websocket("/ws/alerts/{camera_id}")
+async def websocket_camera(websocket: WebSocket, camera_id: str):
     await websocket.accept()
-    active_connections.add(websocket)
+    camera_connections[camera_id].add(websocket)
 
     try:
         while True:
-            await websocket.receive_text()  # Keep connection alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
+        pass  # No need to raise exceptions
+    finally:
+        camera_connections[camera_id].discard(websocket)  # Safe removal
+        if not camera_connections[camera_id]:  # Clean up empty camera entries
+            del camera_connections[camera_id]
+
+# Function to start Redis listener on startup
+async def start_redis_listener():
+    asyncio.create_task(redis_listener())

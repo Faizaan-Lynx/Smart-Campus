@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from config import settings
 import logging
 import redis
+import asyncio 
 
 # Middleware
 # from middleware.JWTAuth import JWTAuthenticationMiddleware  
@@ -17,11 +18,17 @@ from api.cameras.routes import router as cameras_router
 from api.users.routes import router as users_router
 from api.user_cameras.routes import router as user_cameras_router
 from api.alerts.routes import router as alerts_router
-
 from api.intrusion.routes import router as intrusion_router
+
+# Import WebSocket Router
+from api.alerts.websocket import router, start_redis_listener
 
 # WebSockets for alerts
 from api.alerts.routes import router as alerts_router;
+
+# Celery Workers
+from core.celery.worker import celery_app
+from core.celery.feed_worker import feed_worker_app
 
 app = FastAPI()
 
@@ -60,8 +67,12 @@ app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 app.include_router(intrusion_router)
 
-from core.celery.worker import celery_app
-from core.celery.feed_worker import feed_worker_app
+# WebSocket Routes
+app.include_router(router)
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(start_redis_listener())  
+
 
 @app.get("/")
 async def root():

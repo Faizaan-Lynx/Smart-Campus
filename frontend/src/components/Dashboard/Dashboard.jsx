@@ -62,7 +62,6 @@ const Dashboard = () => {
   // Fetch Cameras
   useEffect(() => {
     const fetchCameras = async () => {
-
       const token = localStorage.getItem("token");
       try {
         const response = await axios.get("http://127.0.0.1:8000/camera/", {
@@ -90,33 +89,35 @@ const Dashboard = () => {
 
       try {
         const response = await axios.get("http://127.0.0.1:8000/alerts/", {
-          headers: { accept: "application/json" },
-          Authorization: `Bearer ${token}`,
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
-  
+
         if (response.data && response.data.length > 0) {
           setAlerts(response.data); // Store initial alerts
         }
-  
+
         setIsFirstLoad(false); // Mark first load complete
       } catch (error) {
         console.error("Error fetching alerts:", error);
       }
     };
-  
+
     // Fetch initial alerts
     fetchAlerts();
-  
+
     // Setup WebSocket connection
-    const socket = new WebSocket("ws://127.0.0.1:8000/ws/alerts");
-  
+    const socket = new WebSocket("ws://localhost:8000/ws/alerts");
+
     socket.onopen = () => {
       console.log("✅ WebSocket Connected");
     };
-  
+
     socket.onmessage = (event) => {
       const newAlert = JSON.parse(event.data);
-  
+
       setAlerts((prevAlerts) => {
         const alertExists = prevAlerts.some((a) => a.id === newAlert.id);
         if (!alertExists) {
@@ -128,26 +129,26 @@ const Dashboard = () => {
             onClick: () =>
               handleToastClick(newAlert.file_path, newAlert.camera_id),
           });
-  
+
           return [newAlert, ...prevAlerts]; // Add new alert at the top
         }
         return prevAlerts;
       });
     };
-  
+
     socket.onerror = (error) => {
       console.error("❌ WebSocket Error:", error);
     };
-  
+
     socket.onclose = () => {
       console.log("⚠️ WebSocket Disconnected");
     };
-  
+
     return () => {
       socket.close(); // Cleanup WebSocket on unmount
     };
   }, []);
-   // Runs only once when component mount
+  // Runs only once when component mount
 
   useEffect(() => {
     if (visitData1) {
