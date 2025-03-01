@@ -1,13 +1,12 @@
-from celery import Celery
+from celery import shared_task
 from config import settings
 import json
 import redis
-import asyncio
 
 # Redis client for pub/sub
 redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
-@celery.task
+@shared_task(name="core.celery.alert_tasks.publish_alert")
 def publish_alert(alert_data: dict):
     """
     Publishes an alert to the Redis Pub/Sub channel for real-time updates.

@@ -80,6 +80,16 @@ async def health():
                 "sqlalchemy_check": test_db_connection()
             }
 
+@app.get("/tasks")
+async def list_celery_tasks():
+    inspector = celery_app.control.inspect()
+    
+    registered_tasks = inspector.registered_tasks()
+    
+    if not registered_tasks:
+        return {"error": "No registered tasks found. Ensure Celery is running."}
+
+    return {"registered_tasks": registered_tasks}
 
 @app.get("/worker_name")
 async def worker_name():

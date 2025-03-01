@@ -7,6 +7,7 @@ celery_app = Celery(
     "worker",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=["core.celery.alert_tasks"], 
 )
 
 # Auto-discover tasks in the `tasks.py` file
