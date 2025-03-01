@@ -37,6 +37,3 @@ async def websocket_alerts(websocket: WebSocket):
             await websocket.receive_text()  # Keep connection alive
     except WebSocketDisconnect:
         active_connections.remove(websocket)
-
-# Create a global instance of WebSocketManager
-websocket_manager = WebSocketManager()
