@@ -4,7 +4,7 @@ import json
 import redis
 
 # Redis client for pub/sub
-redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+redis_client = redis.Redis(host="redis", port="6379", db=0, decode_responses=True)
 
 @shared_task(name="core.celery.alert_tasks.publish_alert")
 def publish_alert(alert_data: dict):
