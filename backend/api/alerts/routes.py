@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
