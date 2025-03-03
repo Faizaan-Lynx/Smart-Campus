@@ -23,4 +23,3 @@ data
 # deprecated - keeping local for reference
 backend-old
 backend-old/*
-requirements.txt
