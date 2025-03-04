@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from config import settings
 import logging
 import redis
+import asyncio 
 
 # Middleware
-from middleware.JWTAuth import JWTAuthenticationMiddleware  
+# from middleware.JWTAuth import JWTAuthenticationMiddleware  
 # from middleware.ip_middleware import IPMiddleware  
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,11 +18,17 @@ from api.cameras.routes import router as cameras_router
 from api.users.routes import router as users_router
 from api.user_cameras.routes import router as user_cameras_router
 from api.alerts.routes import router as alerts_router
-
 from api.intrusion.routes import router as intrusion_router
+
+# Import WebSocket Router
+from api.alerts.websocket import router, start_redis_listener
 
 # WebSockets for alerts
 from api.alerts.routes import router as alerts_router;
+
+# Celery Workers
+from core.celery.worker import celery_app
+from core.celery.feed_worker import feed_worker_app
 
 app = FastAPI()
 
@@ -41,7 +48,7 @@ def startup_db_check():
 # IP middleware
 # app.add_middleware(IPMiddleware)
 # Authentication middleware
-app.add_middleware(JWTAuthenticationMiddleware)
+# app.add_middleware(JWTAuthenticationMiddleware)
 
 # CORS Middleware
 app.add_middleware(
@@ -60,12 +67,17 @@ app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 app.include_router(intrusion_router)
 
-from core.celery.worker import celery_app
-app.include_router(alerts_router)
+# WebSocket Routes
+app.include_router(router)
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(start_redis_listener())  
+
 
 @app.get("/")
 async def root():
     return {"message": "Hello World. This is the Smart Campus project!"}
+
 
 @app.get("/health")
 async def health():
@@ -79,6 +91,16 @@ async def health():
                 "sqlalchemy_check": test_db_connection()
             }
 
+@app.get("/tasks")
+async def list_celery_tasks():
+    inspector = celery_app.control.inspect()
+    
+    registered_tasks = inspector.registered_tasks()
+    
+    if not registered_tasks:
+        return {"error": "No registered tasks found. Ensure Celery is running."}
+
+    return {"registered_tasks": registered_tasks}
 
 @app.get("/worker_name")
 async def worker_name():
@@ -86,7 +108,7 @@ async def worker_name():
     return {"worker_name": result.get()}
 
 
-@app.get("/random_name")
-async def worker_name():
-    result = celery_app.send_task("core.celery.tasks.print_process_id")
+@app.get("/feed_worker_test")
+async def feed_worker_test():
+    result = feed_worker_app.send_task("core.celery.feed_worker.fetch_and_process_cameras")
     return {"worker_name": result.get()}

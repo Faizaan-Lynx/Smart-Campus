@@ -11,8 +11,13 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Middleware to enforce JWT authentication except for /auth routes."""
         
+        # Allow public access to authentication endpoints and other specific routes
+        allowed_paths = ["/auth", "/docs", "/openapi.json", "/"]
+        if any(request.url.path.startswith(path) for path in allowed_paths):
+            return await call_next(request)
+        
         # Allow public access to authentication endpoints
-        if request.url.path.startswith("/auth"):
+        if request.url.path.startswith("/docs"):
             return await call_next(request)
         
         if request.url.path.startswith("/docs") or request.url.path.startswith("/redoc") or request.url.path.startswith("/openapi.json"):

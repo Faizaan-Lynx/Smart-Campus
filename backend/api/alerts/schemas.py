@@ -7,7 +7,7 @@ class AlertBase(BaseModel):
     is_acknowledged: bool = False
     file_path: Optional[str] = None
 
-class AlertCreate(AlertBase):
+class AlertCreate(BaseModel):
     message: str
     severity: str
 
@@ -16,6 +16,5 @@ class AlertUpdateAcknowledgment(BaseModel):
 
 class AlertResponse(AlertBase):
     id: int
-
     class Config:
-        from_attributes = True  # ✅ Pydantic v2: Replaces `orm_mode`
+        from_attributes = True  

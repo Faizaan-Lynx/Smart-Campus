@@ -2,10 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.alerts import Alert
 from core.database import get_db
-
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
-# from api.alerts.websocket import broadcast_alert
-from core.celery.tasks import publish_alert
+from core.celery.alert_tasks import publish_alert  
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -19,9 +17,8 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
 
     alert_response = AlertResponse.model_validate(alert)
 
-    # Broadcast the alert
-    await broadcast_alert(alert_response)
-    await broadcast_alert(alert_response)
+    # Trigger Celery tasks asynchronously
+    publish_alert.delay(alert_response.dict())  # Publish alert to Redis
 
     return alert_response
 
