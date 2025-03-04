@@ -90,7 +90,7 @@ const Contact = () => {
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
-                <p>123@gmail.com</p>
+                <p>abdulrehman.prodev@gmail.com</p>
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
