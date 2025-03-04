@@ -9,7 +9,7 @@ const Contact = () => {
   const nameRef = useRef("");
   const emailRef = useRef("");
   const textRef = useRef("");
-  emailjs.init("-eQmqf5mW_8Gde2yq");
+  emailjs.init("pA6YlMxCLMPanA1zo");
 
   function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,7 +53,7 @@ const Contact = () => {
       //   );
     
       emailjs
-      .send("service_sn1bsmj", "template_3n82dg4", {
+      .send("service_p93cq5n", "template_obhuz6l", {
         name: nameRef.current.value,
         email: emailRef.current.value,
         message: textRef.current.value,
