@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import redis
 import asyncio
 from collections import defaultdict
+import json
 
 # Redis client setup
 redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
@@ -37,24 +38,21 @@ async def redis_listener():
 async def broadcast_alert(camera_id: str, alert_data: str):
     """Sends alert messages to all WebSocket clients subscribed to a specific camera and all cameras."""
     to_remove = set()
+    message = json.dumps({"camera_id": camera_id, "alert": alert_data})
 
      # Broadcast to specific camera connections
     if camera_id in camera_connections:
         for connection in camera_connections[camera_id]:
             try:
-                await connection.send_text(alert_data)
-                print(f"✅ Message sent to camera {camera_id} WebSocket")
+                await connection.send_text(message)
             except Exception as e:
-                print(f"⚠️ Error sending to camera {camera_id} WebSocket: {e}")
                 to_remove.add(connection)
 
     # Broadcast to clients subscribed to all cameras
     for connection in all_connections:
         try:
-            await connection.send_text(f"Camera {camera_id}: {alert_data}")
-            print(f"✅ Message sent to all-camera WebSocket")
+            await connection.send_text(message)
         except Exception as e:
-            print(f"⚠️ Error sending to all-camera WebSocket: {e}")
             to_remove.add(connection)
 
     # Remove disconnected clients
@@ -63,8 +61,8 @@ async def broadcast_alert(camera_id: str, alert_data: str):
             camera_connections[camera].discard(conn)
         if not camera_connections[camera]:
             del camera_connections[camera]
-            
-        all_connections.discard(conn)
+
+        all_connections.discard(conn)      
 
 @router.websocket("/ws/alerts/{camera_id}")
 async def websocket_camera(websocket: WebSocket, camera_id: str):
