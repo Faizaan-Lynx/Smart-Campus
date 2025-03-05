@@ -29,6 +29,11 @@ def get_camera(camera_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
     return camera
 
+@router.get("/{start_id}/{end_id}", response_model=List[Camera])
+def get_cameras_list(start_id: int, end_id: int, db: Session = Depends(get_db)):
+    cameras = db.query(CameraModel).filter(CameraModel.id >= start_id, CameraModel.id <= end_id).all()
+    return cameras
+
 # update a camera
 @router.put("/{camera_id}", response_model=Camera)
 def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(get_db)):
