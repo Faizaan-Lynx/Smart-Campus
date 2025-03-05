@@ -18,7 +18,8 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
     alert_response = AlertResponse.model_validate(alert)
 
     # Trigger Celery tasks asynchronously
-    publish_alert.delay(alert_response.dict())  # Publish alert to Redis
+    # publish_alert.delay(alert_response.dict())  # Publish alert to Redis
+    publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')  # Publish alert to Redis
 
     return alert_response
 
