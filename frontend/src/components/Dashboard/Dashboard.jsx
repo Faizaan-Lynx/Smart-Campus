@@ -35,7 +35,6 @@ const Dashboard = () => {
   // Alert Related Variables
   const [alerts, setAlerts] = useState([]);
   const [alertUrl, setAlertUrl] = useState(null);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const socketsRef = useRef({}); // Keep track of active WebSocket connections
 
   const handleClosePopup = () => {
