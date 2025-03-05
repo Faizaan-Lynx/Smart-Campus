@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.alerts import Alert
+from models.cameras import Camera
 from core.database import get_db
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
-from core.celery.alert_tasks import publish_alert  
+from core.celery.alert_tasks import publish_alert, send_email
+from config import settings
+
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
+
 
 @router.post("/", response_model=AlertResponse)
 async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
@@ -16,12 +20,20 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
     db.refresh(alert)
 
     alert_response = AlertResponse.model_validate(alert)
+    alert_camera_id = alert_response.camera_id
+    alert_timestamp = alert_response.timestamp
+    alert_location = db.query(Camera).filter(Camera.id == alert_camera_id).first().location
 
-    # Trigger Celery tasks asynchronously
-    # publish_alert.delay(alert_response.dict())  # Publish alert to Redis
-    publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')  # Publish alert to Redis
+    # celery tasks to generate alerts and send emails
+    publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')
+    
+    send_email.apply_async(args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS, 
+                                 f"Intrusion Detected by Camera {alert_camera_id}", 
+                                 f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
+                                 settings.SMTP_SERVER, settings.SMTP_PORT], queue='general_tasks')  
 
     return alert_response
+
 
 @router.get("/{alert_id}", response_model=AlertResponse)
 def get_alert(alert_id: int, db: Session = Depends(get_db)):
@@ -31,10 +43,12 @@ def get_alert(alert_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Alert not found")
     return alert
 
+
 @router.get("/", response_model=list[AlertResponse])
 def get_all_alerts(db: Session = Depends(get_db)):
     """Fetch all alerts."""
     return db.query(Alert).all()
+
 
 @router.delete("/{alert_id}")
 def delete_alert(alert_id: int, db: Session = Depends(get_db)):
@@ -45,6 +59,7 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
     db.delete(alert)
     db.commit()
     return {"message": "Alert deleted successfully"}
+
 
 @router.patch("/{alert_id}/acknowledge", response_model=AlertResponse)
 def update_alert_acknowledgment(

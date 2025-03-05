@@ -32,6 +32,6 @@ class Settings:
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
     
     # Receiver emails list
-    RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS", "").split(",") if os.getenv("RECEIVER_EMAILS") else []
+    RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS", "") if os.getenv("RECEIVER_EMAILS") else []
 
 settings = Settings()
