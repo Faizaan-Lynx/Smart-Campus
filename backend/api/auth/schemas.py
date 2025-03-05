@@ -22,7 +22,7 @@ class UserCreateSchema(BaseModel):
     password: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TokenSchema(BaseModel):
     """Schema for JWT token response"""
