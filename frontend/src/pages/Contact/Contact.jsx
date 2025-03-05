@@ -51,11 +51,11 @@ const Contact = () => {
       //       toast.error("Failed to send email!");
       //     }
       //   );
-    
+      console.log("Sending email...", nameRef.current.value, emailRef.current.value, textRef.current.value);
       emailjs
       .send("service_p93cq5n", "template_obhuz6l", {
-        name: nameRef.current.value,
-        email: emailRef.current.value,
+        to_name: nameRef.current.value,
+        from_email: emailRef.current.value,
         message: textRef.current.value,
       })
       .then(
