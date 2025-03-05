@@ -182,7 +182,7 @@ const Dashboard = () => {
 
         console.log("Connecting to WebSockets:", alertUrls);
 
-        // Fetch initial alerts
+        // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
           ? "http://127.0.0.1:8000/alerts/"
           : `http://127.0.0.1:8000/alerts?camera_ids=${cameras.map((c) => c.id).join(",")}`;
@@ -195,7 +195,11 @@ const Dashboard = () => {
         });
 
         if (response.data && response.data.length > 0) {
-          setAlerts((prevAlerts) => [...response.data, ...prevAlerts]);
+          const filteredAlerts = isAdmin
+            ? response.data
+            : response.data.filter((alert) => cameras.some((camera) => camera.id === alert.camera_id));
+
+          setAlerts(filteredAlerts);
         }
 
         // Open WebSocket connections
@@ -215,11 +219,14 @@ const Dashboard = () => {
           socket.onmessage = (event) => {
             const newAlert = JSON.parse(event.data);
             console.log("🔔 New Alert Received:", newAlert);
-
-            // ✅ Always update state with new alerts
-            setAlerts((prevAlerts) => [newAlert, ...prevAlerts]);
-
-            // ✅ Always show a toast for every alert
+          
+            setAlerts((prevAlerts) => {
+              const updatedAlerts = [newAlert, ...prevAlerts]; // ✅ New array reference
+              console.log("Updated Alerts State:", updatedAlerts);
+              return updatedAlerts;
+            });
+          
+            // ✅ Toast notification (this works)
             toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
               duration: 5000,
               position: "top-right",
@@ -231,6 +238,8 @@ const Dashboard = () => {
               onClick: () => handleToastClick(newAlert.file_path, newAlert.camera_id),
             });
           };
+          
+          
 
           socket.onerror = (error) => {
             console.error(`❌ WebSocket Error (${url}):`, error);
