@@ -108,7 +108,10 @@ async def worker_name():
     return {"worker_name": result.get()}
 
 
+from core.celery.feed_worker import fetch_and_process_cameras
+
 @app.get("/feed_worker_test")
 async def feed_worker_test():
-    result = feed_worker_app.send_task("core.celery.feed_worker.fetch_and_process_cameras")
+    # result = feed_worker_app.send_task("core.celery.feed_worker.fetch_and_process_cameras")
+    result = fetch_and_process_cameras.apply_async(queue='feed_tasks')
     return {"worker_name": result.get()}

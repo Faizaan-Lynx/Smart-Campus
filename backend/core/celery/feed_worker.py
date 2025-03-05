@@ -6,8 +6,10 @@ from config import settings
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
-from celery.signals import task_prerun
-import time
+from core.database import SessionLocal
+from fastapi import Depends
+from api.cameras.routes import get_cameras_list
+import asyncio
 
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
@@ -19,6 +21,8 @@ def fetch_and_process_cameras():
     Fetch cameras assigned to this worker and continuously capture frames.
     This worker will fetch cameras by ID ranges based on worker_id.
     """
+    db : Session = SessionLocal()
+
     worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
     # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
     worker_id = int(worker_name.split('r')[-1])
@@ -26,11 +30,13 @@ def fetch_and_process_cameras():
     start_camera_id = (worker_id - 1) * 10 + 1  # Worker 1: 1-10, Worker 2: 11-20, etc.
     end_camera_id = start_camera_id + 9
 
-    # cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    # worker_cameras = get_cameras_list(start_camera_id, end_camera_id)
+    worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    # logging.info(worker_cameras[0].url)
 
-    # if not cameras:
-    #     logging.warning(f"No cameras found for worker {worker_id}.")
-    #     return
+    if not worker_cameras:
+        logging.warning(f"No cameras found for worker {worker_id}.")
+        return
 
     logging.info(f"Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
     return {"worker_id": worker_id, "start_camera_id": start_camera_id, "end_camera_id": end_camera_id}
@@ -104,15 +110,15 @@ def release_capture_objects():
         cap.release()
 
 
-if __name__ == "__main__":
-    worker_id = int(sys.argv[1])  # For example, passing worker ID as an argument when running the worker
+# if __name__ == "__main__":
+#     worker_id = int(sys.argv[1])  # For example, passing worker ID as an argument when running the worker
 
-    # Start processing the cameras for this worker
-    with get_db() as db:
-        fetch_and_process_cameras()
+#     # Start processing the cameras for this worker
+#     with get_db() as db:
+#         fetch_and_process_cameras()
 
-    # Release all capture objects after processing is done
-    release_capture_objects()
+#     # Release all capture objects after processing is done
+#     release_capture_objects()
 
 # command to start the worker, include the worker ID as an argument when running the worker
 # celery -A core.celery.feed_worker worker --loglevel=info --queues=unprocessed_queue
