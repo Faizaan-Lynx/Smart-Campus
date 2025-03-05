@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./Dashboard.css";
 import BoxRow from "../BoxDataRow/BoxRow";
 import FootFallRow from "../FootFallRow/FootFallRow";
@@ -36,6 +36,7 @@ const Dashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [alertUrl, setAlertUrl] = useState(null);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const socketsRef = useRef({}); // Keep track of active WebSocket connections
 
   const handleClosePopup = () => {
     setPopupActive(false);
@@ -60,31 +61,32 @@ const Dashboard = () => {
     setLoading(true);
   };
 
-  
-
   // Fetch Cameras
 
   const fetchCameraDetails = async (cameraIds, token) => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
-        const response = await axios.get(`http://127.0.0.1:8000/camera/${cameraId}`, {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `http://127.0.0.1:8000/camera/${cameraId}`,
+          {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         return response.data;
       } catch (error) {
         console.error(`Failed to fetch camera ${cameraId}`, error);
         return null;
       }
     });
-  
+
     const cameras = await Promise.all(cameraPromises);
     return cameras.filter((camera) => camera !== null); // Remove failed fetches
   };
 
-
+  //Fetch Cameras
   useEffect(() => {
     const fetchCameras = async () => {
       const token = localStorage.getItem("token");
@@ -115,17 +117,19 @@ const Dashboard = () => {
           console.log("Cameras fetched (Admin):", response.data);
           setCameras(response.data);
           setSelectedCamera(response.data[0].id); // Set first camera as selected
-
         } else {
           const userId = decodedToken.id;
           console.log(`Fetching user data for ID: ${userId}`);
 
-          const userResponse = await axios.get(`http://127.0.0.1:8000/users/${userId}`, {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const userResponse = await axios.get(
+            `http://127.0.0.1:8000/users/${userId}`,
+            {
+              headers: {
+                accept: "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
           console.log("User Data Response:", userResponse.data);
           const user = userResponse.data;
@@ -137,13 +141,11 @@ const Dashboard = () => {
           }
 
           // Fetch details for each assigned camera
-          console.log("Fetching assigned cameras...");
           const userCameras = await fetchCameraDetails(user.cameras, token);
           console.log("Fetched User Cameras:", userCameras);
           setCameras(userCameras);
           setSelectedCamera(userCameras[0].id);
         }
-
       } catch (error) {
         console.error("Error fetching cameras:", error);
         toast.error("Failed to fetch cameras. Please try again later.");
@@ -154,14 +156,38 @@ const Dashboard = () => {
     fetchCameras();
   }, []);
 
-
-  // Fetch Alerts
   useEffect(() => {
     const fetchAlerts = async () => {
       const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found!");
+        return;
+      }
 
       try {
-        const response = await axios.get("http://127.0.0.1:8000/alerts/", {
+        const decodedToken = jwtDecode(token);
+        const isAdmin = decodedToken.role === "admin";
+
+        let alertUrls = [];
+
+        if (isAdmin) {
+          alertUrls = ["ws://localhost:8000/ws/alerts"]; // ✅ Single WebSocket for Admin
+        } else {
+          if (cameras.length === 0) {
+            console.warn("No assigned cameras found for this user.");
+            return;
+          }
+          alertUrls = cameras.map((camera) => `ws://localhost:8000/ws/alerts/${camera.id}`);
+        }
+
+        console.log("Connecting to WebSockets:", alertUrls);
+
+        // Fetch initial alerts
+        const alertEndpoint = isAdmin
+          ? "http://127.0.0.1:8000/alerts/"
+          : `http://127.0.0.1:8000/alerts?camera_ids=${cameras.map((c) => c.id).join(",")}`;
+
+        const response = await axios.get(alertEndpoint, {
           headers: {
             accept: "application/json",
             Authorization: `Bearer ${token}`,
@@ -169,58 +195,64 @@ const Dashboard = () => {
         });
 
         if (response.data && response.data.length > 0) {
-          setAlerts(response.data); // Store initial alerts
+          setAlerts((prevAlerts) => [...response.data, ...prevAlerts]);
         }
 
-        setIsFirstLoad(false); // Mark first load complete
+        // Open WebSocket connections
+        alertUrls.forEach((url) => {
+          if (socketsRef.current[url]) {
+            console.log(`🔄 WebSocket already connected: ${url}`);
+            return; // Prevent duplicate WebSocket connections
+          }
+
+          const socket = new WebSocket(url);
+          socketsRef.current[url] = socket; // Store reference
+
+          socket.onopen = () => {
+            console.log(`✅ WebSocket Connected: ${url}`);
+          };
+
+          socket.onmessage = (event) => {
+            const newAlert = JSON.parse(event.data);
+            console.log("🔔 New Alert Received:", newAlert);
+
+            // ✅ Always update state with new alerts
+            setAlerts((prevAlerts) => [newAlert, ...prevAlerts]);
+
+            // ✅ Always show a toast for every alert
+            toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
+              duration: 5000,
+              position: "top-right",
+              style: {
+                background: "#333",
+                color: "white",
+                cursor: "pointer",
+              },
+              onClick: () => handleToastClick(newAlert.file_path, newAlert.camera_id),
+            });
+          };
+
+          socket.onerror = (error) => {
+            console.error(`❌ WebSocket Error (${url}):`, error);
+          };
+
+          socket.onclose = () => {
+            console.log(`⚠️ WebSocket Disconnected: ${url}`);
+            delete socketsRef.current[url]; // Remove reference when closed
+          };
+        });
       } catch (error) {
         console.error("Error fetching alerts:", error);
       }
     };
 
-    // Fetch initial alerts
     fetchAlerts();
 
-    // Setup WebSocket connection
-    const socket = new WebSocket("ws://localhost:8000/ws/alerts");
-
-    socket.onopen = () => {
-      console.log("✅ WebSocket Connected");
-    };
-
-    socket.onmessage = (event) => {
-      const newAlert = JSON.parse(event.data);
-
-      setAlerts((prevAlerts) => {
-        const alertExists = prevAlerts.some((a) => a.id === newAlert.id);
-        if (!alertExists) {
-          // Show toast notification
-          toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
-            duration: 5000,
-            position: "top-right",
-            style: { background: "#333", color: "white", cursor: "pointer" },
-            onClick: () =>
-              handleToastClick(newAlert.file_path, newAlert.camera_id),
-          });
-
-          return [newAlert, ...prevAlerts]; // Add new alert at the top
-        }
-        return prevAlerts;
-      });
-    };
-
-    socket.onerror = (error) => {
-      console.error("❌ WebSocket Error:", error);
-    };
-
-    socket.onclose = () => {
-      console.log("⚠️ WebSocket Disconnected");
-    };
-
     return () => {
-      socket.close(); // Cleanup WebSocket on unmount
+      Object.values(socketsRef.current).forEach((socket) => socket.close());
     };
-  }, []);
+  }, [cameras]);
+
   // Runs only once when component mount
 
   useEffect(() => {
