@@ -10,9 +10,9 @@ class Camera(Base):
     url = Column(String, index=True)
     location = Column(String)
     detection_threshold = Column(Integer)
-    resize_dims = Column(String)  # Store dimensions as a string or json
-    crop_region = Column(String)  # Store as a string or json
-    lines = Column(String)  # Store coordinates as a string or json
+    resize_dims = Column(String, nullable=True)
+    crop_region = Column(String, nullable=True)
+    lines = Column(String)
 
     # Relationship with users
     from models.user_cameras import user_cameras  
