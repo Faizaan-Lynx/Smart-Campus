@@ -1,6 +1,7 @@
 import os
 import sys
 import cv2
+import time
 import asyncio
 import logging
 from config import settings
@@ -55,6 +56,10 @@ def fetch_and_process_cameras(**kwargs):
         logging.warning(f"No cameras found for worker {worker_id}.")
         return
     
+    # flag to run/stop the workers
+    global feed_running_flag
+    feed_running_flag = True
+
     # main working loop to capture frames
     while feed_running_flag:
         for camera in worker_cameras:
@@ -125,4 +130,5 @@ def stop_feed_worker():
     """
     global stop_flag
     stop_flag = True
+    time.sleep(3) # busy sleep for 3 seconds to allow other workers to stop
     logging.info("Stop signal set. Worker is stopping...")

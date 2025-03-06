@@ -18,6 +18,11 @@ class Settings:
 
     # Celery settings
     REDIS_URL = os.getenv("REDIS_URL")
+    CELERY_MODULE = os.getenv("CELERY_MODULE", "core.celery")
+    CELERY_WORKERS = int(os.getenv("CELERY_WORKERS", 1))
+    FEED_WORKERS = int(os.getenv("FEED_WORKERS", 2))
+    MODEL_WORKERS = int(os.getenv("MODEL_WORKERS", 0))
+
 
     # JWT settings
     SECRET_KEY = os.getenv("SECRET_KEY") 

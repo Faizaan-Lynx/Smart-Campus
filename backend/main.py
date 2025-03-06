@@ -108,10 +108,16 @@ async def worker_name():
     return {"worker_name": result.get()}
 
 
-from core.celery.feed_worker import fetch_and_process_cameras
+from core.celery.feed_worker import fetch_and_process_cameras, stop_feed_worker
 
 @app.get("/feed_worker_test")
 async def feed_worker_test():
     # result = feed_worker_app.send_task("core.celery.feed_worker.fetch_and_process_cameras")
     result = fetch_and_process_cameras.apply_async(queue='feed_tasks')
     return {"worker_name": result.get()}
+
+@app.get("/feed_worker_stop")
+async def feed_worker_stop():
+    for _ in range(settings.FEED_WORKERS):
+        stop_feed_worker.apply_async(queue='feed_tasks')
+    return {"status": "All feed workers stopped."}
