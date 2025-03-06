@@ -90,7 +90,7 @@ def capture_video_frames(camera: Camera):
         return
 
     frame = preprocess_frame(frame, camera)
-    process_frame.delay(camera.id, frame)
+    process_frame.apply_async(args=[camera.id, frame], queue='model_tasks')
 
 
 def preprocess_frame(frame, camera: Camera):

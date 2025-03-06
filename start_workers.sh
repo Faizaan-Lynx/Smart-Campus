@@ -44,7 +44,7 @@ for i in $(seq 1 $MODEL_WORKERS); do
   export WORKER_NAME
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.model_worker.celery_app worker -n $WORKER_NAME --loglevel=info &
+  celery -A ${celery_mod}.model_worker.celery_app worker -n $WORKER_NAME -Q model_tasks --loglevel=info &
 
   sleep 0.5
 
