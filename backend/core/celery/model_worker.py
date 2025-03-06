@@ -1,13 +1,10 @@
 from celery import Celery, signals
 from config import settings
-import time
 from ultralytics import YOLO
 import numpy as np
 import logging
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
-
-# global model
 model = None
 
 
@@ -24,24 +21,25 @@ def load_model():
         # run a dummy prediction to initialize the model
         dummy_image = np.zeros((1280, 720, 3), dtype=np.uint8)
         model.predict(dummy_image)
+        
         logging.info("Model initialized successfully.")    
+
     except Exception as e:
         logging.exception(e)
         logging.error("Error loading model.")
 
 
 @model_worker_app.task
-def process_frame(stream_id, frame_data):
+def process_frame(camera_id, frame):
     """
-
+    Uses model to process a frame and returns the processed frame.
     """
-    
-    processed_frame = f"Processed frame for stream {stream_id} with model"
-    
-    print(f"Stream {stream_id}: Frame processed and ready for streaming.")
-    return processed_frame
+    global model
+    if model is None:
+        logging.error("Model not loaded.")
+        return None
 
 
-if __name__ == "__main__":
-    load_model()
-    print("Model worker is ready to process frames.")
+def centroid_near_line():
+    """
+    """
