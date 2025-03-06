@@ -1,80 +1,101 @@
+import os
 import sys
 import cv2
+import asyncio
 import logging
-from celery import Celery
 from config import settings
-from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
+from celery import Celery, signals
 from core.database import SessionLocal
-from fastapi import Depends
-from api.cameras.routes import get_cameras_list
-import asyncio
+from .model_worker import process_frame
 
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 capture_objects = {}
+feed_running_flag = True
 
-@feed_worker_app.task
-def fetch_and_process_cameras():
+@feed_worker_app.task # manually trigger task if needed
+@signals.worker_ready.connect # automatically trigger task on worker startup
+def fetch_and_process_cameras(**kwargs):
     """
     Fetch cameras assigned to this worker and continuously capture frames.
     This worker will fetch cameras by ID ranges based on worker_id.
     """
     db : Session = SessionLocal()
 
-    worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
+    # assume that default point of entry for this task is worker startup
+    try:
+        worker_name = kwargs['sender'].hostname.split('@')[1]
+    except (KeyError, AttributeError) as e:
+        worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
+    except Exception as e:
+        worker_name = "celery@worker1"
+
     # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
     worker_id = int(worker_name.split('r')[-1])
 
-    start_camera_id = (worker_id - 1) * 10 + 1  # Worker 1: 1-10, Worker 2: 11-20, etc.
+    start_camera_id = (worker_id - 1) * 10 + 1
     end_camera_id = start_camera_id + 9
+    
+    logging.info(f"Feed Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
 
-    # worker_cameras = get_cameras_list(start_camera_id, end_camera_id)
     worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
-    # logging.info(worker_cameras[0].url)
+    url = worker_cameras[0].url
+    
+
+    logging.info(f"Checking if file exists at URL {url}")
+    if not os.path.exists(url):
+        logging.error(f"File does not exist at URL {url}")
+    else:
+        logging.info(f"File exists at URL {url}")
+
 
     if not worker_cameras:
         logging.warning(f"No cameras found for worker {worker_id}.")
         return
+    
+    # main working loop to capture frames
+    while feed_running_flag:
+        for camera in worker_cameras:
+            capture_video_frames(camera)
+            asyncio.sleep(0.005) # non-busy sleep to allow other tasks to run such as stopping
 
-    logging.info(f"Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
-    return {"worker_id": worker_id, "start_camera_id": start_camera_id, "end_camera_id": end_camera_id}
-    # while True:
-    #     for camera in cameras:
-    #         logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
-    #         capture_video_frames(camera)
-            
+    release_capture_objects()
+    logging.info("Feed worker stopped. Capture objects released.")
 
+    return {"status": "Feed worker stopped."}
+
+
+# main worker function
 def capture_video_frames(camera: Camera):
     """
     Capture frames from the video source (URL) using OpenCV and send them to a Celery queue.
     """
-    if camera.id not in capture_objects:
+    if camera.id in capture_objects:
+        cap = capture_objects[camera.id]
+    else:
         logging.info(f"Creating new VideoCapture object for camera {camera.id}")
         cap = cv2.VideoCapture(camera.url)
-
         if not cap.isOpened():
             logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
             return
-
         capture_objects[camera.id] = cap
-    else:
-        cap = capture_objects[camera.id]
 
+    # read the frame
     ret, frame = cap.read()
 
     if not ret:
         logging.warning(f"Failed to read frame from camera {camera.id}, URL {camera.url}")
         return
 
-    frame = process_frame(frame, camera)
-    push_frame_to_queue(camera.id, frame)
+    frame = preprocess_frame(frame, camera)
+    process_frame.delay(camera.id, frame)
 
 
-def process_frame(frame, camera: Camera):
+def preprocess_frame(frame, camera: Camera):
     """
-    Process the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
+    Preprocess the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
     """
 
     if camera.resize_dims:
@@ -88,19 +109,6 @@ def process_frame(frame, camera: Camera):
     return frame
 
 
-@feed_worker_app.task
-def push_frame_to_queue(camera_id, frame):
-    """
-    Push the processed frame to the unprocessed queue.
-    """
-    logging.info(f"Pushing frame for camera {camera_id} to unprocessed_queue")
-
-    # Here, you can serialize and push the frame to a message queue.
-    # For simplicity, we are just logging it as an example.
-
-    return {"camera_id": camera_id, "frame": frame}
-
-
 def release_capture_objects():
     """
     Release all the capture objects when done.
@@ -110,15 +118,11 @@ def release_capture_objects():
         cap.release()
 
 
-# if __name__ == "__main__":
-#     worker_id = int(sys.argv[1])  # For example, passing worker ID as an argument when running the worker
-
-#     # Start processing the cameras for this worker
-#     with get_db() as db:
-#         fetch_and_process_cameras()
-
-#     # Release all capture objects after processing is done
-#     release_capture_objects()
-
-# command to start the worker, include the worker ID as an argument when running the worker
-# celery -A core.celery.feed_worker worker --loglevel=info --queues=unprocessed_queue
+@feed_worker_app.task
+def stop_feed_worker():
+    """
+    Task to stop the feed worker by setting the stop flag.
+    """
+    global stop_flag
+    stop_flag = True
+    logging.info("Stop signal set. Worker is stopping...")
