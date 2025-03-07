@@ -1,14 +1,15 @@
 import logging
 import numpy as np
+from typing import List
 from config import settings
 from ultralytics import YOLO
+from models.cameras import Camera
 from celery import Celery, signals
 from core.database import SessionLocal
-from models.cameras import Camera
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 model = None
-cameras : list[Camera] = None
+cameras : List[Camera] = None
 
 @signals.worker_ready.connect
 def load_model():
@@ -29,7 +30,7 @@ def load_model():
         # get all cameras from the database
         db = SessionLocal()
         global cameras
-        cameras : list[Camera] = db.query(Camera).all()
+        cameras : List[Camera] = db.query(Camera).all()
         db.close()
         logging.info("Cameras loaded successfully.")
 
@@ -44,11 +45,24 @@ def process_frame(camera_id, frame):
     """
     try:
         global model # model is never unloaded
+        global cameras
+
+        camera = next((c for c in cameras if c.id == camera_id), None)
+        if not camera:
+            logging.error(f"Camera {camera_id} not found.")
+            return None
+        
+        det_threshold = camera.detection_threshold
+        cv2lines = camera.lines
+        
+        # process the frame using the model
+        results = model.predict(frame, classes=[0])
+        # for res in results.xyxy[0]:
+        
 
         
     except Exception as e:
         logging.exception(e)
-        logging.error("Model not loaded.")
         return None
 
 
@@ -62,7 +76,7 @@ def update_cameras_for_model_workers():
     try:
         db = SessionLocal()
         global cameras
-        cameras : list[Camera] = db.query(Camera).all()
+        cameras : List[Camera] = db.query(Camera).all()
         db.close()
         logging.info("Cameras list updated successfully.")
 
