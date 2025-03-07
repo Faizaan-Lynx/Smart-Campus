@@ -1,7 +1,8 @@
 # app/cameras/models.py
-from sqlalchemy import Column, Integer, String, ForeignKey
 from models.base import Base
+from config import settings
 from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey
 
 class Camera(Base):
     __tablename__ = 'cameras'
@@ -10,7 +11,7 @@ class Camera(Base):
     url = Column(String, index=True)
     location = Column(String)
     detection_threshold = Column(Integer)
-    resize_dims = Column(String, nullable=True)
+    resize_dims = Column(String, nullable=True, default=settings.FEED_DIMS)
     crop_region = Column(String, nullable=True)
     lines = Column(String)
 

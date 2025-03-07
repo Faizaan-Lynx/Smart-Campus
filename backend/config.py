@@ -6,6 +6,10 @@ load_dotenv(override=True)
 class Settings:
     PROJECT_NAME = "Lynx-Cam"
 
+    # Feed settings
+    FEED_FPS = int(os.getenv("FEED_FPS", 10))
+    FEED_DIMS = os.getenv("FEED_DIMS", "(854,480)")
+
     # Database settings
     DATABASE_NAME = os.getenv("DATABASE_NAME", "SmartCampus")
     DATABASE_USER = os.getenv("DATABASE_USER", "postgres")
