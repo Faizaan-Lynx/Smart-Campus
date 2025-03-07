@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
-from models.cameras import Camera as CameraModel
-from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
+from celery import group
+from config import settings
 from core.database import get_db
+from sqlalchemy.orm import Session
+from models.cameras import Camera as CameraModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
+from core.celery.model_worker import update_cameras_for_model_workers
 
 
 router = APIRouter(prefix="/camera", tags=["Cameras"])
@@ -16,6 +19,11 @@ def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
     db.add(db_camera)
     db.commit()
     db.refresh(db_camera)
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+
     return db_camera
 
 
@@ -54,6 +62,11 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
 
     db.commit()
     db.refresh(db_camera)
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+
     return db_camera
 
 
@@ -65,4 +78,9 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     
     db.delete(db_camera)
     db.commit()
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+    
     return None

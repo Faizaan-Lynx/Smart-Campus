@@ -21,7 +21,7 @@ class Settings:
     CELERY_MODULE = os.getenv("CELERY_MODULE", "core.celery")
     CELERY_WORKERS = int(os.getenv("CELERY_WORKERS", 1))
     FEED_WORKERS = int(os.getenv("FEED_WORKERS", 2))
-    MODEL_WORKERS = int(os.getenv("MODEL_WORKERS", 0))
+    MODEL_WORKERS = int(os.getenv("MODEL_WORKERS", 1))
 
 
     # JWT settings

@@ -1,12 +1,14 @@
-from celery import Celery, signals
+import logging
+import numpy as np
 from config import settings
 from ultralytics import YOLO
-import numpy as np
-import logging
+from celery import Celery, signals
+from core.database import SessionLocal
+from models.cameras import Camera
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 model = None
-
+cameras : list[Camera] = None
 
 @signals.worker_ready.connect
 def load_model():
@@ -22,11 +24,17 @@ def load_model():
         dummy_image = np.zeros((1280, 720, 3), dtype=np.uint8)
         model.predict(dummy_image)
         
-        logging.info("Model initialized successfully.")    
+        logging.info("Model initialized successfully.")
+
+        # get all cameras from the database
+        db = SessionLocal()
+        global cameras
+        cameras : list[Camera] = db.query(Camera).all()
+        db.close()
+        logging.info("Cameras loaded successfully.")
 
     except Exception as e:
         logging.exception(e)
-        logging.error("Error loading model.")
 
 
 @model_worker_app.task
@@ -34,10 +42,33 @@ def process_frame(camera_id, frame):
     """
     Uses model to process a frame and returns the processed frame.
     """
-    global model
-    if model is None:
+    try:
+        global model # model is never unloaded
+
+        
+    except Exception as e:
+        logging.exception(e)
         logging.error("Model not loaded.")
         return None
+
+
+# high priority task to update the cameras list
+@model_worker_app.task
+def update_cameras_for_model_workers():
+    """
+    Updates the cameras list from the database. Use whenever there is a change in the cameras (add, update, remove).
+    Use with priority=0 to ensure that the cameras list is updated before processing any additional frames.
+    """
+    try:
+        db = SessionLocal()
+        global cameras
+        cameras : list[Camera] = db.query(Camera).all()
+        db.close()
+        logging.info("Cameras list updated successfully.")
+
+    except Exception as e:
+        logging.exception(e)
+        logging.error("Failed to update cameras.")
 
 
 # check if object has crossed/is near the threshold line
