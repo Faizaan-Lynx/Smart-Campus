@@ -1,9 +1,9 @@
 import os
-import sys
 import cv2
 import time
 import asyncio
 import logging
+from typing import List
 from config import settings
 from models.cameras import Camera
 from sqlalchemy.orm import Session
@@ -11,10 +11,13 @@ from celery import Celery, signals
 from core.database import SessionLocal
 from .model_worker import process_frame
 
-feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
+feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+worker_id = None
 capture_objects = {}
+cameras : List[Camera] = None
 feed_running_flag = True
+
 
 @feed_worker_app.task # manually trigger task if needed
 @signals.worker_ready.connect # automatically trigger task on worker startup
@@ -33,7 +36,9 @@ def fetch_and_process_cameras(**kwargs):
     except Exception as e:
         worker_name = "celery@worker1"
 
+
     # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
+    global worker_id
     worker_id = int(worker_name.split('r')[-1])
 
     start_camera_id = (worker_id - 1) * 10 + 1
@@ -41,20 +46,19 @@ def fetch_and_process_cameras(**kwargs):
     
     logging.info(f"Feed Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
 
-    worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
-    url = worker_cameras[0].url
     
-
+    worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    if not worker_cameras:
+        logging.warning(f"No cameras found for worker {worker_id}.")
+        return
+    
+    url = worker_cameras[0].url    
     logging.info(f"Checking if file exists at URL {url}")
     if not os.path.exists(url):
         logging.error(f"File does not exist at URL {url}")
     else:
         logging.info(f"File exists at URL {url}")
 
-
-    if not worker_cameras:
-        logging.warning(f"No cameras found for worker {worker_id}.")
-        return
     
     # flag to run/stop the workers
     global feed_running_flag
@@ -62,10 +66,15 @@ def fetch_and_process_cameras(**kwargs):
 
     # main working loop to capture frames
     while feed_running_flag:
-        for camera in worker_cameras:
-            capture_video_frames(camera)
-            asyncio.sleep(0.005) # non-busy sleep to allow other tasks to run such as stopping
+        for _ in range(500): # run for 500 frames per camera, then update the cameras list
+            for camera in worker_cameras:
+                capture_video_frames(camera)
+                asyncio.sleep(0.005) # non-busy sleep to allow other tasks to run such as stopping
+        
+        worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+        update_cameras_for_feed_workers(worker_cameras)
 
+    # stop running the workers
     release_capture_objects()
     logging.info("Feed worker stopped. Capture objects released.")
 
@@ -101,15 +110,13 @@ def capture_video_frames(camera: Camera):
 def preprocess_frame(frame, camera: Camera):
     """
     Preprocess the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
+    Resize dimensions are in format "(1280, 720)" and crop region is in format "((0,0), (1280,720))".
     """
-
     if camera.resize_dims:
-        width, height = map(int, camera.resize_dims.split('x'))
-        frame = cv2.resize(frame, (width, height))
+        frame = cv2.resize(frame, camera.resize_dims)
 
     if camera.crop_region:
-        x1, y1, x2, y2 = map(int, camera.crop_region.split(','))
-        frame = frame[y1:y2, x1:x2]
+        frame = frame[camera.crop_region[0][1]:camera.crop_region[1][1], camera.crop_region[0][0]:camera.crop_region]
 
     return frame
 
@@ -121,6 +128,25 @@ def release_capture_objects():
     for camera_id, cap in capture_objects.items():
         logging.info(f"Releasing VideoCapture object for camera {camera_id}")
         cap.release()
+
+
+# high priority task to update the cameras list
+def update_cameras_for_feed_workers(cameras: List[Camera]):
+    """
+    Updates the cameras list for the feed workers.
+    """
+    try:
+        global capture_objects
+
+        # release the capture objects for cameras that are not in the new list
+        for camera_id in capture_objects.keys():
+            if camera_id not in [c.id for c in cameras]:
+                logging.info(f"Releasing VideoCapture object for camera {camera_id}")
+                capture_objects[camera_id].release()
+                del capture_objects[camera_id]
+
+    except Exception as e:
+        logging.exception(e)
 
 
 @feed_worker_app.task
