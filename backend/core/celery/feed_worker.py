@@ -103,19 +103,21 @@ def capture_video_frames(camera: Camera):
         return
 
     frame = preprocess_frame(frame, camera)
-    process_frame.apply_async(args=[camera.id, frame], queue='model_tasks')
+    process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
 
 
 def preprocess_frame(frame, camera: Camera):
     """
     Preprocess the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
-    Resize dimensions are in format "(1280, 720)" and crop region is in format "((0,0), (1280,720))".
+    Resize dimensions are strings in format "(1280, 720)" and crop region is in format "((0,0), (1280,720))".
     """
+
     if camera.resize_dims:
-        frame = cv2.resize(frame, camera.resize_dims)
+        frame = cv2.resize(frame, eval(camera.resize_dims))
 
     if camera.crop_region:
-        frame = frame[camera.crop_region[0][1]:camera.crop_region[1][1], camera.crop_region[0][0]:camera.crop_region]
+        crop_region = eval(camera.crop_region)
+        frame = frame[crop_region[0][1]:crop_region[1][1], crop_region[0][0]:crop_region]
 
     return frame
 

@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-from typing import List
 from config import settings
 from ultralytics import YOLO
 from models.cameras import Camera
@@ -12,7 +11,7 @@ model = None
 cameras = None
 
 @signals.worker_ready.connect
-def load_model():
+def load_model(**kwargs):
     """
     Load the machine learning model into memory.
     """
