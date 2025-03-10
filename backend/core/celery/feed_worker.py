@@ -15,7 +15,6 @@ from .model_worker import process_frame
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 worker_id = None
 capture_objects = {}
-cameras : List[Camera] = None
 feed_running_flag = True
 
 

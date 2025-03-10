@@ -9,7 +9,7 @@ from core.database import SessionLocal
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 model = None
-cameras : List[Camera] = None
+cameras = None
 
 @signals.worker_ready.connect
 def load_model():
@@ -30,7 +30,7 @@ def load_model():
         # get all cameras from the database
         db = SessionLocal()
         global cameras
-        cameras : List[Camera] = db.query(Camera).all()
+        cameras = db.query(Camera).all()
         db.close()
         logging.info("Cameras loaded successfully.")
 
@@ -76,7 +76,7 @@ def update_cameras_for_model_workers():
     try:
         db = SessionLocal()
         global cameras
-        cameras : List[Camera] = db.query(Camera).all()
+        cameras = db.query(Camera).all()
         db.close()
         logging.info("Cameras list updated successfully.")
 
