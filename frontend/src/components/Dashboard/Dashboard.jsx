@@ -43,22 +43,34 @@ const Dashboard = () => {
   };
 
   const handleToastClick = (url, cameraId) => {
+    console.log("handleToastClick called with URL:", url, "Camera ID:", cameraId);
+
+    if (!url) {
+        console.error(`Error: URL is undefined for Camera ID: ${cameraId}`);
+        toast.error(`No valid video URL for Camera ${cameraId}`);
+        return;
+    }
+
     const getYouTubeEmbedUrl = (url) => {
-      const videoIdMatch = url.match(
-        /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
-      );
-      return videoIdMatch
-        ? `https://www.youtube.com/embed/${videoIdMatch[1]}`
-        : null;
+        const videoIdMatch = url.match(
+            /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
+        );
+        return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : null;
     };
 
     const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
+    if (!youtubeEmbedUrl) {
+        console.error(`Invalid YouTube URL: ${url}`);
+        toast.error("Invalid YouTube URL provided.");
+        return;
+    }
+
     setAlertUrl(youtubeEmbedUrl);
-    setSelectedCamera(cameraId); // Update selected camera
-    // console.log("Selected Camera: ", cameraId);
+    setSelectedCamera(cameraId);
     setPopupActive(true);
     setLoading(true);
-  };
+};
+
 
   // Fetch Cameras
 
@@ -201,26 +213,38 @@ const Dashboard = () => {
 
           socket.onmessage = (event) => {
             const newAlert = JSON.parse(event.data);
-            console.log("🔔 New Alert Received:", newAlert);
-          
-            setAlerts((prevAlerts) => {
-              const updatedAlerts = [newAlert, ...prevAlerts]; // ✅ New array reference
-              console.log("Updated Alerts State:", updatedAlerts);
-              return updatedAlerts;
+            console.log("🔔 New Alert Received:", newAlert); 
+        
+            // 🔍 Check if alert field exists and parse it
+            let alertData;
+            try {
+                alertData = JSON.parse(newAlert.alert); // ✅ Parse the alert JSON string
+            } catch (error) {
+                console.error("❌ Failed to parse alert data:", newAlert.alert, error);
+                return;
+            }
+        
+            console.log("✅ Parsed Alert Data:", alertData);
+        
+            if (!alertData.file_path) {
+                console.error("❌ Missing file_path in alertData:", alertData);
+                return;
+            }
+        
+            setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
+        
+            toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
+                duration: 5000,
+                position: "top-right",
+                style: {
+                    background: "#333",
+                    color: "white",
+                    cursor: "pointer",
+                },
+                onClick: () => handleToastClick(alertData.file_path, alertData.camera_id), // ✅ Use alertData.file_path
             });
-          
-            // ✅ Toast notification (this works)
-            toast(`🚨 New Alert at Camera ${newAlert.camera_id}`, {
-              duration: 5000,
-              position: "top-right",
-              style: {
-                background: "#333",
-                color: "white",
-                cursor: "pointer",
-              },
-              onClick: () => handleToastClick(newAlert.file_path, newAlert.camera_id),
-            });
-          };
+        };
+        
           
           
 
