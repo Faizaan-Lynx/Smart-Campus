@@ -318,6 +318,7 @@ const Dashboard = () => {
   const handleOptionChange = (e) => {
     const newOption = e.target.value;
     setSelectedOption(newOption); // Update local state
+     // console.log("Selected Camera: ", cameraId);
     // Dispatch action to update Redux store
     dispatch(updateSelectedOption(newOption));
   };
