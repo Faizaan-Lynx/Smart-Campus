@@ -11,8 +11,8 @@ class Camera(Base):
     url = Column(String, index=True)
     location = Column(String)
     detection_threshold = Column(Integer)
-    resize_dims = Column(String, nullable=True, default=settings.FEED_DIMS)
-    crop_region = Column(String, nullable=True)
+    resize_dims = Column(String, nullable=True, default=settings.FEED_DIMS) # format: "(width, height)"
+    crop_region = Column(String, nullable=True) # format: "((x1, y1), (x2, y2))"
     lines = Column(String)
 
     # Relationship with users
