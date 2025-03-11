@@ -25,6 +25,7 @@ from api.intrusion.routes import router as intrusion_router
 from api.alerts.websocket import router as alerts_websocket_router, start_redis_listener
 
 # celery
+from celery import group
 from core.celery.worker import celery_app
 from core.celery.feed_worker import process_cameras, stop_feed_worker
 
@@ -100,13 +101,13 @@ async def health():
 
 @app.get("/feed_worker_start")
 async def feed_worker_test():
-    for i in range(settings.FEED_WORKERS):
-        process_cameras.apply_async(queue='feed_tasks', args=[i+1], priority=10)
+    jobs_group = group(process_cameras.s(i+1) for i in range(settings.FEED_WORKERS))
+    jobs_group.apply_async(queue='feed_tasks', priority=10)
     return {"status": "Feed workers started."}
 
 
 @app.get("/feed_worker_stop")
 async def feed_worker_stop():
-    for _ in range(settings.FEED_WORKERS):
-        stop_feed_worker.apply_async(queue='feed_tasks', priority=0)
+    jobs_group = group(stop_feed_worker.s(i+1) for i in range(settings.FEED_WORKERS))
+    jobs_group.apply_async(queue='feed_tasks', priority=0)
     return {"status": "All feed workers stopped."}
