@@ -25,10 +25,8 @@ from api.intrusion.routes import router as intrusion_router
 from api.alerts.websocket import router as alerts_websocket_router, start_redis_listener
 
 # celery
-from celery import group
 from core.celery.worker import celery_app
-from core.celery.feed_worker import process_cameras, stop_feed_worker
-
+from core.celery.feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
 
 app = FastAPI()
 
@@ -70,7 +68,6 @@ app.include_router(user_cameras_router)
 app.include_router(alerts_router)
 app.include_router(intrusion_router)
 
-
 # WebSocket Routes
 app.include_router(alerts_websocket_router)
 
@@ -89,7 +86,7 @@ async def root():
 @app.get("/health")
 async def health():
     result = celery_app.send_task("core.celery.tasks.add", (4,4))
-    red = redis.Redis(host="redis", port=6379, db=0)
+    red = redis.from_url(settings.REDIS_URL)
 
     return  {
                 "status": "OK",
@@ -98,16 +95,27 @@ async def health():
                 "sqlalchemy_check": test_db_connection()
             }
 
+# ensure only admin can access this route
+@app.get("/start_all_feed_workers")
+async def start_all_feed_workers_route():
+    start_all_feed_workers.apply_async(queue='feed_tasks', priority=10)
+    return {"status": "Starting all feed workers..."}
 
-@app.get("/feed_worker_start")
-async def feed_worker_test():
-    jobs_group = group(process_cameras.s(i+1) for i in range(settings.FEED_WORKERS))
-    jobs_group.apply_async(queue='feed_tasks', priority=10)
-    return {"status": "Feed workers started."}
+
+# ensure only admin can access this route
+@app.get("/stop_all_feed_workers")
+async def stop_all_feed_workers_route():
+    stop_all_feed_workers.apply_async(queue='feed_tasks', priority=0)
+    return {"status": "Stopping all feed workers..."}
 
 
-@app.get("/feed_worker_stop")
-async def feed_worker_stop():
-    jobs_group = group(stop_feed_worker.s(i+1) for i in range(settings.FEED_WORKERS))
-    jobs_group.apply_async(queue='feed_tasks', priority=0)
-    return {"status": "All feed workers stopped."}
+@app.get("/start_feed_worker/{worker_id}")
+async def start_feed_worker_route(worker_id: int):
+    start_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=10)
+    return {"status": f"Starting feed worker {worker_id}..."}
+
+
+@app.get("/stop_feed_worker/{worker_id}")
+async def stop_feed_worker_route(worker_id: int):
+    stop_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=0)
+    return {"status": f"Stopping feed worker {worker_id}..."}
