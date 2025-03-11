@@ -9,7 +9,6 @@ from models.cameras import Camera
 from sqlalchemy.orm import Session
 from celery import Celery, signals
 from core.database import SessionLocal
-from .model_worker import process_frame
 
 
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
@@ -18,35 +17,31 @@ capture_objects = {}
 feed_running_flag = True
 
 
-@feed_worker_app.task # manually trigger task if needed
 @signals.worker_ready.connect # automatically trigger task on worker startup
 def fetch_and_process_cameras(**kwargs):
     """
-    Fetch cameras assigned to this worker and continuously capture frames.
     This worker will fetch cameras by ID ranges based on worker_id.
     """
-    db : Session = SessionLocal()
 
     # assume that default point of entry for this task is worker startup
     try:
         worker_name = kwargs['sender'].hostname.split('@')[1]
-    except (KeyError, AttributeError) as e:
-        worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
     except Exception as e:
-        worker_name = "celery@worker1"
+        worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
 
-
-    # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
+    # worker name will be celery@feed_worker(num)
     global worker_id
-    worker_id = int(worker_name.split('r')[-1])
+    worker_id = int(worker_name.split('feed_worker')[-1])
 
     start_camera_id = (worker_id - 1) * 10 + 1
     end_camera_id = start_camera_id + 9
     
     logging.info(f"Feed Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
 
-    
+    db : Session = SessionLocal()    
     worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    db.close()
+
     if not worker_cameras:
         logging.warning(f"No cameras found for worker {worker_id}.")
         return
@@ -58,22 +53,33 @@ def fetch_and_process_cameras(**kwargs):
     else:
         logging.info(f"File exists at URL {url}")
 
-    
-    # flag to run/stop the workers
+    process_cameras.apply_async(queue='feed_tasks', args=[worker_id], priority=10)
+    return {"status": "Feed worker initialized."}
+
+
+@feed_worker_app.task
+def process_cameras(worker_id: int):
+    """
+    Starting point to processing cameras, for manual restarts
+    """
+
     global feed_running_flag
+    start_camera_id = (worker_id - 1) * 10 + 1
+    end_camera_id = start_camera_id + 9
     feed_running_flag = True
 
-    # main working loop to capture frames
     while feed_running_flag:
-        for _ in range(500): # run for 500 frames per camera, then update the cameras list
-            for camera in worker_cameras:
-                capture_video_frames(camera)
-                asyncio.sleep(0.005) # non-busy sleep to allow other tasks to run such as stopping
-        
+        db = SessionLocal()
         worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
         update_cameras_for_feed_workers(worker_cameras)
+        db.close()
 
-    # stop running the workers
+        for _ in range(25): # run for a batch of frames per camera, then update the cameras list
+            for camera in worker_cameras:
+                    capture_video_frames(camera)
+                    asyncio.sleep(0.001) # non-busy sleep to allow other tasks to run such as stopping
+        
+
     release_capture_objects()
     logging.info("Feed worker stopped. Capture objects released.")
 
@@ -81,6 +87,7 @@ def fetch_and_process_cameras(**kwargs):
 
 
 # main worker function
+from .model_worker import process_frame
 def capture_video_frames(camera: Camera):
     """
     Capture frames from the video source (URL) using OpenCV and send them to a Celery queue.
@@ -96,6 +103,7 @@ def capture_video_frames(camera: Camera):
         capture_objects[camera.id] = cap
 
     # read the frame
+    # logging.info(f"Reading frame from camera {camera.id}, path {camera.url}...")
     ret, frame = cap.read()
 
     if not ret:
@@ -159,3 +167,4 @@ def stop_feed_worker():
     stop_flag = True
     time.sleep(3) # busy sleep for 3 seconds to allow other workers to stop
     logging.info("Stop signal set. Worker is stopping...")
+    return {"status": "Worker is stopping..."}

@@ -26,7 +26,7 @@ from api.alerts.websocket import router as alerts_websocket_router, start_redis_
 
 # celery
 from core.celery.worker import celery_app
-from core.celery.feed_worker import fetch_and_process_cameras, stop_feed_worker
+from core.celery.feed_worker import process_cameras, stop_feed_worker
 
 
 app = FastAPI()
@@ -98,32 +98,15 @@ async def health():
             }
 
 
-@app.get("/tasks")
-async def list_celery_tasks():
-    inspector = celery_app.control.inspect()
-    
-    registered_tasks = inspector.registered_tasks()
-    
-    if not registered_tasks:
-        return {"error": "No registered tasks found. Ensure Celery is running."}
-
-    return {"registered_tasks": registered_tasks}
-
-
-@app.get("/worker_name")
-async def worker_name():
-    result = celery_app.send_task("core.celery.tasks.name_checker")
-    return {"worker_name": result.get()}
-
-
-@app.get("/feed_worker_test")
+@app.get("/feed_worker_start")
 async def feed_worker_test():
-    result = fetch_and_process_cameras.apply_async(queue='feed_tasks')
-    return {"worker_name": result.get()}
+    for i in range(settings.FEED_WORKERS):
+        process_cameras.apply_async(queue='feed_tasks', args=[i+1], priority=10)
+    return {"status": "Feed workers started."}
 
 
 @app.get("/feed_worker_stop")
 async def feed_worker_stop():
     for _ in range(settings.FEED_WORKERS):
-        stop_feed_worker.apply_async(queue='feed_tasks')
+        stop_feed_worker.apply_async(queue='feed_tasks', priority=0)
     return {"status": "All feed workers stopped."}
