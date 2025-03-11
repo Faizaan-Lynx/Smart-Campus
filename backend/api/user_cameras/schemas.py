@@ -10,6 +10,6 @@ class UserCameraCreate(UserCameraBase):
 
 class UserCameraResponse(UserCameraBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 class UserCameraUpdate(BaseModel):
     camera_ids: List[int]

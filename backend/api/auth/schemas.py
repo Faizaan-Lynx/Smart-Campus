@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
 
 class UserLoginSchema(BaseModel):
     """Schema for user login request"""
@@ -22,7 +21,7 @@ class UserCreateSchema(BaseModel):
     password: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TokenSchema(BaseModel):
     """Schema for JWT token response"""

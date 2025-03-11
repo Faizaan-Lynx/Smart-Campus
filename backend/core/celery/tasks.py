@@ -1,4 +1,3 @@
-from config import settings
 from .worker import celery_app
 from billiard import current_process
 
