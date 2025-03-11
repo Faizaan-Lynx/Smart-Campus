@@ -33,7 +33,8 @@ for i in $(seq 1 $FEED_WORKERS); do
   # export WORKER_NAME
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.feed_worker.feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --loglevel=info &
+  # since so many tasks, --loglevel=warning to reduce log spam
+  celery -A ${celery_mod}.feed_worker.feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --loglevel=warning &
 
   sleep 0.5
 
@@ -49,7 +50,8 @@ for i in $(seq 1 $MODEL_WORKERS); do
   export WORKER_NAME
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.model_worker.model_worker_app worker -n $WORKER_NAME -Q model_tasks --loglevel=info &
+  # since so many tasks, --loglevel=warning to reduce log spam
+  celery -A ${celery_mod}.model_worker.model_worker_app worker -n $WORKER_NAME -Q model_tasks --loglevel=warning &
 
   sleep 0.5
 
