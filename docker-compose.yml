@@ -34,7 +34,6 @@ services:
     build: .
     container_name: fastapi_app
     environment:
-      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       WATCHFILES_FORCE_POLLING: true
     ports:
