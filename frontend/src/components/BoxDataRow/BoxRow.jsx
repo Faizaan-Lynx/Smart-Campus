@@ -24,7 +24,7 @@ const BoxRow = ({ alerts }) => {
       });
 
       setFilteredAlerts(updatedAlerts);
-      console.log(updatedAlerts);
+      // console.log(updatedAlerts);
     };
 
     updateAlerts(); // Run immediately on mount
