@@ -5,6 +5,11 @@ echo "Scaling Celery workers to $WORKER_COUNT..."
 
 celery_mod=${CELERY_MODULE:-3}
 
+# force wait for redis to start a small startup delay
+sleep 5
+# use wait-for-it to ensure redis is active on port 6379
+/wait-for-it.sh redis:6379 --timeout=5 -- echo "Redis is up for Celery to start..."
+
 for i in $(seq 1 $WORKER_COUNT); do
   WORKER_NAME="worker$i"
 
@@ -13,7 +18,7 @@ for i in $(seq 1 $WORKER_COUNT); do
   echo "Starting worker: $WORKER_NAME"
   celery -A ${celery_mod}.worker.celery_app worker -n $WORKER_NAME -Q general_tasks --loglevel=info &
 
-  sleep 0.5
+  sleep 1
 
 done
 
@@ -44,7 +49,7 @@ for i in $(seq 1 $MODEL_WORKERS); do
   export WORKER_NAME
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.model_worker.celery_app worker -n $WORKER_NAME -Q model_tasks --loglevel=info &
+  celery -A ${celery_mod}.model_worker.model_worker_app worker -n $WORKER_NAME -Q model_tasks --loglevel=info &
 
   sleep 0.5
 
