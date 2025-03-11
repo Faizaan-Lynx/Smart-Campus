@@ -7,31 +7,46 @@ from celery import Celery, signals
 from core.database import SessionLocal
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
-model = None
-cameras = None
+model_worker_app.conf.update(
+    task_time_limit=60,  
+    broker_transport_options={'visibility_timeout': 3600},
+    worker_heartbeat=60,
+)
+
+model = YOLO(model="./yolo-models/yolov8n.pt")
+db = SessionLocal()
+cameras = db.query(Camera).all()
+db.close()
 
 @signals.worker_ready.connect
 def load_model(**kwargs):
     """
     Load the machine learning model into memory.
     """
-    try:    
-        global model
-        model = YOLO(model="./yolo-models/yolov8n.pt")
-        logging.info("Model loaded successfully.")
+    try:
+        # if worker_name is like format celery@model_worker1, only load the model for model workers
+        if kwargs['sender'].hostname.startswith('celery@model_worker'):
+            worker_name = kwargs['sender'].hostname
+            logging.info(f"Model Worker {worker_name} is initializing...")
 
-        # run a dummy prediction to initialize the model
-        dummy_image = np.zeros((1280, 720, 3), dtype=np.uint8)
-        model.predict(dummy_image)
-        
-        logging.info("Model initialized successfully.")
+            global model
+            logging.info("Model loaded successfully.")
 
-        # get all cameras from the database
-        db = SessionLocal()
-        global cameras
-        cameras = db.query(Camera).all()
-        db.close()
-        logging.info("Cameras loaded successfully.")
+            # run a dummy prediction to initialize the model
+            dummy_image = np.zeros((1280, 720, 3), dtype=np.uint8)
+            model.predict(dummy_image)
+            
+            logging.info(f"{worker_name}: Model initialized successfully.")
+
+            # get all cameras from the database
+            global cameras
+            if cameras:
+                logging.info(f"{worker_name}: Cameras loaded successfully.")
+            else:
+                logging.warning(f"{worker_name}: No cameras found.")
+        else:
+            worker_name = kwargs['sender'].hostname
+            logging.info(f"Worker {worker_name} is not a model worker. Skipping model loading")
 
     except Exception as e:
         logging.exception(e)
@@ -42,20 +57,24 @@ def process_frame(camera_id, frame):
     """
     Uses model to process a frame and returns the processed frame.
     """
+    logging.info(f"Model {process_frame.request.hostname} is processing frame for camera {camera_id}...")
     try:
-        global model # model is never unloaded
+        global model
         global cameras
 
-        camera = next((c for c in cameras if c.id == camera_id), None)
-        if not camera:
-            logging.error(f"Camera {camera_id} not found.")
-            return None
+        # camera = next((c for c in cameras if c.id == camera_id), None)
+        # if not camera:
+        #     logging.error(f"Camera {camera_id} not found.")
+        #     return None
         
-        det_threshold = camera.detection_threshold
-        cv2lines = camera.lines
-        
+        # det_threshold = camera.detection_threshold
+        # cv2lines = camera.lines
+
+        logging.info("Task complete")
+        return {"status": "Frame processed successfully."}
         # process the frame using the model
-        results = model.predict(frame, classes=[0])
+        # frame = np.array(frame)
+        # results = model.predict(frame, classes=[0])
         # for res in results.xyxy[0]:
         
 
