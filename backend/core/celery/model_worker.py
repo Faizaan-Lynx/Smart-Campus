@@ -16,7 +16,9 @@ model_worker_app.conf.update(
 model = YOLO(model="./yolo-models/yolov8n.pt")
 db = SessionLocal()
 cameras = db.query(Camera).all()
+cameras_dict = {c.id: c for c in cameras} # quick lookup for cameras {id : camera}
 db.close()
+
 
 @signals.worker_ready.connect
 def load_model(**kwargs):
@@ -53,7 +55,7 @@ def load_model(**kwargs):
 
 
 @model_worker_app.task
-def process_frame(camera_id, frame):
+def process_frame(camera_id: int, frame):
     """
     Uses model to process a frame and returns the processed frame.
     """
@@ -62,10 +64,10 @@ def process_frame(camera_id, frame):
         global model
         global cameras
 
-        # camera = next((c for c in cameras if c.id == camera_id), None)
-        # if not camera:
-        #     logging.error(f"Camera {camera_id} not found.")
-        #     return None
+        camera = cameras_dict.get(camera_id, None)
+        if not camera:
+            logging.error(f"Camera {camera_id} not found.")
+            return None
         
         # det_threshold = camera.detection_threshold
         # cv2lines = camera.lines
