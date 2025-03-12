@@ -48,12 +48,17 @@ def on_feed_worker_startup(**kwargs):
     if not worker_cameras:
         logging.warning(f"No cameras found for worker {celery_worker_id}.")
         return
+    
+    redis_client = redis.from_url(settings.REDIS_URL)
+    for camera in worker_cameras:
+        redis_client.set(f"camera_{camera.id}_intrusion_flag", "False") 
 
     # if celery_worker_id == 1:
     #     time.sleep(5) # wait for all workers to start before starting the processing of every worker
     #     start_all_feed_workers.apply_async(queue='feed_tasks', priority=5)
 
     return {"status": "Feed worker initialized."}
+
 
 # main task - processes every camera assigned to this worker
 @feed_worker_app.task
@@ -92,6 +97,7 @@ def process_cameras(worker_id: int):
 
 # captures a single frame and sends it to model worker
 from .model_worker import process_frame
+
 def capture_video_frames(camera: Camera):
     """
     Capture frames from the video source (URL) using OpenCV and send them to a Celery queue.
@@ -104,6 +110,9 @@ def capture_video_frames(camera: Camera):
         if not cap.isOpened():
             logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
             return
+        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client.set(f"camera_{camera.id}_intrusion_flag", "False")
+        redis_client.close()
         capture_objects[camera.id] = cap
 
     # read the frame
