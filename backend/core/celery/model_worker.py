@@ -1,10 +1,15 @@
+import cv2
+import redis
 import logging
+import datetime
 import numpy as np
 from config import settings
 from ultralytics import YOLO
 from models.cameras import Camera
 from celery import Celery, signals
 from core.database import SessionLocal
+from api.alerts.schemas import AlertBase
+from api.alerts.routes import create_alert
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 model_worker_app.conf.update(
@@ -59,7 +64,6 @@ def process_frame(camera_id: int, frame):
     """
     Uses model to process a frame and returns the processed frame.
     """
-    logging.info(f"Model {process_frame.request.hostname} is processing frame for camera {camera_id}...")
     try:
         global model
         global cameras
@@ -69,18 +73,47 @@ def process_frame(camera_id: int, frame):
             logging.error(f"Camera {camera_id} not found.")
             return None
         
-        # det_threshold = camera.detection_threshold
-        # cv2lines = camera.lines
+        det_threshold = camera.detection_threshold
+        cv2lines = camera.lines
 
-        logging.info("Task complete")
+        # process the frame using the model ==== already resized and cropped to specifications by feed_worker
+        annotated_frame = np.array(frame)
+        results = model.predict(annotated_frame, classes=[0])
+        # results = model.predict(annotated_frame, classes=[0], verbose=False)
+        
+        redis_client = redis.from_url(settings.REDIS_URL)
+        intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
+        
+        for res in results:
+            if res.boxes.id is None:
+                continue
+        
+            for detection in res.boxes:
+                x1, y1, x2, y2 = map(int, detection.xyxy[0])
+                cx = (x1 + x2) / 2
+                cy = (y1 + y2) / 2
+                
+                threshold_crossed_flag = centroid_near_line(cx, cy, cv2lines[0], cv2lines[1], threshold=det_threshold)
+                
+                if threshold_crossed_flag and intrusion_flag == b"False":
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # draw red box around object
+                    handle_intrusion_event(camera_id)
+                    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+                
+                elif threshold_crossed_flag and intrusion_flag == b"True":
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # draw red box around object
+                
+                else:
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # draw green box around object
+        
+        if redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"True":
+            cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+        redis_client.close()
+
+        # send the processed frame to websocket for streaming
         return {"status": "Frame processed successfully."}
-        # process the frame using the model
-        # frame = np.array(frame)
-        # results = model.predict(frame, classes=[0])
-        # for res in results.xyxy[0]:
-        
 
-        
     except Exception as e:
         logging.exception(e)
         return None
@@ -95,14 +128,46 @@ def update_cameras_for_model_workers():
     """
     try:
         db = SessionLocal()
-        global cameras
+        global cameras, cameras_dict
         cameras = db.query(Camera).all()
+        cameras_dict = {c.id: c for c in cameras}
         db.close()
         logging.info("Cameras list updated successfully.")
 
     except Exception as e:
         logging.exception(e)
         logging.error("Failed to update cameras.")
+
+
+@model_worker_app.task
+def unset_intrusion_flag(camera_id: int):
+    """
+    Unset the intrusion flag for a camera.
+    """
+    try:
+        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+        redis_client.close()
+        logging.info(f"Unset intrusion flag for camera {camera_id}.")
+
+    except Exception as e:
+        logging.exception(e)
+        logging.error(f"Failed to unset intrusion flag for camera {camera_id}.")
+
+
+def handle_intrusion_event(camera_id: int):
+    """
+    Handles the alert process for an intrusion event.
+    Generates an alert in DB, sends an email, and sets a timer to unset the intrusion flag.
+    """
+    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=None)
+    
+    db = SessionLocal()
+    create_alert(alert_data, db)
+    db.close()
+
+    # unset the intrusion flag after a certain time
+    unset_intrusion_flag.apply_async(args=[camera_id], countdown=settings.INTRUSION_FLAG_DURATION)
 
 
 # check if object has crossed/is near the threshold line
