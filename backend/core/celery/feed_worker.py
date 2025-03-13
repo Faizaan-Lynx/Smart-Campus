@@ -106,6 +106,8 @@ def capture_video_frames(camera: Camera):
     else:
         logging.info(f"Creating new VideoCapture object for camera {camera.id}")
         cap = cv2.VideoCapture(camera.url)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FPS, 5)
         if not cap.isOpened():
             logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
             return
