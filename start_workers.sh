@@ -13,13 +13,10 @@ sleep 5
 for i in $(seq 1 $WORKER_COUNT); do
   WORKER_NAME="worker$i"
 
-  # export WORKER_NAME
-
   echo "Starting worker: $WORKER_NAME"
   celery -A ${celery_mod}.worker.celery_app worker -n $WORKER_NAME -Q general_tasks --loglevel=info &
 
   sleep 1
-
 done
 
 
@@ -30,14 +27,10 @@ echo "Scaling Feed workers to $FEED_WORKERS..."
 for i in $(seq 1 $FEED_WORKERS); do
   WORKER_NAME="feed_worker$i"
 
-  # export WORKER_NAME
-
   echo "Starting worker: $WORKER_NAME"
-  # since so many tasks, --loglevel=warning to reduce log spam
-  celery -A ${celery_mod}.feed_worker.feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --loglevel=warning &
+  celery -A ${celery_mod}.feed_worker.feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --loglevel=info &
 
   sleep 0.5
-
 done
 
 
@@ -47,14 +40,11 @@ echo "Scaling Model workers to $MODEL_WORKERS..."
 for i in $(seq 1 $MODEL_WORKERS); do
   WORKER_NAME="model_worker$i"
 
-  export WORKER_NAME
-
   echo "Starting worker: $WORKER_NAME"
   # since so many tasks, --loglevel=warning to reduce log spam
   celery -A ${celery_mod}.model_worker.model_worker_app worker -n $WORKER_NAME -Q model_tasks --loglevel=warning &
 
   sleep 0.5
-
 done
 
 wait
