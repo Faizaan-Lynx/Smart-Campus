@@ -26,7 +26,7 @@ from api.alerts.websocket import router as alerts_websocket_router, start_redis_
 
 # celery
 from core.celery.worker import celery_app
-from core.celery.feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
+
 
 app = FastAPI()
 
@@ -94,28 +94,3 @@ async def health():
                 "redis_check": red.ping(),
                 "sqlalchemy_check": test_db_connection()
             }
-
-# ensure only admin can access this route
-@app.get("/start_all_feed_workers")
-async def start_all_feed_workers_route():
-    start_all_feed_workers.apply_async(queue='feed_tasks', priority=10)
-    return {"status": "Starting all feed workers..."}
-
-
-# ensure only admin can access this route
-@app.get("/stop_all_feed_workers")
-async def stop_all_feed_workers_route():
-    stop_all_feed_workers.apply_async(queue='feed_tasks', priority=0)
-    return {"status": "Stopping all feed workers..."}
-
-
-@app.get("/start_feed_worker/{worker_id}")
-async def start_feed_worker_route(worker_id: int):
-    start_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=10)
-    return {"status": f"Starting feed worker {worker_id}..."}
-
-
-@app.get("/stop_feed_worker/{worker_id}")
-async def stop_feed_worker_route(worker_id: int):
-    stop_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=0)
-    return {"status": f"Stopping feed worker {worker_id}..."}

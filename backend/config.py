@@ -9,6 +9,7 @@ class Settings:
     # Feed settings
     FEED_FPS = int(os.getenv("FEED_FPS", 10))
     FEED_DIMS = os.getenv("FEED_DIMS", "(854,480)")
+    INTRUSION_FLAG_DURATION = int(os.getenv("INTRUSION_FLAG_DURATION", 30))
 
     # Database settings
     DATABASE_NAME = os.getenv("DATABASE_NAME", "SmartCampus")

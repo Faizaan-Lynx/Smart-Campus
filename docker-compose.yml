@@ -56,6 +56,7 @@ services:
       - CELERY_MODULE=${CELERY_MODULE}
     volumes:
       - .:/app
+      - pip-cache:/root/.cache/pip
     depends_on:
       - redis
       - postgres-db
@@ -66,6 +67,9 @@ services:
     container_name: flower
     build: .
     command: celery -A ${CELERY_MODULE}.worker.celery_app -A ${CELERY_MODULE}.feed_worker.feed_worker_app -A ${CELERY_MODULE}.model_worker.model_worker_app flower --port=5555
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
     ports:
       - "5556:5555"
     depends_on:

@@ -4,7 +4,9 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install --cache-dir=/root/.cache/pip --prefer-binary -r requirements.txt
+# use cache volume to speed up the build
+# RUN pip install --cache-dir=/root/.cache/pip --prefer-binary -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 # cv2 requirements
 RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
