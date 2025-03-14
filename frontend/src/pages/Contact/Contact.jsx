@@ -9,7 +9,7 @@ const Contact = () => {
   const nameRef = useRef("");
   const emailRef = useRef("");
   const textRef = useRef("");
-  emailjs.init("-eQmqf5mW_8Gde2yq");
+  emailjs.init("pA6YlMxCLMPanA1zo");
 
   function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,11 +51,11 @@ const Contact = () => {
       //       toast.error("Failed to send email!");
       //     }
       //   );
-    
+      console.log("Sending email...", nameRef.current.value, emailRef.current.value, textRef.current.value);
       emailjs
-      .send("service_sn1bsmj", "template_3n82dg4", {
-        name: nameRef.current.value,
-        email: emailRef.current.value,
+      .send("service_p93cq5n", "template_obhuz6l", {
+        to_name: nameRef.current.value,
+        from_email: emailRef.current.value,
         message: textRef.current.value,
       })
       .then(
@@ -90,7 +90,7 @@ const Contact = () => {
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
-                <p>123@gmail.com</p>
+                <p>abdulrehman.prodev@gmail.com</p>
               </div>
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
