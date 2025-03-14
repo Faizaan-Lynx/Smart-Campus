@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
+from celery import group
+from config import settings
+from core.database import get_db
+from sqlalchemy.orm import Session
 from models.cameras import Camera as CameraModel
+from fastapi import APIRouter, Depends, HTTPException, status
 from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
-from core.database import get_db  # Assuming this is where the `get_db` function is located
+from core.celery.model_worker import update_cameras_for_model_workers
+
 
 router = APIRouter(prefix="/camera", tags=["Cameras"])
+
 
 @router.post("/", response_model=Camera, status_code=status.HTTP_201_CREATED)
 def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
@@ -14,7 +19,13 @@ def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
     db.add(db_camera)
     db.commit()
     db.refresh(db_camera)
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+
     return db_camera
+
 
 # Get all cameras
 @router.get("/", response_model=List[Camera])
@@ -22,12 +33,21 @@ def get_cameras(db: Session = Depends(get_db)):
     cameras = db.query(CameraModel).all()
     return cameras
 
+
 @router.get("/{camera_id}", response_model=Camera)
 def get_camera(camera_id: int, db: Session = Depends(get_db)):
     camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not camera:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
     return camera
+
+
+# Get cameras by ID range
+@router.get("/{start_id}/{end_id}", response_model=List[Camera])
+def get_cameras_list(start_id: int, end_id: int, db: Session = Depends(get_db)):
+    cameras = db.query(CameraModel).filter(CameraModel.id >= start_id, CameraModel.id <= end_id).all()
+    return cameras
+
 
 # update a camera
 @router.put("/{camera_id}", response_model=Camera)
@@ -42,7 +62,13 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
 
     db.commit()
     db.refresh(db_camera)
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+
     return db_camera
+
 
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_camera(camera_id: int, db: Session = Depends(get_db)):
@@ -52,4 +78,9 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     
     db.delete(db_camera)
     db.commit()
+
+    # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+    
     return None

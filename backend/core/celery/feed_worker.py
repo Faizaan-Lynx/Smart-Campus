@@ -1,98 +1,227 @@
-import sys
 import cv2
+import redis
 import logging
-from celery import Celery
+from typing import List
 from config import settings
-from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
-from celery.signals import task_prerun
-import time
+from core.database import SessionLocal
+from celery import Celery, signals, group
+
 
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+feed_worker_app.conf.update(
+    broker_transport_options={'visibility_timeout': 3600},
+    worker_heartbeat=60,
+)
 
+worker_id = None
 capture_objects = {}
 
-@feed_worker_app.task
-def fetch_and_process_cameras():
-    """
-    Fetch cameras assigned to this worker and continuously capture frames.
-    This worker will fetch cameras by ID ranges based on worker_id.
-    """
-    worker_name = fetch_and_process_cameras.request.hostname.split('@')[1]
-    # worker name will be celery@worker_name, worker_name is in format worker1, worker2, etc.
-    worker_id = int(worker_name.split('r')[-1])
 
-    start_camera_id = (worker_id - 1) * 10 + 1  # Worker 1: 1-10, Worker 2: 11-20, etc.
+@signals.worker_ready.connect # automatically trigger task on worker startup
+def on_feed_worker_startup(**kwargs):
+    """
+    Initialize the feed workers on Celery feed_worker startup.
+    """
+
+    # assume that default point of entry for this task is worker startup
+    try:
+        worker_name = kwargs['sender'].hostname.split('@')[1]
+    except Exception as e:
+        worker_name = on_feed_worker_startup.request.hostname.split('@')[1]
+
+    # worker name will be celery@feed_worker(num)
+    global celery_worker_id
+    celery_worker_id = int(worker_name.split('feed_worker')[-1])
+
+    start_camera_id = (celery_worker_id - 1) * 10 + 1
+    end_camera_id = start_camera_id + 9
+    
+    logging.info(f"Feed Worker {celery_worker_id} will process cameras {start_camera_id}-{end_camera_id}")
+
+    db : Session = SessionLocal()    
+    worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    db.close()
+
+    if not worker_cameras:
+        logging.warning(f"No cameras found for worker {celery_worker_id}.")
+        return
+    
+    redis_client = redis.from_url(settings.REDIS_URL)
+    for camera in worker_cameras:
+        redis_client.set(f"camera_{camera.id}_intrusion_flag", "False") 
+
+    # if celery_worker_id == 1:
+    #     time.sleep(5) # wait for all workers to start before starting the processing of every worker
+    #     start_all_feed_workers.apply_async(queue='feed_tasks', priority=5)
+
+    return {"status": "Feed worker initialized."}
+
+
+# main task - processes every camera assigned to this worker
+@feed_worker_app.task
+def process_cameras(worker_id: int):
+    """
+    Starting point to processing cameras, for manual restarts
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    global_stop_flag = redis_client.get("feed_workers_running")
+    individual_stop_flag = redis_client.get(f"feed_worker_{worker_id}_running")
+    redis_client.close()
+
+    start_camera_id = (worker_id - 1) * 10 + 1
     end_camera_id = start_camera_id + 9
 
-    # cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+    while global_stop_flag == b"True" and individual_stop_flag == b"True":
+        db = SessionLocal()
+        worker_cameras = db.query(Camera).filter(Camera.id >= start_camera_id, Camera.id <= end_camera_id).all()
+        update_cameras_for_feed_workers(worker_cameras)
+        db.close()
 
-    # if not cameras:
-    #     logging.warning(f"No cameras found for worker {worker_id}.")
-    #     return
+        for _ in range(10): # run for a batch of frames per camera, then update the cameras list
+            for camera in worker_cameras:
+                    capture_video_frames(camera)
 
-    logging.info(f"Worker {worker_id} will process cameras {start_camera_id}-{end_camera_id}")
-    return {"worker_id": worker_id, "start_camera_id": start_camera_id, "end_camera_id": end_camera_id}
-    # while True:
-    #     for camera in cameras:
-    #         logging.info(f"Worker {worker_id}: Capturing frame for camera {camera.id} at URL {camera.url}")
-    #         capture_video_frames(camera)
-            
+        redis_client = redis.from_url(settings.REDIS_URL)
+        global_stop_flag = redis_client.get("feed_workers_running")
+        individual_stop_flag = redis_client.get(f"feed_worker_{worker_id}_running")
+        redis_client.close()
+
+    release_capture_objects()
+    logging.info("Feed worker stopped. Capture objects released.")
+
+    return {"status": "Feed worker stopped."}
+
+
+# captures a single frame and sends it to model worker
+from .model_worker import process_frame
 
 def capture_video_frames(camera: Camera):
     """
     Capture frames from the video source (URL) using OpenCV and send them to a Celery queue.
     """
-    if camera.id not in capture_objects:
+    if camera.id in capture_objects:
+        cap = capture_objects[camera.id]
+    else:
         logging.info(f"Creating new VideoCapture object for camera {camera.id}")
         cap = cv2.VideoCapture(camera.url)
-
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FPS, 5)
         if not cap.isOpened():
             logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
             return
-
+        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client.set(f"camera_{camera.id}_intrusion_flag", "False")
+        redis_client.close()
         capture_objects[camera.id] = cap
-    else:
-        cap = capture_objects[camera.id]
 
+    # read the frame
+    # logging.info(f"Reading frame from camera {camera.id}, path {camera.url}...")
     ret, frame = cap.read()
 
     if not ret:
         logging.warning(f"Failed to read frame from camera {camera.id}, URL {camera.url}")
         return
 
-    frame = process_frame(frame, camera)
-    push_frame_to_queue(camera.id, frame)
+    frame = preprocess_frame(frame, camera)
+    process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
 
 
-def process_frame(frame, camera: Camera):
+def preprocess_frame(frame, camera: Camera):
     """
-    Process the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
+    Preprocess the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
+    Resize dimensions are strings in format "(1280, 720)" and crop region is in format "((0,0), (1280,720))".
     """
 
     if camera.resize_dims:
-        width, height = map(int, camera.resize_dims.split('x'))
-        frame = cv2.resize(frame, (width, height))
+        frame = cv2.resize(frame, eval(camera.resize_dims))
 
     if camera.crop_region:
-        x1, y1, x2, y2 = map(int, camera.crop_region.split(','))
-        frame = frame[y1:y2, x1:x2]
+        crop_region = eval(camera.crop_region)
+        frame = frame[crop_region[0][1]:crop_region[1][1], crop_region[0][0]:crop_region]
 
     return frame
 
 
+# high priority task to update the cameras list
+def update_cameras_for_feed_workers(cameras: List[Camera]):
+    """
+    Updates the cameras list for the feed workers.
+    """
+    try:
+        global capture_objects
+
+        # release the capture objects for cameras that are not in the new list
+        for camera_id in capture_objects.keys():
+            if camera_id not in [c.id for c in cameras]:
+                logging.info(f"Releasing VideoCapture object for camera {camera_id}")
+                capture_objects[camera_id].release()
+                del capture_objects[camera_id]
+
+    except Exception as e:
+        logging.exception(e)
+
+# ========== feed worker starting tasks ========== #
+
 @feed_worker_app.task
-def push_frame_to_queue(camera_id, frame):
+def start_all_feed_workers():
     """
-    Push the processed frame to the unprocessed queue.
+    Task to start the ALL feed workers simultaneously.
     """
-    logging.info(f"Pushing frame for camera {camera_id} to unprocessed_queue")
+    logging.info("Starting all feed workers...")
 
-    # Here, you can serialize and push the frame to a message queue.
-    # For simplicity, we are just logging it as an example.
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set("feed_workers_running", "True")
+    redis_client.close()
 
-    return {"camera_id": camera_id, "frame": frame}
+    start_jobs_group = group(start_feed_worker.s(i+1) for i in range(settings.FEED_WORKERS))
+    start_jobs_group.apply_async(queue='feed_tasks', priority=10)
+
+    logging.info("All feed workers started!")
+    return {"status": "Feed workers started."}
+
+@feed_worker_app.task
+def start_feed_worker(worker_id: int):
+    """
+    Start a single feed worker by setting its individual running flag.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"feed_worker_{worker_id}_running", "True")
+    redis_client.close()
+
+    process_cameras.apply_async(queue='feed_tasks', args=[worker_id], priority=10)
+
+    logging.info(f"Feed worker {worker_id} started!")
+    return {"status": f"Feed worker {worker_id} started."}
+
+
+# ========== feed worker stopping tasks ========== #
+
+@feed_worker_app.task
+def stop_all_feed_workers():
+    """
+    Task to stop the ALL feed workers simultaneously.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set("feed_workers_running", "False")
+    redis_client.close()
+
+    logging.info("All feed workers stopped!")
+    return {"status": "Feed workers stopped."}
+
+
+@feed_worker_app.task
+def stop_feed_worker(worker_id: int):
+    """
+    Task to stop a single feed worker by setting its individual stop flag.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"feed_worker_{worker_id}_running", "False")
+    redis_client.close()
+
+    logging.info(f"Feed worker {worker_id} stopped!")
+    return {"status": f"Feed worker {worker_id} stopped."}
 
 
 def release_capture_objects():
@@ -102,17 +231,3 @@ def release_capture_objects():
     for camera_id, cap in capture_objects.items():
         logging.info(f"Releasing VideoCapture object for camera {camera_id}")
         cap.release()
-
-
-if __name__ == "__main__":
-    worker_id = int(sys.argv[1])  # For example, passing worker ID as an argument when running the worker
-
-    # Start processing the cameras for this worker
-    with get_db() as db:
-        fetch_and_process_cameras()
-
-    # Release all capture objects after processing is done
-    release_capture_objects()
-
-# command to start the worker, include the worker ID as an argument when running the worker
-# celery -A core.celery.feed_worker worker --loglevel=info --queues=unprocessed_queue

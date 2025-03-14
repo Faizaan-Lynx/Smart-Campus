@@ -4,7 +4,6 @@ import redis
 from httpx import AsyncClient
 from fastapi import FastAPI
 from api.alerts.routes import router
-from unittest.mock import patch
 
 app = FastAPI()
 app.include_router(router)
