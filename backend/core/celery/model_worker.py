@@ -112,6 +112,7 @@ def process_frame(camera_id: int, frame):
         redis_client.close()
 
         # send the processed frame to websocket for streaming
+        # output_frame = annotated_frame
         return {"status": "Frame processed successfully."}
 
     except Exception as e:
