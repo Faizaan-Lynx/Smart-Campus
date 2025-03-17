@@ -99,6 +99,7 @@ def process_frame(camera_id: int, frame):
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # draw red box around object
                     handle_intrusion_event(camera_id)
                     redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+                    intrusion_flag = b"True"
                 
                 elif threshold_crossed_flag and intrusion_flag == b"True":
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # draw red box around object
@@ -106,7 +107,7 @@ def process_frame(camera_id: int, frame):
                 else:
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # draw green box around object
         
-        if redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"True":
+        if intrusion_flag == b"True":
             cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         redis_client.close()
