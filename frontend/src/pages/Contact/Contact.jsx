@@ -9,7 +9,8 @@ const Contact = () => {
   const nameRef = useRef("");
   const emailRef = useRef("");
   const textRef = useRef("");
-  emailjs.init("pA6YlMxCLMPanA1zo");
+
+  emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
 
   function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,7 +21,6 @@ const Contact = () => {
     e.preventDefault();
     if (nameRef.current.value === "") {
       toast.dismiss();
-
       toast.error("Please Enter your name!");
     } else if (emailRef.current.value === "") {
       toast.dismiss();
@@ -32,43 +32,29 @@ const Contact = () => {
       toast.dismiss();
       toast.error("Please enter a valid email!");
     } else {
-      // emailjs
-      //   .send("service_sn1bsmj", "template_3n82dg4", {
-      //     name: nameRef.current.value,
-      //     email: emailRef.current.value,
-      //     message: textRef.current.value,
-      //   })
-      //   .then(
-      //     (response) => {
-      //       toast.dismiss();
-      //       toast.success("Email sent! We will contact you soon.");
-      //       nameRef.current.value = "";
-      //       emailRef.current.value = "";
-      //       textRef.current.value = "";
-      //     },
-      //     (error) => {
-      //       toast.dismiss();
-      //       toast.error("Failed to send email!");
-      //     }
-      //   );
-      console.log("Sending email...", nameRef.current.value, emailRef.current.value, textRef.current.value);
       emailjs
-      .send("service_p93cq5n", "template_obhuz6l", {
-        to_name: nameRef.current.value,
-        from_email: emailRef.current.value,
-        message: textRef.current.value,
-      })
-      .then(
-        (response) => {
-          console.log("✅ Email sent successfully:", response);
-          toast.success("Email sent! We will contact you soon.");
-        },
-        (error) => {
-          console.error("❌ Failed to send email:", error);
-          toast.error("Failed to send email! Check console.");
-        }
-      );
-    
+        .send(
+          import.meta.env.VITE_EMAILJS_SERVICE_ID,
+          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+          {
+            to_name: nameRef.current.value,
+            from_email: emailRef.current.value,
+            message: textRef.current.value,
+          }
+        )
+        .then(
+          (response) => {
+            console.log("✅ Email sent successfully:", response);
+            toast.success("Email sent! We will contact you soon.");
+            nameRef.current.value = "";
+            emailRef.current.value = "";
+            textRef.current.value = "";
+          },
+          (error) => {
+            console.error("❌ Failed to send email:", error);
+            toast.error("Failed to send email! Check console.");
+          }
+        );
     }
   };
 
@@ -82,7 +68,6 @@ const Contact = () => {
             <p className="contact__text">
               Get in touch with us to start your secure tracking journey.
             </p>
-
             <div className="info">
               <div className="information">
                 <img src={assets.logo} className="icon" alt="" />
@@ -97,31 +82,13 @@ const Contact = () => {
                 <p>12345678</p>
               </div>
             </div>
-
-            {/* <div className="social-media">
-              <p>Connect with us :</p>
-              <div className="social-icons">
-                <a href="#">
-                  <i className="fab fa-facebook-f"></i>
-                </a>
-                <a href="#">
-                  <i className="fab fa-twitter"></i>
-                </a>
-                <a href="#">
-                  <i className="fab fa-instagram"></i>
-                </a>
-                <a href="#">
-                  <i className="fab fa-linkedin-in"></i>
-                </a>
-              </div>
-            </div> */}
           </div>
 
           <div className="contact-form">
             <span className="circle one"></span>
             <span className="circle two"></span>
 
-            <form action="index.html" autocomplete="off">
+            <form action="index.html" autoComplete="off">
               <h3 className="title">Contact us</h3>
               <div className="input-container">
                 <input
@@ -131,7 +98,6 @@ const Contact = () => {
                   name="name"
                   className="input"
                 />
-                {/* <label for="">Username</label> */}
                 <span>Username</span>
               </div>
               <div className="input-container">
@@ -142,10 +108,8 @@ const Contact = () => {
                   name="email"
                   className="input"
                 />
-                {/* <label for="">Email</label> */}
                 <span>Email</span>
               </div>
-
               <div className="input-container textarea">
                 <textarea
                   ref={textRef}
@@ -153,15 +117,11 @@ const Contact = () => {
                   name="message"
                   className="input"
                 ></textarea>
-                {/* <label for="">Message</label> */}
                 <span>Message</span>
               </div>
-              <input
-                value="Send"
-                onClick={(e) => sendMail(e)}
-                className="btn"
-              />
-            </form>
+              {/* <input value="Send" onClick={(e) => sendMail(e)} className="btn" /> */}
+              <button className="btn" onClick={(e) => sendMail(e)}>Send</button>
+            </form> 
           </div>
         </div>
       </div>

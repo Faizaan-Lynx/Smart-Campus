@@ -148,6 +148,7 @@ textarea.input {
   cursor: pointer;
   transition: 0.3s;
   margin: 0;
+  width: 100%;
 }
 
 .btn:hover {

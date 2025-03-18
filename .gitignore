@@ -2,6 +2,7 @@
 .env
 .venv
 env/
+.env.local
 
 # python specific
 __pycache__

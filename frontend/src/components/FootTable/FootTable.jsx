@@ -66,15 +66,19 @@ const FootTable = ({ alerts, setAlerts }) => {
   const handleAcknowledge = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.patch(`http://127.0.0.1:8000/alerts/${alertId}/acknowledge`, {
-        is_acknowledged: true,
-      }, {
-        headers: {
-          accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      await axios.patch(
+        `http://127.0.0.1:8000/alerts/${alertId}/acknowledge`,
+        {
+          is_acknowledged: true,
         },
-      });
+        {
+          headers: {
+            accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       // Update the alert list locally
       setAlerts((prevAlerts) =>
@@ -90,23 +94,22 @@ const FootTable = ({ alerts, setAlerts }) => {
   const handleDelete = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://127.0.0.1:8000/alerts/${alertId}`,
-      {
+      await axios.delete(`http://127.0.0.1:8000/alerts/${alertId}`, {
         headers: {
           accept: "application/json",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token})}`,
         },
-      }
-      );
-  
+      });
+
       // Update the alert list locally
-      setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== alertId));
+      setAlerts((prevAlerts) =>
+        prevAlerts.filter((alert) => alert.id !== alertId)
+      );
     } catch (error) {
       console.error("Failed to delete alert:", error);
     }
   };
-  
 
   return (
     <div className="foottable__div__main">
@@ -124,6 +127,7 @@ const FootTable = ({ alerts, setAlerts }) => {
           </TableHead>
           <TableBody>
             {alerts
+              .sort((a, b) => b.id - a.id)
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row) => (
                 <StyledTableRow key={row.id}>
