@@ -57,7 +57,7 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
 
     # Update the camera fields
-    for key, value in camera.dict(exclude_unset=True).items():
+    for key, value in camera.model_dump(exclude_unset=True).items():
         setattr(db_camera, key, value)
 
     db.commit()
