@@ -1,6 +1,7 @@
 from jose import jwt
 from config import settings
 from datetime import datetime, timedelta
+from api.users.schemas import UserResponseSchema
 from fastapi import HTTPException, status, Request, Depends
 
 def create_access_token(user_id: int, username: str, is_admin: bool):
@@ -17,7 +18,7 @@ def create_access_token(user_id: int, username: str, is_admin: bool):
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def get_current_user(request: Request) -> dict:
+def get_current_user(request: Request) -> UserResponseSchema:
     """
     Dependency to get the current user from the request.
     """
@@ -40,13 +41,13 @@ def get_current_user(request: Request) -> dict:
         if expiration < datetime.utcnow():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
 
-        return {"username": username, "user_id": user_id, "role": role}
+        return UserResponseSchema(id=user_id, username=username, email="", is_admin=(role == "admin"))
 
     except jwt.JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     
 
-def is_admin(current_user: dict = Depends(get_current_user)):
+def is_admin(current_user: UserResponseSchema = Depends(get_current_user)):
     """
     Dependency to check if the current user is an admin.
     """
