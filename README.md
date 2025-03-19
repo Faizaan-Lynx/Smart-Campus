@@ -2,6 +2,8 @@
 
 The **Smart-Campus** system is developed by **Lynx InfoSec**.
 
+<br>
+
 ## Setup Instructions
 
 Before building or pulling the repository, ensure the following two commands are executed to ensure correct line endings:
@@ -13,7 +15,7 @@ git config --global core.eol lf
 
 These configurations will ensure that line-endings match those used by Unix-based systems (for docker setup).
 
----
+<br>
 
 ## Deployment
 
@@ -39,7 +41,11 @@ These configurations will ensure that line-endings match those used by Unix-base
 
 The frontend should now be accessible via `http://localhost:3000` (or a similar port based on your configuration).
 
+<br>
+
 ---
+
+<br>
 
 ### Backend Setup
 
@@ -78,12 +84,13 @@ The backend is designed to be highly scalable, using **Celery** for image proces
    By default, the FastAPI backend will be accessible at `http://localhost:8000`.
    **Flower** will be accessible at `http://localhost:5555` for monitoring Celery workers.
 
+<br>
 
 #### Celery Worker Configuration
 
 Celery workers are an integral part of this system. For a basic demo setup, use 1 worker for each type of task. Ensure that the Celery workers and FastAPI can access the same Redis instance for operation.
 
----
+<br>
 
 ## Notes
 
