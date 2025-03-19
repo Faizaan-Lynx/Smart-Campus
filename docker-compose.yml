@@ -71,7 +71,7 @@ services:
       - .:/app
       - pip-cache:/root/.cache/pip
     ports:
-      - "5556:5555"
+      - "5555:5555"
     depends_on:
       - redis
       - postgres-db
