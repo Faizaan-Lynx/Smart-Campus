@@ -50,4 +50,4 @@ class UserUpdate(BaseModel):  # No need to inherit from UserBase to keep fields 
     cameras: Optional[List[int]] = None  # Make cameras optional
 
     class Config:
-        orm_mode = True
+        from_attributes = True

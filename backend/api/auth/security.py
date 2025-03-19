@@ -1,7 +1,7 @@
 from jose import jwt
 from config import settings
 from datetime import datetime, timedelta
-from api.users.schemas import UserResponseSchema
+from api.auth.schemas import UserResponseSchema
 from fastapi import HTTPException, status, Request, Depends
 
 def create_access_token(user_id: int, username: str, is_admin: bool):

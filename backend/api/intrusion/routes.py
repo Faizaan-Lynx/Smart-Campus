@@ -4,8 +4,8 @@ from models.cameras import Camera
 from sqlalchemy.orm import Session
 from api.auth.security import is_admin
 from models.intrusion import Intrusion
+from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
-from api.users.schemas import UserResponseSchema
 from api.intrusion.schemas import IntrusionCreate, IntrusionResponse
 from core.celery.feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
 
