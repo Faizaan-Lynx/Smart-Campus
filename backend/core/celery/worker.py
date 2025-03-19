@@ -15,4 +15,4 @@ celery_app.conf.update(
 )
 
 # Auto-discover tasks in alert_tasks and tasks
-celery_app.autodiscover_tasks(["core.celery.alert_tasks", "core.celery.tasks"])
+celery_app.autodiscover_tasks(["core.celery.alert_tasks","core.celery.frame_tasks", "core.celery.tasks"])

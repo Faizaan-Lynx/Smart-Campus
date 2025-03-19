@@ -8,6 +8,7 @@ from ultralytics import YOLO
 from models.cameras import Camera
 from celery import Celery, signals
 from core.database import SessionLocal
+from core.celery.feed_task import publish_frame 
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 
@@ -113,6 +114,7 @@ def process_frame(camera_id: int, frame):
         redis_client.close()
 
         # send the processed frame to websocket for streaming
+        publish_frame.delay(camera_id, annotated_frame)
         # output_frame = annotated_frame
         return {"status": "Frame processed successfully."}
 
