@@ -101,7 +101,7 @@ async def health():
 import numpy as np
 import logging
 import redis
-from core.celery.feed_task import publish_frame
+from backend.core.celery.stream_worker import publish_frame
 from core.celery.feed_worker import process_frame
 
 redis_client = redis.Redis(host="localhost", port=6379, db=0)
