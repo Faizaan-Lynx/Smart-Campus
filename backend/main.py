@@ -94,3 +94,57 @@ async def health():
                 "redis_check": red.ping(),
                 "sqlalchemy_check": test_db_connection()
             }
+
+# tetsing
+
+from celery.result import AsyncResult
+import cv2
+import numpy as np
+import base64
+from backend.core.celery.feed_task import publish_frame
+
+@app.get("/test_publish_video/")
+def test_publish_video(camera_id: int = 1, video_path: str = "backend/tests/vid2.mp4", frame_interval: int = 5):
+    """
+    Reads frames from a video file and publishes them using the Celery task.
+    Parameters:
+        - camera_id: The ID of the camera.
+        - video_path: Path to the test video file.
+        - frame_interval: Publish every Nth frame (to avoid sending too many frames).
+    """
+    try:
+        logging.info(f"Opening video file {video_path}...")
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            logging.error("Failed to open video file.")
+            return {"error": "Could not open video file."}
+
+        frame_count = 0
+        task_ids = []
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break  # End of video
+
+            if frame_count % frame_interval == 0:
+                annotated_frame = np.array(frame)
+                task = publish_frame.delay(camera_id, annotated_frame)
+                task_ids.append(task.id)
+
+            frame_count += 1
+
+        cap.release()
+        return {"message": "Frames submitted to Celery.", "total_frames": frame_count, "task_ids": task_ids}
+
+    except Exception as e:
+        logging.exception("Error processing video file.")
+        return {"error": str(e)}
+
+@app.get("/task_status/")
+def get_task_status(task_id: str):
+    """
+    Fetch the status of a Celery task.
+    """
+    result = AsyncResult(task_id)
+    return {"task_id": task_id, "status": result.status, "result": result.result}
