@@ -113,15 +113,15 @@ def process_frame(camera_id: int, frame):
             cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         redis_client.close()
+        # Ensure the frame is a valid NumPy array
+        if isinstance(annotated_frame, np.ndarray):
+            # Encode frame to JPEG format
+            success, buffer = cv2.imencode(".jpg", annotated_frame)
+            if success:
+                # Convert to Base64 string
+                annotated_frame = base64.b64encode(buffer).decode("utf-8")
 
-        # Encode frame before sending it through Celery
-        _, buffer = cv2.imencode(".jpg", annotated_frame)
-        frame_base64 = base64.b64encode(buffer).decode("utf-8")
-
-        # Send the encoded frame to the Celery task
-        publish_frame.delay(camera_id, frame_base64)
-        # output_frame = annotated_frame
-        return {"status": "Frame processed successfully."}
+        output_frame = publish_frame(camera_id, annotated_frame)
 
     except Exception as e:
         logging.exception(e)
