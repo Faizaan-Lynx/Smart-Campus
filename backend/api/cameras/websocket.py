@@ -1,8 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import redis
 import asyncio
-from collections import defaultdict
 import json
+from collections import defaultdict
 
 # Redis client setup
 redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
@@ -20,7 +20,7 @@ all_frame_connections = set()
 async def redis_frame_listener():
     """Listens for video frames from Redis and broadcasts them to WebSockets."""
     pubsub = redis_client.pubsub()
-    pubsub.psubscribe("camera_frames:*")  # Listening to all camera frame channels
+    pubsub.psubscribe("camera_*")  # Listening to all camera frame channels
 
     while True:
         message = pubsub.get_message(ignore_subscribe_messages=True)

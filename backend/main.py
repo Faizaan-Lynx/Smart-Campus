@@ -23,6 +23,7 @@ from api.intrusion.routes import router as intrusion_router
 
 # websocket for alerts
 from api.alerts.websocket import router as alerts_websocket_router, start_redis_listener
+from api.cameras.websocket import router as cameras_websocket_router, start_redis_frame_listener
 
 # celery
 from core.celery.worker import celery_app
@@ -70,12 +71,14 @@ app.include_router(intrusion_router)
 
 # WebSocket Routes
 app.include_router(alerts_websocket_router)
+app.include_router(cameras_websocket_router)
 
 
 # routes for startup and some for testing and health checks
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(start_redis_listener())
+    asyncio.create_task(start_redis_frame_listener())
 
 
 @app.get("/")
@@ -134,3 +137,4 @@ async def test_publish_feed():
     except Exception as e:
         logging.exception(e)
         return {"status": "Error", "message": str(e)}
+    
