@@ -13,13 +13,15 @@ router = APIRouter(prefix="/intrusions", tags=["Intrusions"])
 
 # admin only routes
 @router.get("/start_all_feed_workers")
-async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):  
+# async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):  
+async def start_all_feed_workers_route():  
     start_all_feed_workers.apply_async(queue='feed_tasks', priority=10)
     return {"status": "Starting all feed workers..."}
 
 
 @router.get("/stop_all_feed_workers")
-async def stop_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):
+# async def stop_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):
+async def stop_all_feed_workers_route():
     stop_all_feed_workers.apply_async(queue='feed_tasks', priority=0)
     return {"status": "Stopping all feed workers..."}
 
