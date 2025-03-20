@@ -124,7 +124,7 @@ def capture_video_frames(camera: Camera):
         return
 
     frame = preprocess_frame(frame, camera)
-    process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
+    process_frame.apply_async(args=[camera.id, frame.tobytes()], queue='model_tasks')
 
 
 def preprocess_frame(frame, camera: Camera):
@@ -134,7 +134,8 @@ def preprocess_frame(frame, camera: Camera):
     """
 
     if camera.resize_dims:
-        frame = cv2.resize(frame, eval(camera.resize_dims))
+        resize_dims = eval(camera.resize_dims) # default is "(640,480)"
+        frame = cv2.resize(frame, resize_dims) # resize to 640x480
 
     if camera.crop_region:
         crop_region = eval(camera.crop_region)
