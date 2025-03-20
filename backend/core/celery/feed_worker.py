@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from celery import Celery, signals, group
 
-
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 feed_worker_app.conf.update(
     broker_transport_options={'visibility_timeout': 3600},

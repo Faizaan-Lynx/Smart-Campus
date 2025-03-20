@@ -1,5 +1,6 @@
 import cv2
 import redis
+import base64
 import logging
 import datetime
 import numpy as np
@@ -113,8 +114,12 @@ def process_frame(camera_id: int, frame):
 
         redis_client.close()
 
-        # send the processed frame to websocket for streaming
-        publish_frame.delay(camera_id, annotated_frame)
+        # Encode frame before sending it through Celery
+        _, buffer = cv2.imencode(".jpg", annotated_frame)
+        frame_base64 = base64.b64encode(buffer).decode("utf-8")
+
+        # Send the encoded frame to the Celery task
+        publish_frame.delay(camera_id, frame_base64)
         # output_frame = annotated_frame
         return {"status": "Frame processed successfully."}
 

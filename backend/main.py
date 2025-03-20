@@ -95,56 +95,42 @@ async def health():
                 "sqlalchemy_check": test_db_connection()
             }
 
-# tetsing
-
-from celery.result import AsyncResult
-import cv2
 import numpy as np
+import cv2
 import base64
-from backend.core.celery.feed_task import publish_frame
+import json
+import logging
+import redis
+from core.celery.feed_task import publish_frame
+from core.celery.feed_worker import process_frame
 
-@app.get("/test_publish_video/")
-def test_publish_video(camera_id: int = 1, video_path: str = "backend/tests/vid2.mp4", frame_interval: int = 5):
+@app.post("/test_publish_feed/")
+async def test_publish_feed():
     """
-    Reads frames from a video file and publishes them using the Celery task.
-    Parameters:
-        - camera_id: The ID of the camera.
-        - video_path: Path to the test video file.
-        - frame_interval: Publish every Nth frame (to avoid sending too many frames).
+    Test function to generate a synthetic random frame, process it, and publish the result.
     """
     try:
-        logging.info(f"Opening video file {video_path}...")
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            logging.error("Failed to open video file.")
-            return {"error": "Could not open video file."}
+        camera_id = 1
+        # Create a random frame with the same dimensions (720, 1280, 3)
+        frame = np.random.randint(0, 256, (720, 1280, 3), dtype=np.uint8)
 
-        frame_count = 0
-        task_ids = []
+        # Process the synthetic frame
+        result = process_frame(camera_id, frame)
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break  # End of video
+        # Check if process_frame returned an annotated frame
+        if result and "status" in result:
+            # Publish the annotated frame
+            publish_result = publish_frame(camera_id, frame)
 
-            if frame_count % frame_interval == 0:
-                annotated_frame = np.array(frame)
-                task = publish_frame.delay(camera_id, annotated_frame)
-                task_ids.append(task.id)
-
-            frame_count += 1
-
-        cap.release()
-        return {"message": "Frames submitted to Celery.", "total_frames": frame_count, "task_ids": task_ids}
+            return {
+                "status": "Success",
+                "message": "Processed and published a random synthetic frame",
+                "process_result": result,
+                "publish_result": publish_result
+            }
+        else:
+            return {"status": "Error", "message": "Failed to process frame"}
 
     except Exception as e:
-        logging.exception("Error processing video file.")
-        return {"error": str(e)}
-
-@app.get("/task_status/")
-def get_task_status(task_id: str):
-    """
-    Fetch the status of a Celery task.
-    """
-    result = AsyncResult(task_id)
-    return {"task_id": task_id, "status": result.status, "result": result.result}
+        logging.exception(e)
+        return {"status": "Error", "message": str(e)}
