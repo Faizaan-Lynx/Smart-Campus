@@ -1,15 +1,22 @@
 import pytest
-from core.celery.feed_task import publish_frame
+import json
+import base64
+import redis
+import cv2
+import numpy as np
+from time import sleep
+from backend.core.celery.feed_task import publish_frame
 
-# Test parameters
-camera_id = 1
-annotated_frame = None  
-test_video_path = r"C:\Users\sa\OneDrive\Desktop\Smart-Campus\backend\tests\vid2.mp4"
+# Provide a test video file path (Ensure the path is correct)
+test_video_path = r"backend\tests\vid2.mp4"
 
-@pytest.mark.parametrize("camera_id, annotated_frame, video_path", [
-    (1, None, test_video_path),  
-    (2, None, None),  # Test without a video file
-])
-def test_publish_frame(camera_id, annotated_frame, video_path):
-    result = publish_frame(camera_id, annotated_frame, video_path)
-    assert result is not None  # Ensure function returns a valid response
+# Call the function asynchronously
+result = publish_frame.delay(camera_id=1, annotated_frame=None, test_video_path=test_video_path)
+
+# Wait for the result
+print("Task ID:", result.id)
+print("Waiting for result...")
+
+# Get result (blocking)
+output = result.get(timeout=30)
+print("Function Output:", output)
