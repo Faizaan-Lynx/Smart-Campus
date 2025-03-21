@@ -3,48 +3,39 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 import "./FootFallRow.css";
-import FootFall from "../FootFall/FootFall";
-import VideoFeed from "../VideoFeed/VideoFeed";
-import "../GenderRatioRow/GenderRatiorow.css";
-import RepeatRatio from "../RepeatRatio/RepeatRatio";
 import CameraList from "../CCTVCamList/CCTVCamList";
 
-const FootFallRow = ({ visitData, siteId, cameras, selectedCamera ,setSelectedCamera}) => {
+const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera }) => {
   const [loading, setLoading] = useState(false);
-  // useEffect(() => {
-  //   const fetchCameras = async () => {
-  //     try {
-  //       const response = await axios.get("http://127.0.0.1:8000/camera/");
-  //       setCameras(response.data);
-  //     } catch (error) {
-  //       toast.error("Failed to fetch camera list. Please try again later.");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
 
-  //   fetchCameras();
-  // }, []);
+  // Handle camera selection and trigger the API
+  const handleCameraSelect = async (cameraId) => {
+    setSelectedCamera(cameraId);
+    setLoading(true);
+
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/test_publish_feed/", {
+        camera_id: cameraId,
+      });
+
+      console.log(response.data);
+
+      // toast.success(`Camera feed started for ID: ${cameraId}`);
+    } catch (error) {
+      toast.error("Failed to start camera feed.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="app__container__row">
-      {/* <div className="footfall__container">
-        <FootFall visitData={visitData} />
-        <RepeatRatio visitData={visitData} />
-      </div> */}
-
-      {/* Repeat Ratio Graph */}
-      {/* <div className="footfall_repeat_ratio_container">
-        <FootFall visitData={visitData} />
-        <RepeatRatio visitData={visitData} />
-      </div> */}
-
       <div className="video__container__row">
-        {/* <VideoFeed visitData={visitData} siteId={siteId} /> */}
         {loading ? (
           <p>Loading cameras...</p>
         ) : (
-          <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={setSelectedCamera} />
+          <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={handleCameraSelect} />
         )}
       </div>
     </div>

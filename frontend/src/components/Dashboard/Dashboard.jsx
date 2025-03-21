@@ -42,34 +42,7 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleToastClick = (url, cameraId) => {
-    console.log("handleToastClick called with URL:", url, "Camera ID:", cameraId);
 
-    if (!url) {
-        console.error(`Error: URL is undefined for Camera ID: ${cameraId}`);
-        toast.error(`No valid video URL for Camera ${cameraId}`);
-        return;
-    }
-
-    const getYouTubeEmbedUrl = (url) => {
-        const videoIdMatch = url.match(
-            /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
-        );
-        return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : null;
-    };
-
-    const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
-    if (!youtubeEmbedUrl) {
-        console.error(`Invalid YouTube URL: ${url}`);
-        toast.error("Invalid YouTube URL provided.");
-        return;
-    }
-
-    setAlertUrl(youtubeEmbedUrl);
-    setSelectedCamera(cameraId);
-    setPopupActive(true);
-    setLoading(true);
-};
 
 
   // Fetch Cameras
@@ -269,7 +242,56 @@ const Dashboard = () => {
     };
   }, [cameras]);
 
+
+//   const handleToastClick = (url, cameraId) => {
+//     console.log("handleToastClick called with URL:", url, "Camera ID:", cameraId);
+
+//     if (!url) {
+//         console.error(`Error: URL is undefined for Camera ID: ${cameraId}`);
+//         toast.error(`No valid video URL for Camera ${cameraId}`);
+//         return;
+//     }
+
+//     const getYouTubeEmbedUrl = (url) => {
+//         const videoIdMatch = url.match(
+//             /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
+//         );
+//         return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : null;
+//     };
+
+//     const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
+//     if (!youtubeEmbedUrl) {
+//         console.error(`Invalid YouTube URL: ${url}`);
+//         toast.error("Invalid YouTube URL provided.");
+//         return;
+//     }
+
+//     setAlertUrl(youtubeEmbedUrl);
+//     setSelectedCamera(cameraId);
+//     setPopupActive(true);
+//     setLoading(true);
+// };
+
   // Runs only once when component mount
+
+  const handleToastClick = (data, cameraId) => {
+    console.log("handleToastClick called with Camera ID:", cameraId);
+
+    if (!data) {
+        console.error(`Error: No video data received for Camera ID: ${cameraId}`);
+        toast.error(`No valid video feed for Camera ${cameraId}`);
+        return;
+    }
+
+    // Convert byte data into a Blob URL
+    const blob = new Blob([data], { type: "image/jpeg" }); // Assuming JPEG format
+    const blobUrl = URL.createObjectURL(blob);
+
+    setSelectedCamera(cameraId);
+    setAlertUrl(blobUrl); // Set blob URL to display the image
+    setPopupActive(true);
+    setLoading(false);
+};
 
   useEffect(() => {
     if (visitData1) {

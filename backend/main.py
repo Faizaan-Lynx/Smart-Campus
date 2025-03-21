@@ -99,9 +99,10 @@ async def health():
             }
 
 import numpy as np
+import cv2
 import logging
 import redis
-from core.celery.model_worker import process_frame
+from core.celery.stream_worker import publish_frame
 
 redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
@@ -117,9 +118,10 @@ async def test_publish_feed():
       
         # Create a random frame (720p resolution)
         frame = np.random.randint(0, 256, (720, 1280, 3), dtype=np.uint8)
-
+        _, jpeg_bytes = cv2.imencode('.jpg', frame)
+        frame = jpeg_bytes.tobytes()
         # Process the synthetic frame
-        result = process_frame(camera_id, frame)
+        result = publish_frame(camera_id, frame)
 
         if result:
             return {"status": "Success", "message": "Frame published successfully"}
