@@ -1,11 +1,14 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import redis
 import asyncio
-import json
 from collections import defaultdict
+import logging
+logging.basicConfig(level=logging.INFO)
+
+
 
 # Redis client setup
-redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+redis_client = redis.Redis(host="redis", port=6379, db=0)
 
 # WebSocket router
 router = APIRouter()
@@ -26,10 +29,11 @@ async def redis_frame_listener():
         message = pubsub.get_message(ignore_subscribe_messages=True)
         if message:
             channel = message["channel"]
+            if isinstance(channel, bytes):  # Ensure channel is a string
+                channel = channel.decode("utf-8")
             frame_data = message["data"]  # Data is in bytes
             camera_id = channel.split("_")[-1]
 
-            print(f"📨 Redis Frame Received (binary) for camera {camera_id}")
             await broadcast_frame(camera_id, frame_data)
 
         await asyncio.sleep(0.1)  # Prevent busy-waiting
@@ -74,7 +78,7 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
 
     try:
         while True:
-            await websocket.receive_text()  # Keep connection alive
+            await websocket.receive_bytes()  # Keep connection alive
     except WebSocketDisconnect:
         print(f"Client disconnected from camera frames {camera_id}")
     finally:
@@ -92,7 +96,7 @@ async def websocket_all_frames(websocket: WebSocket):
 
     try:
         while True:
-            await websocket.receive_text()  # Keep connection alive
+            await websocket.receive_bytes()  # Keep connection alive
     except WebSocketDisconnect:
         print("Client disconnected from all video frames")
     finally:
