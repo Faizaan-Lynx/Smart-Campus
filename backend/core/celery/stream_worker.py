@@ -16,15 +16,20 @@ stream_worker_app.conf.update(
 redis_client = redis.from_url(settings.REDIS_URL)
 
 @stream_worker_app.task
-def publish_frame(camera_id: int, annotated_frame:bytes):
+def publish_frame(camera_id: int, annotated_frame: bytes):
     try:
         logging.info(f"Publishing frame for camera_id: {camera_id}")
 
+        if not isinstance(annotated_frame, bytes):
+            logging.error("Frame is not in bytes format.")
+            return {"error": "Invalid frame format"}
+
+        # Publish to Redis as raw bytes
         redis_client.publish(f"camera_{camera_id}", annotated_frame)
 
         logging.info("Frame published successfully.")
         return {"status": "Frame published successfully"}
 
     except Exception as e:
-        logging.exception(f"Error publishing frame for camera_id: {camera_id}")
+        logging.exception(f"Error publishing frame: {e}")
         return {"error": "Failed to publish frame"}
