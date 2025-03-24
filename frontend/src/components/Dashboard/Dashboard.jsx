@@ -111,6 +111,22 @@ const Dashboard = () => {
   
         setCameras(response.data);
         setSelectedCamera(response.data[0]?.id);
+
+        const cameraId = response.data[0]?.id;
+        try {
+          const response = await axios.post("http://127.0.0.1:8000/test_publish_feed/", {
+            camera_id: cameraId,
+          });
+    
+          console.log(response.data);
+          setSelectedCamera(cameraId);
+    
+    
+          // toast.success(`Camera feed started for ID: ${cameraId}`);
+        } catch (error) {
+          toast.error("Failed to start camera feed.");
+          console.error(error);
+        }
       } catch (error) {
         console.error("Error fetching cameras:", error);
         if (!toast.isActive("fetch-error")) {
