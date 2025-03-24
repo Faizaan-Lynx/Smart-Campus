@@ -47,4 +47,17 @@ for i in $(seq 1 $MODEL_WORKERS); do
   sleep 0.5
 done
 
+STREAM_WORKERS=${4:-3}
+echo "Scaling Stream workers to $STREAM_WORKERS..."
+
+for i in $(seq 1 $STREAM_WORKERS); do
+  WORKER_NAME="stream_worker$i"
+
+  echo "Starting worker: $WORKER_NAME"
+  # since so many tasks, --loglevel=warning to reduce log spam
+  celery -A ${celery_mod}.stream_worker.stream_worker_app worker -n $WORKER_NAME -Q stream_tasks --loglevel=warning &
+
+  sleep 0.5
+done
+
 wait

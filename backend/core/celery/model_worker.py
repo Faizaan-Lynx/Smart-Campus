@@ -40,7 +40,9 @@ def load_model(**kwargs):
             logging.info("Model loaded successfully.")
 
             # run a dummy prediction to initialize the model
-            dummy_image = np.zeros((1280, 720, 3), dtype=np.uint8)
+            img_size = settings.FEED_DIMS
+            img_size = eval(img_size)
+            dummy_image = np.zeros((img_size[0], img_size[1], 3), dtype=np.uint8)
             model.predict(dummy_image)
             
             logging.info(f"{worker_name}: Model initialized successfully.")
@@ -76,8 +78,8 @@ def process_frame(camera_id: int, frame):
         det_threshold = camera.detection_threshold
         cv2lines = camera.lines
 
-        # process the frame using the model ==== already resized and cropped to specifications by feed_worker
-        annotated_frame = np.array(frame)
+        annotated_frame = np.frombuffer(frame, dtype=np.uint8)
+
         results = model.predict(annotated_frame, classes=[0])
         # results = model.predict(annotated_frame, classes=[0], verbose=False)
         
@@ -112,9 +114,17 @@ def process_frame(camera_id: int, frame):
 
         redis_client.close()
 
-        # send the processed frame to websocket for streaming
-        # output_frame = annotated_frame
-        return {"status": "Frame processed successfully."}
+        output_frame = annotated_frame.tobytes()
+
+        # Ensure the frame is a valid NumPy array
+        # if isinstance(annotated_frame, np.ndarray):
+        #     # Encode frame to JPEG format
+        #     success, buffer = cv2.imencode(".jpg", annotated_frame)
+        #     if success:
+        #         # Convert to Base64 string
+        #         annotated_frame = base64.b64encode(buffer).decode("utf-8")
+
+        # publish_frame(camera_id, annotated_frame)
 
     except Exception as e:
         logging.exception(e)

@@ -51,7 +51,7 @@ services:
   celery:
     build: .
     hostname: worker1
-    command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${MODEL_WORKERS}
+    command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${MODEL_WORKERS} ${STREAM_WORKERS}
     environment:
       - CELERY_MODULE=${CELERY_MODULE}
     volumes:

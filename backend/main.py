@@ -23,6 +23,7 @@ from api.intrusion.routes import router as intrusion_router
 
 # websocket for alerts
 from api.alerts.websocket import router as alerts_websocket_router, start_redis_listener
+from api.cameras.websocket import router as cameras_websocket_router, start_redis_frame_listener
 
 # celery
 from core.celery.worker import celery_app
@@ -70,12 +71,14 @@ app.include_router(intrusion_router)
 
 # WebSocket Routes
 app.include_router(alerts_websocket_router)
+app.include_router(cameras_websocket_router)
 
 
 # routes for startup and some for testing and health checks
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(start_redis_listener())
+    asyncio.create_task(start_redis_frame_listener())
 
 
 @app.get("/")
@@ -94,3 +97,44 @@ async def health():
                 "redis_check": red.ping(),
                 "sqlalchemy_check": test_db_connection()
             }
+
+import numpy as np
+import logging
+import redis
+from backend.core.celery.stream_worker import publish_frame
+from core.celery.feed_worker import process_frame
+
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+
+
+@app.post("/test_publish_feed/")
+async def test_publish_feed():
+    """
+    Test function to generate a synthetic random frame, process it, and publish the result.
+    """
+    try:
+        camera_id = 1
+        # Create a random frame with the same dimensions (720, 1280, 3)
+        frame = np.random.randint(0, 256, (720, 1280, 3), dtype=np.uint8)
+
+        # Process the synthetic frame
+        result = process_frame(camera_id, frame)
+
+        # Check if process_frame returned an annotated frame
+        if result and "status" in result:
+            # Publish the annotated frame
+            publish_result = publish_frame(camera_id, frame)
+
+            return {
+                "status": "Success",
+                "message": "Processed and published a random synthetic frame",
+                "process_result": result,
+                "publish_result": publish_result
+            }
+        else:
+            return {"status": "Error", "message": "Failed to process frame"}
+
+    except Exception as e:
+        logging.exception(e)
+        return {"status": "Error", "message": str(e)}
+    
