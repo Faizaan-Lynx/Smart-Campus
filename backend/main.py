@@ -103,25 +103,26 @@ import cv2
 import logging
 import redis
 from core.celery.stream_worker import publish_frame
+from core.celery.model_worker import process_frame
 
 redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 
-@app.post("/test_publish_feed/")
-async def test_publish_feed():
+@app.post("/test_publish_feed/{camera_id}")
+async def test_publish_feed(camera_id: int):
     """
     Generates a synthetic random frame, processes it, and publishes the result.
     """
-    camera_id = 1  # Default test camera ID
 
     try:
       
         # Create a random frame (720p resolution)
-        frame = np.random.randint(0, 256, (720, 1280, 3), dtype=np.uint8)
-        _, jpeg_bytes = cv2.imencode('.jpg', frame)
-        frame = jpeg_bytes.tobytes()
+        frame = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
+        # _, jpeg_bytes = cv2.imencode('.jpg', frame)
+        # frame = jpeg_bytes.tobytes()
         # Process the synthetic frame
-        result = publish_frame(camera_id, frame)
+        # result = publish_frame(camera_id, frame)
+        result = process_frame(camera_id, frame.tolist())
 
         if result:
             return {"status": "Success", "message": "Frame published successfully"}

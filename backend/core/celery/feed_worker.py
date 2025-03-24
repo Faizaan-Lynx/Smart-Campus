@@ -118,13 +118,14 @@ def capture_video_frames(camera: Camera):
     # read the frame
     # logging.info(f"Reading frame from camera {camera.id}, path {camera.url}...")
     ret, frame = cap.read()
+    frame = cv2.convertScaleAbs(frame)
 
     if not ret:
         logging.warning(f"Failed to read frame from camera {camera.id}, URL {camera.url}")
         return
 
     frame = preprocess_frame(frame, camera)
-    process_frame.apply_async(args=[camera.id, frame.tobytes()], queue='model_tasks')
+    process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
 
 
 def preprocess_frame(frame, camera: Camera):

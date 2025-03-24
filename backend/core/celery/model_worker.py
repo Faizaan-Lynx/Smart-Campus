@@ -79,7 +79,8 @@ def process_frame(camera_id: int, frame):
         det_threshold = camera.detection_threshold
         cv2lines = camera.lines
 
-        annotated_frame = np.frombuffer(frame, dtype=np.uint8)
+        # annotated_frame = np.frombuffer(frame, dtype=np.uint8)
+        annotated_frame = np.array(frame, dtype=np.uint8)
 
         results = model.predict(annotated_frame, classes=[0])
         # results = model.predict(annotated_frame, classes=[0], verbose=False)
@@ -115,15 +116,8 @@ def process_frame(camera_id: int, frame):
 
         redis_client.close()
 
-        output_frame = annotated_frame.tobytes()
-
-        # Ensure the frame is a valid NumPy array
-        if isinstance(annotated_frame, np.ndarray):
-            # Encode frame to JPEG format
-            success, buffer = cv2.imencode(".jpg", annotated_frame)
-            if success:
-                # Convert to byte
-                annotated_frame = buffer.tobytes()
+        _, buffer = cv2.imencode(".jpg", annotated_frame)
+        annotated_frame = buffer.tobytes()
 
         publish_frame(camera_id, annotated_frame)
 
