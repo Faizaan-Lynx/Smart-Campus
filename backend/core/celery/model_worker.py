@@ -10,6 +10,7 @@ from celery import Celery, signals
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
+from core.celery.stream_worker import publish_frame
 
 model_worker_app = Celery('model_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 model_worker_app.conf.update(
@@ -117,14 +118,14 @@ def process_frame(camera_id: int, frame):
         output_frame = annotated_frame.tobytes()
 
         # Ensure the frame is a valid NumPy array
-        # if isinstance(annotated_frame, np.ndarray):
-        #     # Encode frame to JPEG format
-        #     success, buffer = cv2.imencode(".jpg", annotated_frame)
-        #     if success:
-        #         # Convert to Base64 string
-        #         annotated_frame = base64.b64encode(buffer).decode("utf-8")
+        if isinstance(annotated_frame, np.ndarray):
+            # Encode frame to JPEG format
+            success, buffer = cv2.imencode(".jpg", annotated_frame)
+            if success:
+                # Convert to byte
+                annotated_frame = buffer.tobytes()
 
-        # publish_frame(camera_id, annotated_frame)
+        publish_frame(camera_id, annotated_frame)
 
     except Exception as e:
         logging.exception(e)

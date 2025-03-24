@@ -4,34 +4,33 @@ import assets from "../../assets";
 
 const BoxRow = ({ alerts }) => {
   const [filteredAlerts, setFilteredAlerts] = useState([]);
-
+  console.log("Filtered Alerts",filteredAlerts);
   useEffect(() => {
     const updateAlerts = () => {
       const now = new Date(); // Current date and time
-
-      // Filter alerts that happened within the last 24 hours
+  
       const updatedAlerts = alerts.filter((alert) => {
         if (!alert.timestamp) return false; // Ignore missing timestamps
-
-        // Parse "dd mm yyyy" format to Date object
-        const [day, month, year] = alert.timestamp.split(" ");
-        const alertDate = new Date(`${year}-${month}-${day}`); // Convert to YYYY-MM-DD
-
-        if (isNaN(alertDate)) return false; // Ignore invalid dates
-
+  
+        // Correct date parsing
+        const [day, month, year] = alert.timestamp.split(" ").map(Number); // Convert to numbers
+        const alertDate = new Date(year, month - 1, day); // (YYYY, MM-1, DD)
+  
+        if (isNaN(alertDate.getTime())) return false; // Ignore invalid dates
+  
         // Check if the alert is within the last 24 hours
         return now - alertDate <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
       });
-
+  
       setFilteredAlerts(updatedAlerts);
-      // console.log(updatedAlerts);
     };
-
+  
     updateAlerts(); // Run immediately on mount
     const interval = setInterval(updateAlerts, 10000); // Run every 10 seconds
-
+  
     return () => clearInterval(interval); // Cleanup on unmount
   }, [alerts]);
+  
 
   // Automatically clear filteredAlerts after 24 hours if no new alerts come in
   useEffect(() => {

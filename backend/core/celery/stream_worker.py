@@ -16,12 +16,11 @@ stream_worker_app.conf.update(
 redis_client = redis.from_url(settings.REDIS_URL)
 
 @stream_worker_app.task
-def publish_frame(camera_id: int, annotated_frame):
+def publish_frame(camera_id: int, annotated_frame:bytes):
     try:
         logging.info(f"Publishing frame for camera_id: {camera_id}")
 
-        redis_data = json.dumps({"camera_id": camera_id, "frame": annotated_frame})
-        redis_client.publish(f"camera_{camera_id}", redis_data)
+        redis_client.publish(f"camera_{camera_id}", annotated_frame)
 
         logging.info("Frame published successfully.")
         return {"status": "Frame published successfully"}

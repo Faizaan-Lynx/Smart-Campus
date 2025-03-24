@@ -99,10 +99,10 @@ async def health():
             }
 
 import numpy as np
+import cv2
 import logging
 import redis
-from backend.core.celery.stream_worker import publish_frame
-from core.celery.feed_worker import process_frame
+from core.celery.stream_worker import publish_frame
 
 redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
@@ -110,31 +110,23 @@ redis_client = redis.Redis(host="localhost", port=6379, db=0)
 @app.post("/test_publish_feed/")
 async def test_publish_feed():
     """
-    Test function to generate a synthetic random frame, process it, and publish the result.
+    Generates a synthetic random frame, processes it, and publishes the result.
     """
+    camera_id = 1  # Default test camera ID
+
     try:
-        camera_id = 1
-        # Create a random frame with the same dimensions (720, 1280, 3)
+      
+        # Create a random frame (720p resolution)
         frame = np.random.randint(0, 256, (720, 1280, 3), dtype=np.uint8)
-
+        _, jpeg_bytes = cv2.imencode('.jpg', frame)
+        frame = jpeg_bytes.tobytes()
         # Process the synthetic frame
-        result = process_frame(camera_id, frame)
+        result = publish_frame(camera_id, frame)
 
-        # Check if process_frame returned an annotated frame
-        if result and "status" in result:
-            # Publish the annotated frame
-            publish_result = publish_frame(camera_id, frame)
-
-            return {
-                "status": "Success",
-                "message": "Processed and published a random synthetic frame",
-                "process_result": result,
-                "publish_result": publish_result
-            }
-        else:
-            return {"status": "Error", "message": "Failed to process frame"}
+        if result:
+            return {"status": "Success", "message": "Frame published successfully"}
 
     except Exception as e:
-        logging.exception(e)
+        logging.error(f"Error in test_publish_feed: {str(e)}", exc_info=True)
         return {"status": "Error", "message": str(e)}
     
