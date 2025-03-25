@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from models.alerts import Alert
-from models.cameras import Camera
-from core.database import get_db
-from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
-from core.celery.alert_tasks import publish_alert, send_email
 from config import settings
-
+from models.alerts import Alert
+from core.database import get_db
+from models.cameras import Camera
+from sqlalchemy.orm import Session
+from api.auth.security import is_admin
+from api.auth.schemas import UserResponseSchema
+from fastapi import APIRouter, Depends, HTTPException
+from core.celery.alert_tasks import publish_alert, send_email
+from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -45,13 +46,13 @@ def get_alert(alert_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[AlertResponse])
-def get_all_alerts(db: Session = Depends(get_db)):
+def get_all_alerts(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     """Fetch all alerts."""
     return db.query(Alert).all()
 
 
 @router.delete("/{alert_id}")
-def delete_alert(alert_id: int, db: Session = Depends(get_db)):
+def delete_alert(alert_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     """Delete an alert."""
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:

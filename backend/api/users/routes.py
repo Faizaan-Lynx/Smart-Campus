@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
-from models.users import Users as UserModel
-from api.users.schemas import UserCreate, UserUpdate, UserBase
 from core.database import get_db
+from sqlalchemy.orm import Session
+from api.auth.security import is_admin
 from passlib.context import CryptContext
+from models.users import Users as UserModel
+from api.auth.schemas import UserResponseSchema
+from fastapi import APIRouter, Depends, HTTPException, status
+from api.users.schemas import UserCreate, UserUpdate, UserBase
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -34,7 +36,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[UserBase])
-def get_users(db: Session = Depends(get_db), limit: int = 10, offset: int = 0):
+def get_users(db: Session = Depends(get_db), limit: int = 10, offset: int = 0, current_user: UserResponseSchema = Depends(is_admin)):
     users = db.query(UserModel).offset(offset).limit(limit).all()
     return [UserBase.from_orm(user) for user in users]
 
@@ -70,7 +72,7 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from models.user_cameras import user_cameras
-from sqlalchemy import delete, insert
 from models.users import Users
-from models.cameras import Camera
 from core.database import get_db
+from models.cameras import Camera
+from sqlalchemy.orm import Session
+from sqlalchemy import delete, insert
+from api.auth.security import is_admin
+from models.user_cameras import user_cameras
+from api.auth.schemas import UserResponseSchema
+from fastapi import APIRouter, Depends, HTTPException
 from api.user_cameras.schemas import UserCameraCreate, UserCameraResponse, UserCameraUpdate
 
 router = APIRouter(prefix="/user-cameras", tags=["User Cameras"])
 
 @router.post("/", response_model=UserCameraResponse)
-def add_camera_to_user(user_camera: UserCameraCreate, db: Session = Depends(get_db)):
+def add_camera_to_user(user_camera: UserCameraCreate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     user = db.query(Users).filter(Users.id == user_camera.user_id).first()
     camera = db.query(Camera).filter(Camera.id == user_camera.camera_id).first()
 
@@ -34,7 +36,7 @@ def get_cameras_for_user(user_id: int, db: Session = Depends(get_db)):
     return [{"user_id": row.user_id, "camera_id": row.camera_id} for row in cameras]
 
 @router.delete("/", status_code=204)
-def remove_camera_from_user(user_camera: UserCameraCreate, db: Session = Depends(get_db)):
+def remove_camera_from_user(user_camera: UserCameraCreate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     user = db.query(Users).filter(Users.id == user_camera.user_id).first()
     camera = db.query(Camera).filter(Camera.id == user_camera.camera_id).first()
 
@@ -49,7 +51,7 @@ def remove_camera_from_user(user_camera: UserCameraCreate, db: Session = Depends
     return None
 
 @router.put("/{user_id}", response_model=list[UserCameraResponse])
-def update_user_cameras(user_id: int, user_camera_update: UserCameraUpdate, db: Session = Depends(get_db)):
+def update_user_cameras(user_id: int, user_camera_update: UserCameraUpdate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     user = db.query(Users).filter(Users.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

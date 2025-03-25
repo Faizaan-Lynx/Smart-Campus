@@ -13,15 +13,13 @@ router = APIRouter(prefix="/intrusions", tags=["Intrusions"])
 
 # admin only routes
 @router.get("/start_all_feed_workers")
-# async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):  
-async def start_all_feed_workers_route():  
+async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):  
     start_all_feed_workers.apply_async(queue='feed_tasks', priority=10)
     return {"status": "Starting all feed workers..."}
 
 
 @router.get("/stop_all_feed_workers")
-# async def stop_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):
-async def stop_all_feed_workers_route():
+async def stop_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):
     stop_all_feed_workers.apply_async(queue='feed_tasks', priority=0)
     return {"status": "Stopping all feed workers..."}
 
@@ -56,7 +54,7 @@ def create_intrusion(data: IntrusionCreate, db: Session = Depends(get_db)):
 
 # Get all intrusions
 @router.get("/", response_model=List[IntrusionResponse])
-def get_intrusions(db: Session = Depends(get_db)):
+def get_intrusions(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     return db.query(Intrusion).all()
 
 # Get intrusions by camera ID
@@ -69,7 +67,7 @@ def get_intrusions_by_camera(camera_id: int, db: Session = Depends(get_db)):
 
 # Delete an intrusion by ID
 @router.delete("/{intrusion_id}")
-def delete_intrusion(intrusion_id: int, db: Session = Depends(get_db)):
+def delete_intrusion(intrusion_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     intrusion = db.query(Intrusion).filter(Intrusion.id == intrusion_id).first()
     if not intrusion:
         raise HTTPException(status_code=404, detail="Intrusion not found")

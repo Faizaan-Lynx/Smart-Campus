@@ -3,17 +3,18 @@ from celery import group
 from config import settings
 from core.database import get_db
 from sqlalchemy.orm import Session
+from api.auth.security import is_admin
+from api.auth.schemas import UserResponseSchema
 from models.cameras import Camera as CameraModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
 from core.celery.model_worker import update_cameras_for_model_workers
 
-
 router = APIRouter(prefix="/camera", tags=["Cameras"])
 
 
 @router.post("/", response_model=Camera, status_code=status.HTTP_201_CREATED)
-def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
+def create_camera(camera: CameraCreate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     db_camera = CameraModel(url=camera.url, location=camera.location, detection_threshold=camera.detection_threshold,
                             resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines)
     db.add(db_camera)
@@ -29,7 +30,7 @@ def create_camera(camera: CameraCreate, db: Session = Depends(get_db)):
 
 # Get all cameras
 @router.get("/", response_model=List[Camera])
-def get_cameras(db: Session = Depends(get_db)):
+def get_cameras(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     cameras = db.query(CameraModel).all()
     return cameras
 
@@ -51,7 +52,7 @@ def get_cameras_list(start_id: int, end_id: int, db: Session = Depends(get_db)):
 
 # update a camera
 @router.put("/{camera_id}", response_model=Camera)
-def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(get_db)):
+def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not db_camera:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
@@ -71,7 +72,7 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
 
 
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_camera(camera_id: int, db: Session = Depends(get_db)):
+def delete_camera(camera_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
     if not db_camera:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
