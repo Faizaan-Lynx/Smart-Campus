@@ -5,6 +5,7 @@ from models.users import Users
 from api.auth.security import create_access_token
 from api.auth.schemas import UserLoginSchema, TokenSchema, UserCreateSchema
 import bcrypt
+from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -56,3 +57,11 @@ def register(user_data: UserCreateSchema, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     return {"message": "User registered successfully", "user_id": new_user.id}
+
+@router.post("/token", response_model=TokenSchema)
+def login_for_access_token(form_data: OAuth2PasswordRequestForm=Depends(), db: Session = Depends(get_db)):
+    """
+    Login route for access token using form data instead of json/pydantic
+    """
+
+    return login(user_credentials=UserLoginSchema(username=form_data.username, password=form_data.password), db=db)

@@ -3,10 +3,10 @@ from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, insert
-from api.auth.security import is_admin
 from models.user_cameras import user_cameras
 from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
+from api.auth.security import is_admin, get_current_user
 from api.user_cameras.schemas import UserCameraCreate, UserCameraResponse, UserCameraUpdate
 
 router = APIRouter(prefix="/user-cameras", tags=["User Cameras"])
@@ -26,7 +26,7 @@ def add_camera_to_user(user_camera: UserCameraCreate, db: Session = Depends(get_
     return {"user_id": user.id, "camera_id": camera.id}
 
 @router.get("/{user_id}", response_model=list[UserCameraResponse])
-def get_cameras_for_user(user_id: int, db: Session = Depends(get_db)):
+def get_cameras_for_user(user_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     user = db.query(Users).filter(Users.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

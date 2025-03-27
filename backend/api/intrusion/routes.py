@@ -2,7 +2,7 @@ from typing import List
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
-from api.auth.security import is_admin
+from api.auth.security import is_admin, get_current_user
 from models.intrusion import Intrusion
 from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
@@ -59,7 +59,7 @@ def get_intrusions(db: Session = Depends(get_db), current_user: UserResponseSche
 
 # Get intrusions by camera ID
 @router.get("/camera/{camera_id}", response_model=List[IntrusionResponse])
-def get_intrusions_by_camera(camera_id: int, db: Session = Depends(get_db)):
+def get_intrusions_by_camera(camera_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     intrusions = db.query(Intrusion).filter(Intrusion.camera_id == camera_id).all()
     if not intrusions:
         raise HTTPException(status_code=404, detail="No intrusions found for this camera")

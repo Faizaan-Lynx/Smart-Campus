@@ -3,9 +3,9 @@ from models.alerts import Alert
 from core.database import get_db
 from models.cameras import Camera
 from sqlalchemy.orm import Session
-from api.auth.security import is_admin
 from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
+from api.auth.security import is_admin, get_current_user
 from core.celery.alert_tasks import publish_alert, send_email
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
 
@@ -37,7 +37,7 @@ async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
 
 
 @router.get("/{alert_id}", response_model=AlertResponse)
-def get_alert(alert_id: int, db: Session = Depends(get_db)):
+def get_alert(alert_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     """Fetch an alert by ID."""
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
@@ -64,7 +64,7 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db), current_user: Use
 
 @router.patch("/{alert_id}/acknowledge", response_model=AlertResponse)
 def update_alert_acknowledgment(
-    alert_id: int, update_data: AlertUpdateAcknowledgment, db: Session = Depends(get_db)
+    alert_id: int, update_data: AlertUpdateAcknowledgment, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)
 ):
     """Updates only the `is_acknowledged` field of an alert."""
     alert = db.query(Alert).filter(Alert.id == alert_id).first()

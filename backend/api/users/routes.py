@@ -1,10 +1,10 @@
 from typing import List
 from core.database import get_db
 from sqlalchemy.orm import Session
-from api.auth.security import is_admin
 from passlib.context import CryptContext
 from models.users import Users as UserModel
 from api.auth.schemas import UserResponseSchema
+from api.auth.security import is_admin, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from api.users.schemas import UserCreate, UserUpdate, UserBase
 
@@ -42,7 +42,7 @@ def get_users(db: Session = Depends(get_db), limit: int = 10, offset: int = 0, c
 
 
 @router.get("/{user_id}", response_model=UserBase)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -50,7 +50,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=UserBase)
-def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     db_user = db.get(UserModel, user_id)
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
