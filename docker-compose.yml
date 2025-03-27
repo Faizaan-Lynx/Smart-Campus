@@ -35,7 +35,7 @@ services:
     container_name: fastapi_app
     environment:
       REDIS_URL: ${REDIS_URL}
-      WATCHFILES_FORCE_POLLING: true
+      WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "8000:8000"
     volumes:
