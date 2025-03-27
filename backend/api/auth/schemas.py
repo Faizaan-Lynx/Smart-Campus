@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 class UserLoginSchema(BaseModel):
     """Schema for user login request"""
@@ -9,7 +10,7 @@ class UserResponseSchema(BaseModel):
     """Schema for user response"""
     id: int
     username: str
-    email: EmailStr
+    email: Optional[EmailStr]
     is_admin: bool
 
     class Config:

@@ -37,11 +37,12 @@ def get_current_user(request: Request) -> UserResponseSchema:
 
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        
 
-        if expiration < datetime.utcnow():
+        if expiration < datetime.utcnow().timestamp():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
 
-        return UserResponseSchema(id=user_id, username=username, email="", is_admin=(role == "admin"))
+        return UserResponseSchema(id=user_id, username=username, email=None, is_admin=(role == "admin"))
 
     except jwt.JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
@@ -51,7 +52,7 @@ def is_admin(current_user: UserResponseSchema = Depends(get_current_user)):
     """
     Dependency to check if the current user is an admin.
     """
-    if current_user["role"] != "admin":
+    if current_user.is_admin is False:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this resource. Only admins can access.",

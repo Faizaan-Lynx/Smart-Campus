@@ -28,8 +28,20 @@ from api.cameras.websocket import router as cameras_websocket_router, start_redi
 # celery
 from core.celery.worker import celery_app
 
-
-app = FastAPI()
+app = FastAPI(
+    title="Smart-Campus API",
+    description="API for the Smart Campus project.",
+    version="1.0.0",
+    openapi_tags=[{"name": "Auth", "description": "Authentication related endpoints"}],
+    # Adding the security schema directly to Swagger UI
+    openapi_security=[{
+        "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }]
+)
 
 
 # Configure logging
