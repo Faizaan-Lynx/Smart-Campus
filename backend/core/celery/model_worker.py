@@ -20,6 +20,7 @@ model_worker_app.conf.update(
 )
 
 model = YOLO(model="./yolo-models/yolov8n.pt")
+model.to("cuda:0")
 db = SessionLocal()
 cameras = db.query(Camera).all()
 cameras_dict = {c.id: c for c in cameras} # quick lookup for cameras {id : camera}

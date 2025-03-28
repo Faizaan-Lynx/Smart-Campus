@@ -132,15 +132,16 @@ def preprocess_frame(frame, camera: Camera):
     """
     Preprocess the frame (resize, crop, etc.) based on the camera's settings (e.g., resize_dims, crop_region).
     Resize dimensions are strings in format "(1280, 720)" and crop region is in format "((0,0), (1280,720))".
+    Crop before resize.
     """
-
-    if camera.resize_dims:
-        resize_dims = eval(camera.resize_dims) # default is "(640,480)"
-        frame = cv2.resize(frame, resize_dims) # resize to 640x480
 
     if camera.crop_region:
         crop_region = eval(camera.crop_region)
         frame = frame[crop_region[0][1]:crop_region[1][1], crop_region[0][0]:crop_region]
+    
+    if camera.resize_dims:
+        resize_dims = eval(camera.resize_dims) # default is "(640,480)"
+        frame = cv2.resize(frame, resize_dims) # resize to 640x480
 
     return frame
 
