@@ -84,6 +84,21 @@ The backend is designed to be highly scalable, using **Celery** for image proces
    By default, the FastAPI backend will be accessible at `http://localhost:8000`.
    **Flower** will be accessible at `http://localhost:5555` for monitoring Celery workers.
 
+
+#### NVIDIA GPU Setup (Optional for Production)
+
+If you want to leverage NVIDIA GPUs for production, ensure the following:
+
+1. Install the appropriate NVIDIA drivers for your system.
+2. Install the **NVIDIA Container Toolkit**.
+3. Use the production Docker Compose file to start the containers with GPU access:
+
+   ```bash
+   sudo docker compose -f docker-compose.prod.yml up
+   ```
+
+   This will enable GPU acceleration for tasks that support it.
+
 <br>
 
 #### Celery Worker Configuration
