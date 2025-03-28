@@ -143,3 +143,21 @@ async def test_publish_feed(camera_id: int):
         logging.error(f"Error in test_publish_feed: {str(e)}", exc_info=True)
         return {"status": "Error", "message": str(e)}
     
+
+from core.celery.model_worker import update_cameras_for_model_workers
+from celery import group
+
+@app.post("/update_cameras_for_model_workers")
+async def update_cameras():
+    """
+    Updates the cameras list from the database. Use whenever there is a change in the cameras (add, update, remove).
+    Use with priority=0 to ensure that the cameras list is updated before processing any additional frames.
+    """
+    try:
+        # Call the Celery task to update cameras
+        task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+        task_group.apply_async(queue='model_tasks')
+        return {"status": "Success", "message": "Cameras updated successfully"}
+    except Exception as e:
+        logging.error(f"Error updating cameras: {str(e)}", exc_info=True)
+        return {"status": "Error", "message": str(e)}

@@ -36,8 +36,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[UserBase])
-def get_users(db: Session = Depends(get_db), limit: int = 10, offset: int = 0, current_user: UserResponseSchema = Depends(is_admin)):
-    users = db.query(UserModel).offset(offset).limit(limit).all()
+def get_users(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
+    users = db.query(UserModel).all()
     return [UserBase.from_orm(user) for user in users]
 
 

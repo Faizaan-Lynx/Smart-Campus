@@ -59,9 +59,9 @@ def register(user_data: UserCreateSchema, db: Session = Depends(get_db)):
     return {"message": "User registered successfully", "user_id": new_user.id}
 
 @router.post("/token", response_model=TokenSchema)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm=Depends(), db: Session = Depends(get_db)):
+def form_data_login(form_data: OAuth2PasswordRequestForm=Depends(), db: Session = Depends(get_db)):
     """
-    Login route for access token using form data instead of json/pydantic
+    Form-data Login for Access Token
     """
 
     return login(user_credentials=UserLoginSchema(username=form_data.username, password=form_data.password), db=db)
