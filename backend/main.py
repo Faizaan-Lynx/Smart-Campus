@@ -27,6 +27,7 @@ from api.cameras.websocket import router as cameras_websocket_router, start_redi
 
 # celery
 from core.celery.worker import celery_app
+from core.celery.tasks import add
 
 app = FastAPI(
     title="Smart-Campus API",
@@ -100,14 +101,24 @@ async def root():
 
 @app.get("/health")
 async def health():
+    logging.info("Health check running...")
+
     result = celery_app.send_task("core.celery.tasks.add", (4,4))
+    from torch.cuda import is_available
+
+    logging.info("Torch CUDA available: %s", is_available())
     red = redis.from_url(settings.REDIS_URL)
+
+    logging.info("Redis ping: %s", red.ping())
+
+    logging.info("SQLAlchemy connection check: %s", test_db_connection())
 
     return  {
                 "status": "OK",
                 "celery_calculation": result.get(),
                 "redis_check": red.ping(),
-                "sqlalchemy_check": test_db_connection()
+                "sqlalchemy_check": test_db_connection(),
+                "torch_cuda_check": is_available(),
             }
 
 import numpy as np
