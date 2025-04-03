@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "./CameraFeedsButtons.css";
 import axios from "axios";
 
 const CameraFeedsButtons = () => {
