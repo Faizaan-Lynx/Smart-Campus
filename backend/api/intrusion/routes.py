@@ -7,14 +7,18 @@ from models.intrusion import Intrusion
 from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
 from api.intrusion.schemas import IntrusionCreate, IntrusionResponse
-from core.celery.feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
+from core.celery.full_feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
+# from core.celery.feed_worker import start_all_feed_workers, stop_all_feed_workers, stop_feed_worker, start_feed_worker
 
 router = APIRouter(prefix="/intrusions", tags=["Intrusions"])
 
 # admin only routes
 @router.get("/start_all_feed_workers")
-async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):  
-    start_all_feed_workers.apply_async(queue='feed_tasks', priority=10)
+async def start_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin), db: Session = Depends(get_db)):  
+    # get all cameras from the database
+    cameras = db.query(Camera).all()
+    camera_ids = [camera.id for camera in cameras]
+    start_all_feed_workers.apply_async(queue='feed_tasks', args=[camera_ids], priority=10)
     return {"status": "Starting all feed workers..."}
 
 

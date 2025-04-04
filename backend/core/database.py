@@ -27,7 +27,7 @@ def test_db_connection():
 
 
 # Import models to ensure tables are created
-from models.base import Base
+from models import Base
 
 logger.info(f"Tables detected by SQLAlchemy: {Base.metadata.tables.keys()}")
 Base.metadata.create_all(bind=engine)
