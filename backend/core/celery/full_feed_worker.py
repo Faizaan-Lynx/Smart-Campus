@@ -1,31 +1,31 @@
 import cv2
 import redis
 import logging
-import datetime
 import numpy as np
-from celery import Celery
 from config import settings
 from ultralytics import YOLO
+from datetime import datetime
+from celery import Celery, group
 from models.cameras import Camera
 from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 
-# Celery app
+# celery worker for processing video feeds
 full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 full_feed_worker_app.conf.update(
-    task_time_limit=60,
+    # task_time_limit=60,
     broker_transport_options={'visibility_timeout': 3600},
     worker_heartbeat=60,
 )
 
-# Redis client
-redis_client = redis.from_url(settings.REDIS_URL)
-
 # Load YOLO model
 model = YOLO(model="./yolo-models/yolov8n.pt")
 model.to("cuda:0")
+
+
+## ===== General Video Processing ===== ##
 
 @full_feed_worker_app.task
 def process_feed(camera_id: int):
@@ -36,7 +36,7 @@ def process_feed(camera_id: int):
         camera_id (int): The ID of the camera to process.
     """
     try:
-        # Fetch camera details from the database
+        # get all cameras
         db: Session = SessionLocal()
         camera = db.query(Camera).filter(Camera.id == camera_id).first()
         db.close()
@@ -45,45 +45,56 @@ def process_feed(camera_id: int):
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
 
-        # Create a VideoCapture object
         cap = cv2.VideoCapture(camera.url)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        # cap.set(cv2.CAP_PROP_FPS, 5)
 
         if not cap.isOpened():
             logging.error(f"Could not open video stream for camera {camera_id} at URL {camera.url}")
             return {"error": "Failed to open video stream"}
 
         # Initialize Redis intrusion flag
+        redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
 
+        stop_check_counter = 20
+
         while True:
-            # Capture a frame
             ret, frame = cap.read()
             if not ret:
                 logging.warning(f"Failed to read frame from camera {camera_id}")
                 break
 
-            # Preprocess the frame
             frame = preprocess_frame(frame, camera)
 
-            # Run YOLO model for intrusion detection
+
+            redis_client.get(f"camera_{camera_id}_intrusion_flag")
+
             annotated_frame, intrusion_detected = detect_intrusion(frame, camera)
 
-            # Publish the annotated frame
             publish_frame(camera_id, annotated_frame)
 
-            # Handle intrusion event if detected
-            if intrusion_detected:
+            # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
+            if intrusion_detected and redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"False":
                 handle_intrusion_event(camera_id)
+            
+            stop_check_counter -= 1
+            if stop_check_counter <= 0:
+                camera_running = redis_client.get(f"camera_{camera_id}_running")
+                global_cameras_running = redis_client.get("feed_workers_running")
+
+                if camera_running == b"False" or global_cameras_running == b"False":
+                    logging.info(f"Stopping feed processing for camera {camera_id}.")
+                    break
 
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
         cap.release()
+        redis_client.close()
         logging.info(f"Released VideoCapture object for camera {camera_id}")
 
     return {"status": "Feed processing completed"}
+
 
 def preprocess_frame(frame, camera: Camera):
     """
@@ -99,12 +110,32 @@ def preprocess_frame(frame, camera: Camera):
 
     return frame
 
+# redis client for publishing frames
+redis_client_ws = redis.from_url(settings.REDIS_URL)
+
+def publish_frame(camera_id: int, annotated_frame: np.ndarray):
+    """
+    Publish the annotated frame to Redis.
+    """
+    _, buffer = cv2.imencode(".jpg", annotated_frame)
+    global redis_client_ws
+    redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
+    # logging.info(f"Published frame for camera {camera_id}")
+
+
+
+
+## ====== Handling Intrusion Logic ===== ##
+
+
+
+
 def detect_intrusion(frame, camera: Camera):
     """
     Detect intrusions in the frame using the YOLO model.
     """
     intrusion_detected = False
-    results = model.predict(frame, classes=[0])  # Detect only specific classes (e.g., person)
+    results = model.predict(frame, classes=[0], verbose=False)
 
     for res in results:
         for detection in res.boxes:
@@ -114,39 +145,41 @@ def detect_intrusion(frame, camera: Camera):
 
             if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
                 intrusion_detected = True
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
+                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
             else:
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
+                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
     return frame, intrusion_detected
 
-def publish_frame(camera_id: int, annotated_frame: np.ndarray):
-    """
-    Publish the annotated frame to Redis.
-    """
-    _, buffer = cv2.imencode(".jpg", annotated_frame)
-    redis_client.publish(f"camera_{camera_id}", buffer.tobytes())
-    # logging.info(f"Published frame for camera {camera_id}")
-
-def handle_intrusion_event(camera_id: int):
-    """
-    Handle an intrusion event: create an alert and set a timer to reset the intrusion flag.
-    """
-    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=None)
-    db = SessionLocal()
-    create_alert(alert_data, db)
-    db.close()
-
-    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
-    full_feed_worker_app.send_task('unset_intrusion_flag', args=[camera_id], countdown=settings.INTRUSION_FLAG_DURATION)
 
 @full_feed_worker_app.task
 def unset_intrusion_flag(camera_id: int):
     """
     Unset the intrusion flag for a camera.
     """
+    redis_client = redis.from_url(settings.REDIS_URL)
     redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+    redis_client.close()
     logging.info(f"Unset intrusion flag for camera {camera_id}")
+
+
+def handle_intrusion_event(camera_id: int):
+    """
+    Handle an intrusion event: create an alert and set a timer to reset the intrusion flag.
+    """
+    logging.warning(f"Intrusion detected for camera {camera_id}!!!")
+
+
+    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=None)
+    db = SessionLocal()
+    create_alert(alert_data, db)
+    db.close()
+
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+    redis_client.close()
+    full_feed_worker_app.send_task('unset_intrusion_flag', args=[camera_id], countdown=settings.INTRUSION_FLAG_DURATION)
+
 
 def centroid_near_line(centroid_x: float, centroid_y: float, line_point1: tuple, line_point2: tuple, threshold: float = 50) -> bool:
     """
@@ -171,3 +204,68 @@ def centroid_near_line(centroid_x: float, centroid_y: float, line_point1: tuple,
 
     closest_distance = np.linalg.norm(np.array([centroid_x, centroid_y]) - closest_point)
     return closest_distance <= threshold
+
+
+
+
+## ====== Celery Tasks for Starting and Stopping Feed Workers ===== ##
+
+
+
+
+@full_feed_worker_app.task
+def start_feed_worker(camera_id: int):
+    """
+    Start the feed worker for a specific camera.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"feed_worker_{camera_id}_running", "True")
+    redis_client.close()
+
+    full_feed_worker_app.send_task(
+        "core.celery.full_feed_worker.process_feed",
+        args=[camera_id],
+        queue="feed_tasks"
+    )
+    return f"Feed worker started for camera {camera_id}"
+
+
+@full_feed_worker_app.task
+def start_all_feed_workers(camera_ids: list):
+    """
+    Start feed workers for all cameras.
+    """
+
+    if not camera_ids or len(camera_ids) == 0:
+        logging.warning("No cameras found to start feed workers.")
+        return "No cameras found"
+    
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set("feed_workers_running", "True")
+    redis_client.close()
+
+    tasks = group(start_feed_worker.s(camera_id) for camera_id in camera_ids)
+    result = tasks.apply_async(queue="feed_tasks", priority=10)
+    return result
+
+
+@full_feed_worker_app.task
+def stop_feed_worker(camera_id: int):
+    """
+    Stop the feed worker for a specific camera.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set("feed_workers_running", "False")
+    return f"Feed worker stopping for camera {camera_id}..."
+
+
+@full_feed_worker_app.task
+def stop_all_feed_workers():
+    """
+    Stop all feed workers.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set("feed_workers_running", "False")
+    redis_client.close()
+    return "All feed workers stopping..."
+
