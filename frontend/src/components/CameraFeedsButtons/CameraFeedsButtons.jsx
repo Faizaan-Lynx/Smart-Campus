@@ -1,87 +1,75 @@
 import React, { useState, useEffect } from "react";
 import "./CameraFeedsButtons.css";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const CameraFeedsButtons = () => {
   const [userInfo, setUserInfo] = useState(() => {
-    // Load from localStorage (if exists), otherwise default to null
     const storedUser = localStorage.getItem("userInfo");
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
   useEffect(() => {
-    if (!userInfo) {
-      axios.get("http://127.0.0.1:8000/users")
-        .then(response => {
-          console.log("User Info from API:", response.data);
-          // Assuming you can identify the logged-in user by id or email, filter the correct user
-          const loggedInUser = response.data.find(user => user.id === 29); // Change this to a dynamic condition if needed
-          setUserInfo(loggedInUser); // Set the user information
-          localStorage.setItem("userInfo", JSON.stringify(loggedInUser)); // Store the logged-in user info in localStorage
-        })
-        .catch(error => console.error("Error fetching user info:", error));
-    }
-  }, [userInfo]);
-
-  const fetchUserInfo = () => {
-    const token = localStorage.getItem("authToken");  // Retrieve token from localStorage
+    const token = localStorage.getItem("token");
     if (token) {
-      axios.get("http://127.0.0.1:8000/users/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,  // Send the token in the Authorization header
-        },
-      })
-      .then(response => {
-        setUserInfo(response.data);
-        localStorage.setItem("userInfo", JSON.stringify(response.data));  // Store the user info in localStorage
-      })
-      .catch(error => {
-        console.error("Error fetching user data:", error);
-      });
+      try {
+        const decoded = jwtDecode(token);
+        console.log("Decoded token:", decoded);
+        setUserInfo(decoded);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
     }
-  };
+  }, []);
 
+  // 🟢 Start feeds
   const startFeeds = () => {
-    console.log("Attempting to start feeds...");
-  
-    axios.get("http://127.0.0.1:8000/intrusions/start_all_feed_workers")
-      .then(response => {
-        console.log("API Response:", response.data);
+    console.log("▶️ Attempting to start feeds...");
+
+    axios
+      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers")
+      .then((response) => {
+        console.log("✅ API Response:", response.data);
         alert("Feeds started successfully");
       })
-      .catch(error => {
-        console.error("Failed to start feeds:", error);
+      .catch((error) => {
+        console.error("❌ Failed to start feeds:", error);
         alert("Failed to start feeds. Check console for details.");
       });
   };
 
+  // 🔴 Stop feeds
   const stopFeeds = () => {
-    console.log("Attempting to stop feeds...");
-    
-    // Call the API route to stop the feeds
-    axios.get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers")
-      .then(response => {
-        console.log("API Response:", response.data);
-        // Notify the user that feeds are stopped
+    console.log("⏹️ Attempting to stop feeds...");
+
+    axios
+      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers")
+      .then((response) => {
+        console.log("✅ API Response:", response.data);
         alert("Feeds stopped successfully.");
       })
-      .catch(error => {
-        console.error("Failed to stop feeds:", error);
+      .catch((error) => {
+        console.error("❌ Failed to stop feeds:", error);
         alert("Failed to stop feeds. Check console for details.");
       });
   };
 
-  if (userInfo === null) {
-    return <p>Loading...</p>;  // Show loading state while fetching user data
+  // 🕒 Show loading if userInfo not ready
+  if (!userInfo) {
+    return <p>Loading...</p>;
   }
 
-  // Check for admin role and return buttons only if admin
+  // ✅ Conditional rendering based on is_admin
   return (
     <>
-      {userInfo.is_admin ? (
+      {userInfo?.role === "admin" ? (
         <div className="camera-feeds__buttons">
-          <button className="Start_Button" onClick={startFeeds}>Start Feeds</button>
-          <button className="Stop_Button" onClick={stopFeeds}>Stop Feeds</button>
+          <button className="Start_Button" onClick={startFeeds}>
+            Start Feeds
+          </button>
+          <button className="Stop_Button" onClick={stopFeeds}>
+            Stop Feeds
+          </button>
         </div>
       ) : (
         <p>You do not have permission to view these controls.</p>
