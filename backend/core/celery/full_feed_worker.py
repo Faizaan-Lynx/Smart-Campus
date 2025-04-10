@@ -1,6 +1,5 @@
 import cv2
 import redis
-import asyncio
 import logging
 import numpy as np
 from config import settings
@@ -16,16 +15,6 @@ from api.alerts.routes import create_alert
 
 # celery worker for processing video feeds
 full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
-# full_feed_worker_app.conf.update(
-#     # task_time_limit=60,
-#     broker_transport_options={'visibility_timeout': 3600},
-#     worker_heartbeat=60,
-# )
-
-# Load YOLO model
-model = YOLO(model="./yolo-models/yolov8n.pt")
-model.to("cuda:0")
-
 
 ## ===== General Video Processing ===== ##
 
@@ -60,6 +49,11 @@ def process_feed(camera_id: int):
 
         stop_check_counter = 20
 
+        # load yolo and move to GPU
+        model = YOLO(model="./yolo-models/yolov8n.pt")
+        model.to("cuda:0")
+        logging.info(f"Loaded YOLO model for camera {camera_id}.")
+
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -68,10 +62,25 @@ def process_feed(camera_id: int):
 
             frame = preprocess_frame(frame, camera)
 
-
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
 
-            annotated_frame, intrusion_detected = detect_intrusion(frame, camera)
+            # annotated_frame, intrusion_detected = detect_intrusion(frame, camera)
+            intrusion_detected = False
+            results = model.predict(frame, classes=[0], verbose=False)
+
+            for res in results:
+                for detection in res.boxes:
+                    x1, y1, x2, y2 = map(int, detection.xyxy[0])
+                    cx = (x1 + x2) / 2
+                    cy = (y1 + y2) / 2
+
+                    # if intrusion is detected, raise flag and draw red box, put text
+                    if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
+                        intrusion_detected = True
+                        annotated_frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
+                        annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    else:
+                        annotated_frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
             publish_frame(camera_id, annotated_frame)
 
@@ -93,6 +102,49 @@ def process_feed(camera_id: int):
     finally:
         cap.release()
         redis_client.close()
+        logging.info(f"Released VideoCapture object for camera {camera_id}")
+
+    return {"status": "Feed processing completed"}
+
+
+@full_feed_worker_app.task
+def process_feed_without_model(camera_id: int):
+    """
+    Process a single feed source without using a model.
+    This function is run as a Celery task.
+    Args:
+        camera_id (int): The ID of the camera to process.
+    """
+    try:
+        # get relevant cameras
+        db: Session = SessionLocal()
+        camera = db.query(Camera).filter(Camera.id == camera_id).first()
+        db.close()
+
+        if not camera:
+            logging.error(f"Camera {camera_id} not found.")
+            return {"error": "Camera not found"}
+
+        cap = cv2.VideoCapture(camera.url)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        if not cap.isOpened():
+            logging.error(f"Could not open video stream for camera {camera_id} at URL {camera.url}")
+            return {"error": "Failed to open video stream"}
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                logging.warning(f"Failed to read frame from camera {camera_id}")
+                break
+
+            frame = preprocess_frame(frame, camera)
+            publish_frame(camera_id, frame)
+
+    except Exception as e:
+        logging.exception(f"Error processing feed for camera {camera_id}: {e}")
+    finally:
+        cap.release()
         logging.info(f"Released VideoCapture object for camera {camera_id}")
 
     return {"status": "Feed processing completed"}
@@ -130,28 +182,6 @@ def publish_frame(camera_id: int, annotated_frame: np.ndarray):
 ## ====== Handling Intrusion Logic ===== ##
 
 
-
-
-def detect_intrusion(frame, camera: Camera):
-    """
-    Detect intrusions in the frame using the YOLO model.
-    """
-    intrusion_detected = False
-    results = model.predict(frame, classes=[0], verbose=False)
-
-    for res in results:
-        for detection in res.boxes:
-            x1, y1, x2, y2 = map(int, detection.xyxy[0])
-            cx = (x1 + x2) / 2
-            cy = (y1 + y2) / 2
-
-            if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
-                intrusion_detected = True
-                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
-            else:
-                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
-
-    return frame, intrusion_detected
 
 
 @full_feed_worker_app.task
@@ -224,11 +254,22 @@ def start_feed_worker(camera_id: int):
     redis_client.set(f"feed_worker_{camera_id}_running", "True")
     redis_client.close()
 
-    full_feed_worker_app.send_task(
-        "core.celery.full_feed_worker.process_feed",
-        args=[camera_id],
-        queue="feed_tasks"
-    )
+    db = SessionLocal()
+    camera = db.query(Camera).filter(Camera.id == camera_id).first()
+    db.close()
+
+    if camera.detect_intrusions:
+        full_feed_worker_app.send_task(
+            "core.celery.full_feed_worker.process_feed",
+            args=[camera_id],
+            queue="feed_tasks"
+        )
+    else:
+        full_feed_worker_app.send_task(
+            "core.celery.full_feed_worker.process_feed_without_model",
+            args=[camera_id],
+            queue="feed_tasks"
+        )
     return f"Feed worker started for camera {camera_id}"
 
 
@@ -270,4 +311,3 @@ def stop_all_feed_workers():
     redis_client.set("feed_workers_running", "False")
     redis_client.close()
     return "All feed workers stopping..."
-
