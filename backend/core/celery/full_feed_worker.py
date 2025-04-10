@@ -1,5 +1,6 @@
 import cv2
 import redis
+import asyncio
 import logging
 import numpy as np
 from config import settings
@@ -12,13 +13,14 @@ from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 
+
 # celery worker for processing video feeds
 full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
-full_feed_worker_app.conf.update(
-    # task_time_limit=60,
-    broker_transport_options={'visibility_timeout': 3600},
-    worker_heartbeat=60,
-)
+# full_feed_worker_app.conf.update(
+#     # task_time_limit=60,
+#     broker_transport_options={'visibility_timeout': 3600},
+#     worker_heartbeat=60,
+# )
 
 # Load YOLO model
 model = YOLO(model="./yolo-models/yolov8n.pt")

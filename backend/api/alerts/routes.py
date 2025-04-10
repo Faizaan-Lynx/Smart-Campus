@@ -13,7 +13,7 @@ router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 
 @router.post("/", response_model=AlertResponse)
-async def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
+def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
     """Creates a new alert and broadcasts it in real time."""
     alert = Alert(**alert_data.dict())
     db.add(alert)
