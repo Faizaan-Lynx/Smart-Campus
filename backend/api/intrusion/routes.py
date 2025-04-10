@@ -19,25 +19,25 @@ async def start_all_feed_workers_route(current_user: UserResponseSchema = Depend
     cameras = db.query(Camera).all()
     camera_ids = [camera.id for camera in cameras]
     start_all_feed_workers.apply_async(queue='feed_tasks', args=[camera_ids], priority=10)
-    return {"status": "Starting all feed workers..."}
+    return {"status": "Starting all feeds..."}
 
 
 @router.get("/stop_all_feed_workers")
 async def stop_all_feed_workers_route(current_user: UserResponseSchema = Depends(is_admin)):
     stop_all_feed_workers.apply_async(queue='feed_tasks', priority=0)
-    return {"status": "Stopping all feed workers..."}
+    return {"status": "Stopping all feeds..."}
 
 
-@router.get("/start_feed_worker/{worker_id}")
-async def start_feed_worker_route(worker_id: int, current_user: UserResponseSchema = Depends(is_admin)):
-    start_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=10)
-    return {"status": f"Starting feed worker {worker_id}..."}
+@router.get("/start_feed_worker/{camera_id}")
+async def start_feed_worker_route(camera_id: int, current_user: UserResponseSchema = Depends(is_admin)):
+    start_feed_worker.apply_async(queue='feed_tasks', args=[camera_id], priority=10)
+    return {"status": f"Starting Camera {camera_id}..."}
 
 
-@router.get("/stop_feed_worker/{worker_id}")
-async def stop_feed_worker_route(worker_id: int, current_user: UserResponseSchema = Depends(is_admin)):
-    stop_feed_worker.apply_async(queue='feed_tasks', args=[worker_id], priority=0)
-    return {"status": f"Stopping feed worker {worker_id}..."}
+@router.get("/stop_feed_worker/{camera_id}")
+async def stop_feed_worker_route(camera_id: int, current_user: UserResponseSchema = Depends(is_admin)):
+    stop_feed_worker.apply_async(queue='feed_tasks', args=[camera_id], priority=0)
+    return {"status": f"Stopping Camera {camera_id}..."}
 
 
 # any user routes
