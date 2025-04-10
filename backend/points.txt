@@ -1,0 +1,14 @@
+79:         "((80,475),(375,90))"                location: WtrTank-Museum       threshold: 25
+82:         "((540,475),(525,200))"              location: Gate-1               threshold: 25
+73:errorrrr "((,),(,))"                          location: 
+137:        "((400,100),(635,125))"              location: Gate-5               threshold: 20
+54:         "((640,360),(130,140))"              location: FatimaCoy-Co         threshold: 15 
+88:   no    "((,),(,))"                          location: Gate5-Inside         threshold: no-detect 
+70:   no    "((,),(,))"                          location: Gate6-Inside         threshold: no-detect
+86: error   "((,),(,))"                          location:                      threshold: 
+182:        "((10,375),(100,230))"               location: Rear-DataCenter      threshold: 15 
+72:         "((630,15),(630,470))"               location: ParkingWall          threshold: 30
+95:         "((20,90),(500,180))"                location: Gate7-Inside         threshold: 20
+71:         "((460,40),(500,430))"               location: Rear-CSE             threshold: 40
+87:  no     "((,),(,))"                          location: Gate6-Outside        threshold: no-detect
+180:        "((580,455),(640,230))"              location: Gate6-KhRd           threshold: 15
