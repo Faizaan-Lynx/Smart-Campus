@@ -1,4 +1,5 @@
 import cv2
+import time
 import redis
 import logging
 import numpy as np
@@ -36,12 +37,8 @@ def process_feed(camera_id: int):
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
 
-        cap = cv2.VideoCapture(camera.url)
+        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-        if not cap.isOpened():
-            logging.error(f"Could not open video stream for camera {camera_id} at URL {camera.url}")
-            return {"error": "Failed to open video stream"}
 
         # Initialize Redis intrusion flag
         redis_client = redis.from_url(settings.REDIS_URL)
@@ -57,8 +54,9 @@ def process_feed(camera_id: int):
         while True:
             ret, frame = cap.read()
             if not ret:
-                logging.warning(f"Failed to read frame from camera {camera_id}")
-                break
+                logging.warning(f"Failed to read frame from camera {camera_id}. Attempting to reopen capture object...")
+                cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
+                continue
 
             frame = preprocess_frame(frame, camera)
 
@@ -125,18 +123,16 @@ def process_feed_without_model(camera_id: int):
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
 
-        cap = cv2.VideoCapture(camera.url)
+        # cap = cv2.VideoCapture(camera.url)
+        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-        if not cap.isOpened():
-            logging.error(f"Could not open video stream for camera {camera_id} at URL {camera.url}")
-            return {"error": "Failed to open video stream"}
 
         while True:
             ret, frame = cap.read()
             if not ret:
-                logging.warning(f"Failed to read frame from camera {camera_id}")
-                break
+                logging.warning(f"Failed to read frame from camera {camera_id}. Attempting to reopen capture object...")
+                cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
+                continue
 
             frame = preprocess_frame(frame, camera)
             publish_frame(camera_id, frame)
@@ -176,6 +172,22 @@ def publish_frame(camera_id: int, annotated_frame: np.ndarray):
     redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
     # logging.info(f"Published frame for camera {camera_id}")
 
+
+def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
+    """
+    Reopen video capture object if failed
+    """
+    for attempt in range(0, max_tries):
+        cap = cv2.VideoCapture(url)
+        if cap.isOpened():
+            logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
+            return cap
+        else:
+            logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
+            cap.release()
+            time.sleep(timeout)
+    logging.error(f"Failed to create Capture object for Camera {camera_id}")
+    raise Exception(f"Failed to create Capture object for Camera {camera_id}")
 
 
 
