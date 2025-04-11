@@ -75,13 +75,14 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
     await websocket.accept()
     frame_connections[camera_id].add(websocket)
     print(f"Client connected to video frames for camera {camera_id}")
-    redis_client.sadd("active_camera_websockets", camera_id)
+    redis_client.set(f"camera_{camera_id}_websocket_active", "True")
     try:
         while True:
             await websocket.receive_bytes()  # Keep connection alive
     except WebSocketDisconnect:
         print(f"Client disconnected from camera frames {camera_id}")
     finally:
+        redis_client.set(f"camera_{camera_id}_websocket_active", "False")
         frame_connections[camera_id].discard(websocket)
         if not frame_connections[camera_id]:
             del frame_connections[camera_id]
