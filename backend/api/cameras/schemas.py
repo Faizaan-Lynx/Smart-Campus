@@ -8,6 +8,7 @@ class CameraBase(BaseModel):
     resize_dims: Optional[str] = None
     crop_region: Optional[str] = None
     lines: Optional[str] = None
+    detect_intrusions: Optional[bool] = True
 
 class CameraCreate(CameraBase):
     pass
@@ -19,6 +20,7 @@ class CameraUpdate(CameraBase):
     resize_dims: Optional[str] = None
     crop_region: Optional[str] = None
     lines: Optional[str] = None
+    detect_intrusions: Optional[bool] = None
 
 class Camera(CameraBase):
     id: int
