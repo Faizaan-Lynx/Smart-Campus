@@ -4,6 +4,8 @@ import UserAdmin from "../../components/Settings/Users/UsersAdmin";
 import { localurl } from "../../utils";
 import axios from "axios";
 import UsersAdminSitesEditModal from "../../components/Settings/Users/UsersAdminSitesEditModal";
+import UserFeeds from "../../components/CameraFeedsButtons/CameraFeedsButtons";
+import CameraFeedsButtons from "../../components/CameraFeedsButtons/CameraFeedsButtons";
 
 const Settings = () => {
   const [userInfo, setUserInfo] = useState([]);
@@ -45,6 +47,7 @@ const Settings = () => {
       <div className="users__table__div">
         <UserAdmin columns={userColumns} />
       </div>
+      <CameraFeedsButtons/>
     </div>
   );
 };

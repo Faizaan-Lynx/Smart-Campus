@@ -10,7 +10,6 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera }) => {
 
   // Handle camera selection and trigger the API
   const handleCameraSelect = async (cameraId) => {
-    setSelectedCamera(cameraId);
     setLoading(true);
 
     try {
@@ -19,6 +18,8 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera }) => {
       });
 
       console.log(response.data);
+      setSelectedCamera(cameraId);
+
 
       // toast.success(`Camera feed started for ID: ${cameraId}`);
     } catch (error) {
