@@ -80,7 +80,10 @@ def process_feed(camera_id: int):
                     else:
                         annotated_frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
-            publish_frame(camera_id, annotated_frame)
+
+            # only publish the frame if the websocket is open
+            if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
+                publish_frame(camera_id, annotated_frame)
 
             # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
             if intrusion_detected and redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"False":
@@ -102,7 +105,7 @@ def process_feed(camera_id: int):
         redis_client.close()
         logging.info(f"Released VideoCapture object for camera {camera_id}")
 
-    return {"status": "Feed processing completed"}
+    return {"status": "Feed processing stopped."}
 
 
 @full_feed_worker_app.task
@@ -127,6 +130,8 @@ def process_feed_without_model(camera_id: int):
         cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
+        redis_client = redis.from_url(settings.REDIS_URL)
+
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -135,15 +140,18 @@ def process_feed_without_model(camera_id: int):
                 continue
 
             frame = preprocess_frame(frame, camera)
-            publish_frame(camera_id, frame)
+
+            if redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"True":
+                publish_frame(camera_id, frame)
 
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
+        redis_client.close()
         cap.release()
         logging.info(f"Released VideoCapture object for camera {camera_id}")
 
-    return {"status": "Feed processing completed"}
+    return {"status": "Feed processing stopped."}
 
 
 def preprocess_frame(frame, camera: Camera):
