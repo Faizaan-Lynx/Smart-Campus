@@ -75,7 +75,7 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
     await websocket.accept()
     frame_connections[camera_id].add(websocket)
     print(f"Client connected to video frames for camera {camera_id}")
-
+    redis_client.sadd("active_camera_websockets", camera_id)
     try:
         while True:
             await websocket.receive_bytes()  # Keep connection alive
@@ -102,22 +102,6 @@ async def websocket_all_frames(websocket: WebSocket):
     finally:
         all_frame_connections.discard(websocket)
 
-async def sync_frame_connection_counts():
-    """Periodically update Redis with the number of active WebSocket connections per camera."""
-    while True:
-        try:
-            connection_counts = {camera_id: len(conns) for camera_id, conns in frame_connections.items()}
-            # Save as a Redis hash (camera_id -> connection count)
-            if connection_counts:
-                redis_client.hset("frame_connection_counts", mapping=connection_counts)
-            else:
-                redis_client.delete("frame_connection_counts")
-        except Exception as e:
-            logging.error(f"Failed to sync frame connection counts: {e}")
-        
-        await asyncio.sleep(5)  # Adjust interval as needed
-
 # Function to start Redis frame listener on startup
 async def start_redis_frame_listener():
     asyncio.create_task(redis_frame_listener())
-    asyncio.create_task(sync_frame_connection_counts())
