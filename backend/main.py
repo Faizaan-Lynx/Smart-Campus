@@ -57,7 +57,7 @@ def startup_db_check():
         logger.info("✅ Database connected successfully.")
     else:
         logger.error("❌ Database connection failed on startup. Exiting...")
-        exit(1)
+        # exit(1)
 
 
 # IP middleware

@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - backend
+      backend:
     ports:
       - "5432:5432"
 
@@ -19,7 +19,7 @@ services:
     image: redis:latest
     container_name: redis
     networks:
-      - backend
+      backend:
     ports:
       - "6379:6379"
     healthcheck:
@@ -46,7 +46,7 @@ services:
       - postgres-db
       - redis
     networks:
-      - backend
+      backend:
     runtime: nvidia
 
   # Celery Workers with gpu support
@@ -65,7 +65,10 @@ services:
       - redis
       - postgres-db
     networks:
-      - backend
+      backend:
+      stream-net:
+        mac_address: D0:94:66:7E:8F:30
+        ipv4_address: 172.23.55.189
     runtime: nvidia
 
   # Flower - for monitoring Celery workers
@@ -86,12 +89,16 @@ services:
       - celery
       - app
     networks:
-      - backend
+      backend:
     runtime: nvidia
 
 networks:
   backend:
     driver: bridge
+    external: false
+  stream-net:
+    driver: bridge
+    external: true
 
 volumes:
   postgres_data:
