@@ -25,9 +25,12 @@ const CameraFeedsButtons = () => {
   // 🟢 Start feeds
   const startFeeds = () => {
     console.log("▶️ Attempting to start feeds...");
+    const token = localStorage.getItem("token");
 
     axios
-      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers")
+      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", {
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+      })
       .then((response) => {
         console.log("✅ API Response:", response.data);
         alert("Feeds started successfully");
@@ -41,9 +44,12 @@ const CameraFeedsButtons = () => {
   // 🔴 Stop feeds
   const stopFeeds = () => {
     console.log("⏹️ Attempting to stop feeds...");
+    const token = localStorage.getItem("token");
 
     axios
-      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers")
+      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers", {
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+      })
       .then((response) => {
         console.log("✅ API Response:", response.data);
         alert("Feeds stopped successfully.");

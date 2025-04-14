@@ -36,13 +36,13 @@ def process_feed(camera_id: int):
         if not camera:
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
-
-        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
+        
         # Initialize Redis intrusion flag
         redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+
+        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         stop_check_counter = 20
 
@@ -58,11 +58,10 @@ def process_feed(camera_id: int):
                 cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
                 continue
 
-            frame = preprocess_frame(frame, camera)
+            annotated_frame = preprocess_frame(frame, camera)
 
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
 
-            # annotated_frame, intrusion_detected = detect_intrusion(frame, camera)
             intrusion_detected = False
             results = model.predict(frame, classes=[0], verbose=False)
 
@@ -97,13 +96,14 @@ def process_feed(camera_id: int):
                 if camera_running == b"False" or global_cameras_running == b"False":
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
                     break
+                
+        cap.release()
 
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
-        cap.release()
         redis_client.close()
-        logging.info(f"Released VideoCapture object for camera {camera_id}")
+        logging.info(f"Stopped feed processing for camera {camera_id}")
 
     return {"status": "Feed processing stopped."}
 
