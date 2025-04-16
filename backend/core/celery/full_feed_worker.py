@@ -74,10 +74,10 @@ def process_feed(camera_id: int):
                     # if intrusion is detected, raise flag and draw red box, put text
                     if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
                         intrusion_detected = True
-                        annotated_frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
                         annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                     else:
-                        annotated_frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
 
             # only publish the frame if the websocket is open
@@ -87,6 +87,7 @@ def process_feed(camera_id: int):
             # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
             if intrusion_detected and redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"False":
                 handle_intrusion_event(camera_id)
+            
             
             stop_check_counter -= 1
             if stop_check_counter <= 0:
