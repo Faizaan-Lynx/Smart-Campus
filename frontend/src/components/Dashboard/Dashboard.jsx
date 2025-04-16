@@ -42,7 +42,37 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  //Start All Feeds
+  useEffect(() => {
+    const startFeeds = () => {
+      console.log("▶️ Attempting to start feeds...");
+      const token = localStorage.getItem("token");
+  
+      if (!token) {
+        console.warn("🔒 No token found in localStorage.");
+        return;
+      }
+  
+      axios
+        .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((response) => {
+          console.log("✅ API Response:", response.data);
+          alert("Feeds started successfully");
+        })
+        .catch((error) => {
+          console.error("❌ Failed to start feeds:", error);
+          alert("Failed to start feeds. Check console for details.");
+        });
+    };
 
+    
+  }, []);
+  
 
 
   // Fetch Cameras
@@ -112,21 +142,7 @@ const Dashboard = () => {
         setCameras(response.data);
         setSelectedCamera(response.data[0]?.id);
 
-        const cameraId = response.data[0]?.id;
-        try {
-          const response = await axios.post("http://127.0.0.1:8000/test_publish_feed/", {
-            camera_id: cameraId,
-          });
-    
-          console.log(response.data);
-          setSelectedCamera(cameraId);
-    
-    
-          // toast.success(`Camera feed started for ID: ${cameraId}`);
-        } catch (error) {
-          toast.error("Failed to start camera feed.");
-          console.error(error);
-        }
+        
       } catch (error) {
         console.error("Error fetching cameras:", error);
         if (!toast.isActive("fetch-error")) {

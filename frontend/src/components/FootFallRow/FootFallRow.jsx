@@ -36,7 +36,7 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera }) => {
         {loading ? (
           <p>Loading cameras...</p>
         ) : (
-          <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={handleCameraSelect} />
+          <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={setSelectedCamera} />
         )}
       </div>
     </div>

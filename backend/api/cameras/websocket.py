@@ -21,22 +21,31 @@ all_frame_connections = set()
 
 # Redis Listener for Frames 
 async def redis_frame_listener():
-    """Listens for video frames from Redis and broadcasts them as bytes to WebSockets."""
-    pubsub = redis_client.pubsub()
-    pubsub.psubscribe("camera_*")  # Listen to all camera frame channels
-
+    """Persistent Redis pubsub listener that reconnects only when the server closes the connection."""
     while True:
-        message = pubsub.get_message(ignore_subscribe_messages=True)
-        if message:
-            channel = message["channel"]
-            if isinstance(channel, bytes):  # Ensure channel is a string
-                channel = channel.decode("utf-8")
-            frame_data = message["data"]  # Data is in bytes
-            camera_id = channel.split("_")[-1]
+        try:
+            pubsub = redis_client.pubsub()
+            pubsub.psubscribe("camera_*")
+            logging.info("Subscribed to Redis channels for frames.")
 
-            await broadcast_frame(camera_id, frame_data)
+            while True:
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1)
+                if message:
+                    channel = message["channel"]
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+                    frame_data = message["data"]
+                    camera_id = channel.split("_")[-1]
+                    await broadcast_frame(camera_id, frame_data)
 
-        await asyncio.sleep(0.1)  # Prevent busy-waiting
+                await asyncio.sleep(0.025)  # Light async sleep to keep loop responsive
+
+        except redis.exceptions.ConnectionError as e:
+            logging.warning(f"Redis connection lost: {e}. Attempting reconnect in 3 seconds...")
+            await asyncio.sleep(3)
+        except Exception as e:
+            logging.exception(f"Unexpected error in redis_frame_listener: {e}")
+            await asyncio.sleep(3)
 
 
 async def broadcast_frame(camera_id: str, frame_data: bytes):
@@ -76,9 +85,10 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
     frame_connections[camera_id].add(websocket)
     print(f"Client connected to video frames for camera {camera_id}")
     redis_client.set(f"camera_{camera_id}_websocket_active", "True")
+
     try:
         while True:
-            await websocket.receive_bytes()  # Keep connection alive
+            await asyncio.sleep(1)  # 🔁 Just keep the loop alive
     except WebSocketDisconnect:
         print(f"Client disconnected from camera frames {camera_id}")
     finally:
@@ -90,18 +100,18 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
 # WebSocket for All Frames 
 @router.websocket("/ws/frames")
 async def websocket_all_frames(websocket: WebSocket):
-    """Handles WebSocket connections for video frames from all cameras."""
     await websocket.accept()
     all_frame_connections.add(websocket)
     print("Client connected to all video frames")
 
     try:
         while True:
-            await websocket.receive_bytes()  # Keep connection alive
+            await asyncio.sleep(1)  # 🔁 Keep connection open
     except WebSocketDisconnect:
         print("Client disconnected from all video frames")
     finally:
         all_frame_connections.discard(websocket)
+
 
 # Function to start Redis frame listener on startup
 async def start_redis_frame_listener():

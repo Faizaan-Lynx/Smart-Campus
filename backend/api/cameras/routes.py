@@ -16,7 +16,8 @@ router = APIRouter(prefix="/camera", tags=["Cameras"])
 @router.post("/", response_model=Camera, status_code=status.HTTP_201_CREATED)
 def create_camera(camera: CameraCreate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     db_camera = CameraModel(url=camera.url, location=camera.location, detection_threshold=camera.detection_threshold,
-                            resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines)
+                            resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines, 
+                            detect_intrusions=camera.detect_intrusions)
     db.add(db_camera)
     db.commit()
     db.refresh(db_camera)

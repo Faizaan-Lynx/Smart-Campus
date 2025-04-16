@@ -57,7 +57,6 @@ def startup_db_check():
         logger.info("✅ Database connected successfully.")
     else:
         logger.error("❌ Database connection failed on startup. Exiting...")
-        exit(1)
 
 
 # IP middleware
@@ -92,6 +91,7 @@ app.include_router(cameras_websocket_router)
 async def startup_event():
     asyncio.create_task(start_redis_listener())
     asyncio.create_task(start_redis_frame_listener())
+    logging.info("Redis listener started.")
 
 
 @app.get("/")
