@@ -5,6 +5,7 @@ fastapi[all]
 flower
 httpx 
 jwt
+opencv-python==4.10.0.84
 passlib[bcrypt]
 psycopg2-binary
 pytest 
