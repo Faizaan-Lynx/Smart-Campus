@@ -27,4 +27,4 @@ COPY data/ /app/data
 # run the server
 WORKDIR /app/backend
 EXPOSE 8000
-CMD /wait-for-it.sh postgres:5432 --timeout=5 -- uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+CMD ["/wait-for-it.sh", "postgres:5432", "--timeout=5", "--", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
