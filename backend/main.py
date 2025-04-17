@@ -11,7 +11,9 @@ import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 
 # database stuff
-from core.database import test_db_connection  
+from core.database import test_db_connection
+from core.database import SessionLocal
+from models import Camera
 
 # routers (uncomment when needed)
 from api.auth.routes import router as auth_router  
@@ -89,6 +91,12 @@ app.include_router(cameras_websocket_router)
 # routes for startup and some for testing and health checks
 @app.on_event("startup")
 async def startup_event():
+    # getting all cam ids:
+    db = SessionLocal()
+    cameras = db.query(Camera).all()
+    camera_ids = [camera.id for camera in cameras]
+    for camera_id in camera_ids:
+        redis_client.set(f"camera_{camera_id}_websocket_active", "False")
     asyncio.create_task(start_redis_listener())
     asyncio.create_task(start_redis_frame_listener())
     logging.info("Redis listener started.")
@@ -128,7 +136,7 @@ import redis
 from core.celery.stream_worker import publish_frame
 from core.celery.model_worker import process_frame
 
-redis_client = redis.Redis(host="localhost", port=6379, db=0)
+redis_client = redis.from_url(settings.REDIS_URL)
 
 
 @app.post("/test_publish_feed/{camera_id}")
