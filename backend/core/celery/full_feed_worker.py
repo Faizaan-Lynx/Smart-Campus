@@ -63,7 +63,7 @@ def process_feed(camera_id: int):
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
 
             intrusion_detected = False
-            results = model.predict(frame, classes=[0], verbose=False)
+            results = model.predict(annotated_frame, classes=[0], verbose=False)
 
             for res in results:
                 for detection in res.boxes:
@@ -142,7 +142,7 @@ def process_feed_without_model(camera_id: int):
 
             frame = preprocess_frame(frame, camera)
 
-            if redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"True":
+            if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, frame)
 
     except Exception as e:
