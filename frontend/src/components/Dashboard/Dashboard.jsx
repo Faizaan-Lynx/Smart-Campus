@@ -325,49 +325,6 @@ const Dashboard = () => {
     setLoading(false);
 };
 
-  useEffect(() => {
-    if (visitData1) {
-      const visitDetails = filterVisits(visitData1, selectedOptionRedux);
-      setVisitData(visitDetails.visits);
-    }
-  }, [visitData1, selectedOptionRedux]);
-
-  useEffect(() => {
-    const eventSource = new EventSource(`${localurl}/new_visit`);
-    eventSource.onmessage = (event) => {
-      const jsonString = event.data.replace("data: ", "");
-      const parsedData1 = JSON.parse(jsonString);
-      const parsedData = JSON.parse(parsedData1.data);
-      // console.log(parsedData);
-      // console.log(parsedData.site_id);
-      if (parsedData.site_id != siteId) {
-        return;
-      }
-      const newData = {
-        date_in: parsedData.date_in,
-        guest: {},
-        guest_id: null,
-        id: parsedData.id,
-        is_female: parsedData.is_female,
-        is_group: parsedData.is_group,
-        is_new: parsedData.is_new,
-        site_id: parsedData.site_id,
-        time_in: parsedData.time_in,
-        time_out: parsedData.time_out,
-      };
-      if (visitData) setVisitData((prevData) => [newData, ...prevData]);
-      //toast.dismiss();
-      if (parsedData.time_out != null) {
-        // toast.error("A person left");
-      } else {
-        //Wtoast.success("New visit!");
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, []);
 
   const handleOptionChange = (e) => {
     const newOption = e.target.value;
