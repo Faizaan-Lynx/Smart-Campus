@@ -7,6 +7,7 @@ from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
 from api.auth.security import is_admin, get_current_user
 from core.celery.alert_tasks import publish_alert, send_email
+from core.celery.worker import celery_app
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
@@ -26,12 +27,22 @@ def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
     alert_location = db.query(Camera).filter(Camera.id == alert_camera_id).first().location
 
     # celery tasks to generate alerts and send emails
-    publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')
+    # publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')
+    celery_app.send_task("core.celery.alert_tasks.publish_alert", args=[alert_response.dict()], queue='general_tasks')
     
-    send_email.apply_async(args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS, 
-                                 f"Intrusion Detected by Camera {alert_camera_id}", 
-                                 f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
-                                 settings.SMTP_SERVER, settings.SMTP_PORT], queue='general_tasks')  
+    # send_email.apply_async(args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS, 
+    #                              f"Intrusion Detected by Camera {alert_camera_id}", 
+    #                              f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
+    #                              settings.SMTP_SERVER, settings.SMTP_PORT], queue='general_tasks')
+    
+    # celery_app.send_task(   
+    #                         "core.celery.alert_tasks.send_email", 
+    #                         args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS,
+    #                            f"Intrusion Detected by Camera {alert_camera_id}", 
+    #                            f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
+    #                            settings.SMTP_SERVER, settings.SMTP_PORT], 
+    #                         queue='general_tasks'
+    #                     )
 
     return alert_response
 
