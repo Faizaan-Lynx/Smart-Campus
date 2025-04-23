@@ -41,7 +41,7 @@ const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
   { Header: "Location (Camera ID)", accessor: "camera_id" },
   { Header: "Status", accessor: "is_acknowledged" },
-  { Header: "Feed", accessor: "file_path" },
+  { Header: "View Image", accessor: "file_path" },
 ];
 
 const FootTable = ({ alerts, setAlerts }) => {
@@ -58,10 +58,32 @@ const FootTable = ({ alerts, setAlerts }) => {
     setPage(0);
   };
 
-  const handleFeedClick = (filePath) => {
-    console.log("Feed Clicked", filePath);
-    setSelectedFeed(filePath);
+  const handleFeedClick = async (alertId) => {
+    console.log("Feed Clicked", alertId);
+  
+    try {
+      const token = localStorage.getItem("token");
+  
+      const response = await axios.get(`http://127.0.0.1:8000/alerts/${alertId}/image`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: 'blob', // Expecting the response to be a blob (image)
+      });
+  
+      if (response.headers["content-type"]?.startsWith("image/")) {
+        console.log("Image blob received", response.data);
+        setSelectedFeed(response.data); // Set the blob directly to state
+      } else {
+        const errorText = await response.data.text();
+        console.error("Expected image, got:", errorText);
+      }
+    } catch (error) {
+      console.error("Error fetching the image:", error);
+    }
   };
+  
+  
 
   const handleAcknowledge = async (alertId) => {
     const token = localStorage.getItem("token");
@@ -132,7 +154,7 @@ const FootTable = ({ alerts, setAlerts }) => {
                       {column.accessor === "file_path" ? (
                         <button
                           className="feed-button"
-                          onClick={() => handleFeedClick(row.file_path)}
+                          onClick={() => handleFeedClick(row.id)}
                         >
                           View Feed
                         </button>
