@@ -1,8 +1,9 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import json
 import redis
 import asyncio
+import logging
 from collections import defaultdict
-import json
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 # Redis client setup
 redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
@@ -25,12 +26,12 @@ async def redis_listener():
     while True:
             message = pubsub.get_message(ignore_subscribe_messages=True)
             if message:
-                print(f"📨 Redis Message Received: {message}")  # Debug log
+                logging.info(f"📨 Redis Message Received: {message}")  # Debug log
                 channel = message["channel"]
                 alert_data = message["data"]
                 camera_id = channel.split(":")[-1]
 
-                print(f"Received alert for camera {camera_id}: {alert_data}")
+                logging.info(f"Received alert for camera {camera_id}: {alert_data}")
                 await broadcast_alert(camera_id, alert_data)
 
             await asyncio.sleep(0.1)  # Prevents busy-waiting
@@ -40,7 +41,9 @@ async def broadcast_alert(camera_id: str, alert_data: str):
     to_remove = set()
     message = json.dumps({"camera_id": camera_id, "alert": alert_data})
 
-     # Broadcast to specific camera connections
+    global camera_connections, all_connections
+
+    # Broadcast to specific camera connections
     if camera_id in camera_connections:
         for connection in camera_connections[camera_id]:
             try:
@@ -69,13 +72,13 @@ async def websocket_camera(websocket: WebSocket, camera_id: str):
     """Handles WebSocket connections for specific cameras."""
     await websocket.accept()
     camera_connections[camera_id].add(websocket)
-    print(f"Client connected to camera {camera_id}")
+    logging.info(f"Client connected to camera {camera_id}")
 
     try:
         while True:
-            await websocket.receive_text()  # Keep connection alive
+            await asyncio.sleep(1)  # Keep connection alive
     except WebSocketDisconnect:
-        print(f"Client disconnected from camera {camera_id}")
+        logging.info(f"Client disconnected from camera {camera_id}")
     finally:
         camera_connections[camera_id].discard(websocket)
         if not camera_connections[camera_id]:
@@ -86,13 +89,13 @@ async def websocket_all_cameras(websocket: WebSocket):
     """Handles WebSocket connections for all cameras."""
     await websocket.accept()
     all_connections.add(websocket)
-    print("Client connected to all camera alerts")
+    logging.info("Client connected to all camera alerts")
 
     try:
         while True:
-            await websocket.receive_text()  # Keep connection alive
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
-        print("Client disconnected from all cameras")
+        logging.info("Client disconnected from all camera alerts")
     finally:
         all_connections.discard(websocket)
 

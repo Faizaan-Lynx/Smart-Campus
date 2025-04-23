@@ -1,3 +1,4 @@
+import os
 import cv2
 import time
 import redis
@@ -63,7 +64,7 @@ def process_feed(camera_id: int):
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
 
             intrusion_detected = False
-            results = model.predict(frame, classes=[0], verbose=False)
+            results = model.predict(annotated_frame, classes=[0], verbose=False)
 
             for res in results:
                 for detection in res.boxes:
@@ -86,7 +87,7 @@ def process_feed(camera_id: int):
 
             # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
             if intrusion_detected and redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"False":
-                handle_intrusion_event(camera_id)
+                handle_intrusion_event(camera_id, annotated_frame)
             
             
             stop_check_counter -= 1
@@ -142,7 +143,7 @@ def process_feed_without_model(camera_id: int):
 
             frame = preprocess_frame(frame, camera)
 
-            if redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"True":
+            if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, frame)
 
     except Exception as e:
@@ -216,14 +217,23 @@ def unset_intrusion_flag(camera_id: int):
     logging.info(f"Unset intrusion flag for camera {camera_id}")
 
 
-def handle_intrusion_event(camera_id: int):
+def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     """
     Handle an intrusion event: create an alert and set a timer to reset the intrusion flag.
+    Save the frame where the initial intrusion was detected to later display in alert.
     """
     logging.warning(f"Intrusion detected for camera {camera_id}!!!")
 
+    file_path = None
 
-    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=None)
+    if frame is not None:
+        # Save the frame to a file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_path = f"/app/alert_images/intrusion_{camera_id}_{timestamp}.jpg"
+        cv2.imwrite(file_path, frame)
+
+
+    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=file_path)
     db = SessionLocal()
     create_alert(alert_data, db)
     db.close()
@@ -299,6 +309,8 @@ def start_all_feed_workers(camera_ids: list):
     """
     Start feed workers for all cameras.
     """
+
+    os.makedirs("/app/alert_images", exist_ok=True)
 
     if not camera_ids or len(camera_ids) == 0:
         logging.warning("No cameras found to start feed workers.")

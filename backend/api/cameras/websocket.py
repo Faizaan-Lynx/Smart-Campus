@@ -5,8 +5,6 @@ from collections import defaultdict
 import logging
 logging.basicConfig(level=logging.INFO)
 
-
-
 # Redis client setup
 redis_client = redis.Redis(host="redis", port=6379, db=0)
 
@@ -15,9 +13,6 @@ router = APIRouter()
 
 # Dictionary to manage WebSocket connections per camera (for frames)
 frame_connections = defaultdict(set)
-
-# Set to manage WebSocket connections for all frames (all cameras)
-all_frame_connections = set()
 
 # Redis Listener for Frames 
 async def redis_frame_listener():
@@ -51,6 +46,7 @@ async def redis_frame_listener():
 async def broadcast_frame(camera_id: str, frame_data: bytes):
     """Sends frames to WebSocket clients subscribed to a specific camera and all frames."""
     to_remove = set()
+    global frame_connections
 
     # Broadcast to specific camera connections
     if camera_id in frame_connections:
@@ -60,21 +56,13 @@ async def broadcast_frame(camera_id: str, frame_data: bytes):
             except Exception:
                 to_remove.add(connection)
 
-    # Broadcast to clients subscribed to all frames
-    for connection in all_frame_connections:
-        try:
-            await connection.send_bytes(frame_data)  # Send as raw bytes
-        except Exception:
-            to_remove.add(connection)
-
     # Remove disconnected clients
     for conn in to_remove:
         for camera in frame_connections.keys():
             frame_connections[camera].discard(conn)
         if not frame_connections[camera]:
             del frame_connections[camera]
-
-        all_frame_connections.discard(conn)
+            redis_client.set(f"camera_{camera_id}_websocket_active", "False")
 
 
 # WebSocket for Frames (Per Camera) 
@@ -82,35 +70,24 @@ async def broadcast_frame(camera_id: str, frame_data: bytes):
 async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
     """Handles WebSocket connections for video frames from a specific camera."""
     await websocket.accept()
+
+    global frame_connections
     frame_connections[camera_id].add(websocket)
-    print(f"Client connected to video frames for camera {camera_id}")
+    
+    logging.info(f"Client connected to video frames for camera {camera_id}")
     redis_client.set(f"camera_{camera_id}_websocket_active", "True")
 
     try:
         while True:
-            await asyncio.sleep(1)  # 🔁 Just keep the loop alive
+            await websocket.receive() # 🔁 Just keep the loop alive
     except WebSocketDisconnect:
-        print(f"Client disconnected from camera frames {camera_id}")
+        logging.warning(f"Client disconnected from Frame streaming of Camera {camera_id}")
     finally:
-        redis_client.set(f"camera_{camera_id}_websocket_active", "False")
+        logging.warning(f"Client disconnected from Frame streaming of Camera {camera_id}")
         frame_connections[camera_id].discard(websocket)
         if not frame_connections[camera_id]:
             del frame_connections[camera_id]
-
-# WebSocket for All Frames 
-@router.websocket("/ws/frames")
-async def websocket_all_frames(websocket: WebSocket):
-    await websocket.accept()
-    all_frame_connections.add(websocket)
-    print("Client connected to all video frames")
-
-    try:
-        while True:
-            await asyncio.sleep(1)  # 🔁 Keep connection open
-    except WebSocketDisconnect:
-        print("Client disconnected from all video frames")
-    finally:
-        all_frame_connections.discard(websocket)
+            redis_client.set(f"camera_{camera_id}_websocket_active", "False")
 
 
 # Function to start Redis frame listener on startup

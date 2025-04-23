@@ -42,6 +42,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - pip-cache:/root/.cache/pip
+      - ./alert_images:/app/alert_images
     depends_on:
       - postgres-db
       - redis
@@ -61,6 +62,7 @@ services:
     volumes:
       - .:/app
       - pip-cache:/root/.cache/pip
+      - ./alert_images:/app/alert_images
     depends_on:
       - redis
       - postgres-db
@@ -103,3 +105,4 @@ networks:
 volumes:
   postgres_data:
   pip-cache:
+  alert_images:

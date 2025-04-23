@@ -1,12 +1,16 @@
+import os
+import logging
 from config import settings
 from models.alerts import Alert
 from core.database import get_db
-from models.cameras import Camera
+from models import Camera, Users
 from sqlalchemy.orm import Session
+from fastapi.responses import FileResponse
 from api.auth.schemas import UserResponseSchema
 from fastapi import APIRouter, Depends, HTTPException
 from api.auth.security import is_admin, get_current_user
 from core.celery.alert_tasks import publish_alert, send_email
+from core.celery.worker import celery_app
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
@@ -26,12 +30,22 @@ def create_alert(alert_data: AlertBase, db: Session = Depends(get_db)):
     alert_location = db.query(Camera).filter(Camera.id == alert_camera_id).first().location
 
     # celery tasks to generate alerts and send emails
-    publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')
+    # publish_alert.apply_async(args=[alert_response.dict()], queue='general_tasks')
+    celery_app.send_task("core.celery.alert_tasks.publish_alert", args=[alert_response.dict()], queue='general_tasks')
     
-    send_email.apply_async(args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS, 
-                                 f"Intrusion Detected by Camera {alert_camera_id}", 
-                                 f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
-                                 settings.SMTP_SERVER, settings.SMTP_PORT], queue='general_tasks')  
+    # send_email.apply_async(args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS, 
+    #                              f"Intrusion Detected by Camera {alert_camera_id}", 
+    #                              f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
+    #                              settings.SMTP_SERVER, settings.SMTP_PORT], queue='general_tasks')
+    
+    # celery_app.send_task(   
+    #                         "core.celery.alert_tasks.send_email", 
+    #                         args=[settings.SMTP_EMAIL, settings.SMTP_PASSWORD, settings.RECEIVER_EMAILS,
+    #                            f"Intrusion Detected by Camera {alert_camera_id}", 
+    #                            f"Intrusion Detected at {alert_location} by {alert_camera_id}. Time: {alert_timestamp}", 
+    #                            settings.SMTP_SERVER, settings.SMTP_PORT], 
+    #                         queue='general_tasks'
+    #                     )
 
     return alert_response
 
@@ -76,3 +90,25 @@ def update_alert_acknowledgment(
     db.refresh(alert)
 
     return AlertResponse.model_validate(alert)
+
+# get blob of image associated with alert
+@router.get("/{alert_id}/image")
+def get_alert_image(alert_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
+    """Fetch the image associated with an alert."""
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    print(os.listdir("/app/alert_images"))
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    # check if the user has access to the camera
+    if not current_user.is_admin:
+        user = db.query(Users).filter(Users.id == current_user.id).first()
+        if alert.camera_id not in [camera_id for camera_id in user.cameras]:
+            raise HTTPException(status_code=403, detail="Access denied to this camera")    
+    
+    try:
+        logging.warning(f"Alert {alert_id} image accessed.")
+        return FileResponse(path=alert.file_path, media_type="image/jpeg", filename=alert.file_path.split("/")[-1])
+    
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image file not found")
