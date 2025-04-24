@@ -24,6 +24,8 @@ import Hosts from "./pages/Hosts/Hosts";
 import Guests from "./pages/Guests/Guests";
 import CCTVPage from "./components/CCTV/CCTVPage";
 import { logout } from "./redux/actions/authActions";
+import logo from "./assets/logo.png";
+import AnimatedSplash from "./pages/SplashScreen/AnimatedSplash";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -75,7 +77,9 @@ function App() {
               <Route
                 path="/"
                 element={
-                  user ? <Dashboard /> : <Navigate to="/login" replace />
+                  user ? <AnimatedSplash imageSrc={logo}>
+                    <Dashboard />
+                  </AnimatedSplash> : <Navigate to="/login" replace />
                 }
               />
 

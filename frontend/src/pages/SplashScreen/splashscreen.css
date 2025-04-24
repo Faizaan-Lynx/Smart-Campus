@@ -1,0 +1,251 @@
+/* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.splash-screen {
+  position: relative;
+  height: 100vh;
+  background: linear-gradient(135deg, #6a0dad, #e6e6fa);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Poppins', sans-serif;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+}
+
+
+/* .logo {
+   width: 200px;
+  height: auto;
+  animation: zoomInStay 2s ease-out forwards;
+  opacity: 0;
+  z-index: 2;
+  margin-bottom: 40px;
+}
+
+
+.zoom-in-title {
+  font-size: 4rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  font-style: italic;
+  color: white;
+  animation: zoomInStay 2s ease-out forwards;
+  opacity: 0;
+  z-index: 2;
+}
+
+@keyframes zoomInStay {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  80% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+.spinner {
+  margin-top: 25px;
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3e5f5;
+  border-top: 6px solid #7b1fa2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 2;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+.loading-text {
+  margin-top: 15px;
+  font-size: 1.2rem;
+  font-style: italic;
+  z-index: 2;
+}
+
+
+.tagline {
+  margin-top: 30px;
+  font-size: 1rem;
+  color: #f8f8ff;
+  font-style: italic;
+  z-index: 2;
+}
+
+
+.background-shapes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.background-shapes span {
+  position: absolute;
+  display: block;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  animation: float 20s linear infinite;
+}
+
+.background-shapes span:nth-child(1) {
+  left: 10%;
+  top: 20%;
+  width: 120px;
+  height: 120px;
+}
+
+.background-shapes span:nth-child(2) {
+  left: 70%;
+  top: 10%;
+  width: 80px;
+  height: 80px;
+}
+
+.background-shapes span:nth-child(3) {
+  left: 50%;
+  top: 70%;
+  width: 150px;
+  height: 150px;
+}
+
+.background-shapes span:nth-child(4) {
+  left: 30%;
+  top: 80%;
+  width: 60px;
+  height: 60px;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+} */ 
+
+/* 
+.splash-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  background: linear-gradient(135deg, #6a0dad, #e6e6fa);
+}
+
+.splash-logo {
+  animation: pulse 2s infinite;
+}
+
+.fade-out {
+  animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.app-container {
+  padding: 20px;
+  background-color: white;
+  min-height: 100vh;
+} */
+
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Splash screen container using lavender, purple, and white color scheme */
+.splash-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #6a0dad, #e6e6fa); /* Purple to Lavender */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overflow: hidden;
+  /* The container will fade out after a delay */
+  animation: fadeOut 0.5s ease-in forwards;
+  animation-play-state: paused;  /* We'll trigger this in JS */
+  animation-delay: 2s;  /* Total delay: pop (1.5s) + 0.5s gap */
+}
+
+/* Splash image (logo or GIF) in the center */
+.splash-image {
+  width: 200px;
+  height: auto;
+  animation: popAnimation 1.5s ease forwards;
+}
+
+/* Pop animation: quick scale in effect */
+@keyframes popAnimation {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Fade-out animation for the container */
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
