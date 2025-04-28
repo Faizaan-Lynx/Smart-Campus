@@ -140,7 +140,8 @@ const Dashboard = () => {
         }
   
         setCameras(response.data);
-        setSelectedCamera(response.data[0]?.id);
+        const sortedCameras = response.data.sort((a, b) => a.id - b.id);
+        setSelectedCamera(sortedCameras[0]?.id || null);
 
         
       } catch (error) {

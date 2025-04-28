@@ -41,7 +41,9 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
     <div className="camera-feed-container">
       {/* Camera List */}
       <div className="camera-list">
-        {cameras.map((camera) => (
+        {cameras
+          .sort((a, b) => a.id - b.id)
+          .map((camera) => (
           <div
             key={camera.id}
             className={`camera-card ${selectedCamera === camera.id ? "active" : ""}`}
