@@ -96,7 +96,6 @@ def update_alert_acknowledgment(
 def get_alert_image(alert_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
     """Fetch the image associated with an alert."""
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
-    print(os.listdir("/app/alert_images"))
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     
@@ -107,7 +106,6 @@ def get_alert_image(alert_id: int, db: Session = Depends(get_db), current_user: 
             raise HTTPException(status_code=403, detail="Access denied to this camera")    
     
     try:
-        logging.warning(f"Alert {alert_id} image accessed.")
         return FileResponse(path=alert.file_path, media_type="image/jpeg", filename=alert.file_path.split("/")[-1])
     
     except FileNotFoundError:
