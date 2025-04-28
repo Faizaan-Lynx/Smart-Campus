@@ -41,14 +41,6 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const columns = [
-  { Header: "Visit Date", accessor: "visitDate" },
-  { Header: "Gender", accessor: "gender" },
-  { Header: "Group", accessor: "group" },
-  { Header: "New", accessor: "new" },
-  { Header: "Time In", accessor: "timeIn" },
-];
-
 const UserAdmin = ({ columns }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -199,14 +191,17 @@ const UserAdmin = ({ columns }) => {
           <TableBody>
             {tableData
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
+              .map((row) => {
+                const isAdmin = row.is_admin;
+                return (
                 <StyledTableRow key={row.id}>
                   {columns.map((column) => (
                     <StyledTableCell key={column.accessor} align="left">
                       {column.accessor === "cameras"
-                        ? row[column.accessor]?.join(", ") ||
-                          "No Cameras Assigned"
-                        : row[column.accessor]}
+                          ? isAdmin
+                            ? "All cameras assigned"
+                            : row[column.accessor]?.join(", ") || "No Cameras Assigned"
+                          : row[column.accessor]}
                     </StyledTableCell>
                   ))}
                   <StyledTableCell align="center">
@@ -248,7 +243,7 @@ const UserAdmin = ({ columns }) => {
                     </div>
                   </StyledTableCell>
                 </StyledTableRow>
-              ))}
+              )})}
           </TableBody>
         </Table>
         <TablePagination

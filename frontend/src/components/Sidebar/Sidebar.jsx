@@ -159,7 +159,7 @@ const Sidebar = () => {
               <li className="nav-link">
                 <a onClick={() => navigate("/settings")}>
                   <i className="bx bx-cog icon"></i>
-                  <span className="text nav-text">Users</span>
+                  <span className="text nav-text">Admin Panel</span>
                 </a>
               </li>
             )}
