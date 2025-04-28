@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
 import redis
 import asyncio
 from collections import defaultdict
@@ -79,11 +79,19 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
 
     try:
         while True:
-            await websocket.receive() # 🔁 Just keep the loop alive
-    except WebSocketDisconnect:
-        logging.warning(f"Client disconnected from Frame streaming of Camera {camera_id}")
+            try:
+                await websocket.receive()
+            except WebSocketDisconnect:
+                logging.warning(f"Client disconnected from Frame streaming of Camera {camera_id}")
+                break
+            except WebSocketException as e:
+                logging.error(f"WebSocket error for Camera {camera_id}: {e}")
+                break
+            except Exception as e:
+                logging.error(f"Unexpected error for Camera {camera_id}: {e}")
+                break
     finally:
-        logging.warning(f"Client disconnected from Frame streaming of Camera {camera_id}")
+        logging.warning(f"Cleaning up WebSocket connection for Camera {camera_id}")
         frame_connections[camera_id].discard(websocket)
         if not frame_connections[camera_id]:
             del frame_connections[camera_id]
