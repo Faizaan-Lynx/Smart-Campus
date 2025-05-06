@@ -68,6 +68,8 @@ def process_feed(camera_id: int):
 
             for res in results:
                 for detection in res.boxes:
+                    if detection.conf < 0.30:
+                        continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     cx = (x1 + x2) / 2
                     cy = (y1 + y2) / 2
@@ -249,7 +251,7 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     redis_client = redis.from_url(settings.REDIS_URL)
     redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
     redis_client.close()
-    full_feed_worker_app.send_task('unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
+    full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
 
 
 def centroid_near_line(centroid_x: float, centroid_y: float, line_point1: tuple, line_point2: tuple, threshold: float = 50) -> bool:
