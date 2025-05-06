@@ -62,7 +62,8 @@ export default function UsersAdminEditModal({
         const response = await axios.get("http://127.0.0.1:8000/camera/", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setCameras(response.data);
+        const sortedCameras = response.data.sort((a, b) => a.id - b.id);
+        setCameras(sortedCameras);
       } catch (error) {
         console.error("Error fetching cameras:", error);
       }

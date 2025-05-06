@@ -10,6 +10,9 @@ class Settings:
     FEED_FPS = int(os.getenv("FEED_FPS", 10))
     FEED_DIMS = os.getenv("FEED_DIMS", "(854,480)")
     INTRUSION_FLAG_DURATION = int(os.getenv("INTRUSION_FLAG_DURATION", 30))
+    # stored as "True" in env, convert to bool
+    SHOW_INTRUSION_LINES = os.getenv("SHOW_INTRUSION_LINES", "True")
+    SHOW_INTRUSION_FLAG = os.getenv("SHOW_INTRUSION_FLAG", "True")
 
     # Database settings
     DATABASE_NAME = os.getenv("DATABASE_NAME", "SmartCampus")

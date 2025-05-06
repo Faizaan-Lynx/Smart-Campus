@@ -140,7 +140,8 @@ const Dashboard = () => {
         }
   
         setCameras(response.data);
-        setSelectedCamera(response.data[0]?.id);
+        const sortedCameras = response.data.sort((a, b) => a.id - b.id);
+        setSelectedCamera(sortedCameras[0]?.id || null);
 
         
       } catch (error) {
@@ -239,7 +240,7 @@ const Dashboard = () => {
             setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
         
             toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
-                duration: 5000,
+                duration: 50000,
                 position: "top-right",
                 style: {
                     background: "#333",

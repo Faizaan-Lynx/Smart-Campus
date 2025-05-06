@@ -45,7 +45,7 @@ def process_feed(camera_id: int):
         cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-        stop_check_counter = 20
+        stop_check_counter = 200
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-models/yolov8n.pt")
@@ -68,6 +68,8 @@ def process_feed(camera_id: int):
 
             for res in results:
                 for detection in res.boxes:
+                    if detection.conf < 0.30:
+                        continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     cx = (x1 + x2) / 2
                     cy = (y1 + y2) / 2
@@ -76,24 +78,32 @@ def process_feed(camera_id: int):
                     if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
                         intrusion_detected = True
                         annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
-                        annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                     else:
                         annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
+            if settings.SHOW_INTRUSION_LINES == "True":
+                annotated_frame = cv2.line(annotated_frame, eval(camera.lines)[0], eval(camera.lines)[1], (0,0,255), 1)
+            
+            redis_intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
+            if settings.SHOW_INTRUSION_FLAG == "True" and redis_intrusion_flag == b"True":
+                annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
             # only publish the frame if the websocket is open
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, annotated_frame)
 
             # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
-            if intrusion_detected and redis_client.get(f"camera_{camera_id}_intrusion_flag") == b"False":
+            if intrusion_detected and redis_intrusion_flag == b"False":
                 handle_intrusion_event(camera_id, annotated_frame)
-            
             
             stop_check_counter -= 1
             if stop_check_counter <= 0:
                 camera_running = redis_client.get(f"camera_{camera_id}_running")
                 global_cameras_running = redis_client.get("feed_workers_running")
+
+                db: Session = SessionLocal()
+                camera = db.query(Camera).filter(Camera.id == camera_id).first()
+                db.close()
 
                 if camera_running == b"False" or global_cameras_running == b"False":
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
@@ -203,6 +213,16 @@ def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
 
 ## ====== Handling Intrusion Logic ===== ##
 
+@full_feed_worker_app.task
+def set_intrusion_flag(camera_id: int):
+    """
+    Unset the intrusion flag for a camera.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+    redis_client.close()
+    logging.info(f"Set intrusion flag for camera {camera_id}")
+    full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=5)
 
 
 
@@ -228,12 +248,13 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
 
     if frame is not None:
         # Save the frame to a file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = int(datetime.now().timestamp())
         file_path = f"/app/alert_images/intrusion_{camera_id}_{timestamp}.jpg"
         cv2.imwrite(file_path, frame)
 
 
-    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=file_path)
+    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now().replace(microsecond=0)), 
+                           is_acknowledged=False, file_path=file_path)
     db = SessionLocal()
     create_alert(alert_data, db)
     db.close()
@@ -241,7 +262,7 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     redis_client = redis.from_url(settings.REDIS_URL)
     redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
     redis_client.close()
-    full_feed_worker_app.send_task('unset_intrusion_flag', args=[camera_id], countdown=settings.INTRUSION_FLAG_DURATION)
+    full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
 
 
 def centroid_near_line(centroid_x: float, centroid_y: float, line_point1: tuple, line_point2: tuple, threshold: float = 50) -> bool:
