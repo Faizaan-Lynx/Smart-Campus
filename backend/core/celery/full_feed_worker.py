@@ -253,7 +253,8 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
         cv2.imwrite(file_path, frame)
 
 
-    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now()), is_acknowledged=False, file_path=file_path)
+    alert_data = AlertBase(camera_id=camera_id, timestamp=str(datetime.now().replace(microsecond=0)), 
+                           is_acknowledged=False, file_path=file_path)
     db = SessionLocal()
     create_alert(alert_data, db)
     db.close()
