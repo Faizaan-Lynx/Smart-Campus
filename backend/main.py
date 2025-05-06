@@ -180,3 +180,13 @@ async def update_cameras():
     except Exception as e:
         logging.error(f"Error updating cameras: {str(e)}", exc_info=True)
         return {"status": "Error", "message": str(e)}
+    
+from core.celery.full_feed_worker import full_feed_worker_app
+
+@app.post("/gen-intr/{camera_id}")
+def generate_intrusion(camera_id: int) :
+    """
+    Generate sample intr that unsets after 5 seconds
+    """
+    full_feed_worker_app.send_task('core.celery.full_feed_worker.set_intrusion_flag', args=[camera_id], queue="feed_tasks")
+    return {"status" : f"Generated sample intrusion at camera {camera_id}"}

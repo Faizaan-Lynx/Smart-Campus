@@ -213,6 +213,16 @@ def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
 
 ## ====== Handling Intrusion Logic ===== ##
 
+@full_feed_worker_app.task
+def set_intrusion_flag(camera_id: int):
+    """
+    Unset the intrusion flag for a camera.
+    """
+    redis_client = redis.from_url(settings.REDIS_URL)
+    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+    redis_client.close()
+    logging.info(f"Set intrusion flag for camera {camera_id}")
+    full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=5)
 
 
 
