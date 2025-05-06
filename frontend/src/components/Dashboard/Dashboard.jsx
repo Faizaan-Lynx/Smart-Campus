@@ -240,7 +240,7 @@ const Dashboard = () => {
             setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
         
             toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
-                duration: 5000,
+                duration: 50000,
                 position: "top-right",
                 style: {
                     background: "#333",
