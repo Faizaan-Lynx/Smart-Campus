@@ -12,6 +12,7 @@ pytest
 python-jose[cryptography]
 python-multipart
 redis
+shapely
 sqlmodel
 sqlalchemy
 ultralytics
