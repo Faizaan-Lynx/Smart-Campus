@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
+from shapely.geometry import Point, LineString, Polygon
 
 
 # celery worker for processing video feeds
@@ -45,7 +46,12 @@ def process_feed(camera_id: int):
         cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-        stop_check_counter = 200
+        stop_check_counter = 300
+        try:
+            threshold_polygon = Polygon(eval(camera.lines))
+        except Exception as e:
+            logging.error(f"Error creating polygon/line threshold for camera {camera_id}: {e}")
+            return {"error": "Invalid lines data"} 
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-models/yolov8n.pt")
@@ -71,11 +77,10 @@ def process_feed(camera_id: int):
                     if detection.conf < 0.30:
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
-                    cx = (x1 + x2) / 2
-                    cy = (y1 + y2) / 2
+                    bbox = detection.xyxy[0]
 
                     # if intrusion is detected, raise flag and draw red box, put text
-                    if centroid_near_line(cx, cy, eval(camera.lines)[0], eval(camera.lines)[1], camera.detection_threshold):
+                    if centroid_near_line(bbox, threshold_polygon, camera.detection_threshold) or box_intersects_line(bbox, threshold_polygon):
                         intrusion_detected = True
                         annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
                     else:
@@ -98,12 +103,15 @@ def process_feed(camera_id: int):
             
             stop_check_counter -= 1
             if stop_check_counter <= 0:
+                stop_check_counter = 300
                 camera_running = redis_client.get(f"camera_{camera_id}_running")
                 global_cameras_running = redis_client.get("feed_workers_running")
 
                 db: Session = SessionLocal()
                 camera = db.query(Camera).filter(Camera.id == camera_id).first()
                 db.close()
+
+                threshold_polygon = Polygon(eval(camera.lines))
 
                 if camera_running == b"False" or global_cameras_running == b"False":
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
@@ -265,30 +273,25 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
 
 
-def centroid_near_line(centroid_x: float, centroid_y: float, line_point1: tuple, line_point2: tuple, threshold: float = 50) -> bool:
+def centroid_near_line(bounding_box: tuple, line:Polygon, threshold:float=10) -> bool:
     """
     Determine if a centroid is near or has crossed a line defined by two points.
     """
-    x1, y1 = line_point1
-    x2, y2 = line_point2
+    x1, y1, x2, y2 = bounding_box
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+    point = Point(cx, cy)
+    distance = line.distance(point)
+    return distance <= threshold
 
-    line_vector = np.array([x2 - x1, y2 - y1])
-    centroid_vector = np.array([centroid_x - x1, centroid_y - y1])
-    line_length = np.linalg.norm(line_vector)
-    line_unit_vector = line_vector / line_length
 
-    projection_length = np.dot(centroid_vector, line_unit_vector)
-
-    if projection_length < 0:
-        closest_point = np.array([x1, y1])
-    elif projection_length > line_length:
-        closest_point = np.array([x2, y2])
-    else:
-        closest_point = np.array([x1, y1]) + projection_length * line_unit_vector
-
-    closest_distance = np.linalg.norm(np.array([centroid_x, centroid_y]) - closest_point)
-    return closest_distance <= threshold
-
+def box_intersects_line(bounding_box: tuple, line:Polygon) -> bool:
+    """
+    Determines if a bounding box intersects with a line.
+    """
+    x1, y1, x2, y2 = bounding_box
+    box_polygon = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
+    return box_polygon.intersects(line)
 
 
 
