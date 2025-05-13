@@ -1,4 +1,5 @@
 import os
+import ast
 import cv2
 import time
 import redis
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
-from shapely.geometry import Point, LineString, Polygon
+from shapely.geometry import Polygon, MultiPolygon
 
 
 # celery worker for processing video feeds
@@ -47,11 +48,8 @@ def process_feed(camera_id: int):
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         stop_check_counter = 300
-        try:
-            threshold_polygon = Polygon(eval(camera.lines))
-        except Exception as e:
-            logging.error(f"Error creating polygon/line threshold for camera {camera_id}: {e}")
-            return {"error": "Invalid lines data"} 
+
+        threshold_polygons = get_polygons(camera_id)
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-models/yolov8n.pt")
@@ -80,7 +78,7 @@ def process_feed(camera_id: int):
                     bbox = detection.xyxy[0]
 
                     # if intrusion is detected, raise flag and draw red box, put text
-                    if centroid_near_line(bbox, threshold_polygon, camera.detection_threshold) or box_intersects_line(bbox, threshold_polygon):
+                    if centroid_near_line(bbox, threshold_polygons, camera.detection_threshold) or box_intersects_line(bbox, threshold_polygons):
                         intrusion_detected = True
                         annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red box for intrusion
                     else:
@@ -107,11 +105,10 @@ def process_feed(camera_id: int):
                 camera_running = redis_client.get(f"camera_{camera_id}_running")
                 global_cameras_running = redis_client.get("feed_workers_running")
 
-                db: Session = SessionLocal()
-                camera = db.query(Camera).filter(Camera.id == camera_id).first()
-                db.close()
-
-                threshold_polygon = Polygon(eval(camera.lines))
+                threshold_polygons = get_polygons(camera_id)
+                if threshold_polygons is None:
+                    logging.error(f"Failed to get polygons for camera {camera_id}.")
+                    break
 
                 if camera_running == b"False" or global_cameras_running == b"False":
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
@@ -126,6 +123,25 @@ def process_feed(camera_id: int):
         logging.info(f"Stopped feed processing for camera {camera_id}")
 
     return {"status": "Feed processing stopped."}
+
+
+def get_polygons(camera_id: int):
+    """
+    Get the polygons for a specific camera.
+    """
+    db: Session = SessionLocal()
+    camera = db.query(Camera).filter(Camera.id == camera_id).first()
+    db.close()
+    if not camera:
+        logging.error(f"Camera {camera_id} not found.")
+        return {"error": "Camera not found"}
+    try:
+        temp = ast.literal_eval(camera.lines)
+        polygons = MultiPolygon([Polygon(poly) for poly in temp])
+        return polygons
+    except Exception as e:
+        logging.error(f"Error creating polygon/line threshold for camera {camera_id}: {e}")
+        return {"error": "Invalid lines data"}
 
 
 @full_feed_worker_app.task
@@ -273,25 +289,22 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
 
 
-def centroid_near_line(bounding_box: tuple, line:Polygon, threshold:float=10) -> bool:
+def centroid_near_line(bounding_box: tuple, region:MultiPolygon, threshold:float=5) -> bool:
     """
-    Determine if a centroid is near or has crossed a line defined by two points.
-    """
-    x1, y1, x2, y2 = bounding_box
-    cx = (x1 + x2) / 2
-    cy = (y1 + y2) / 2
-    point = Point(cx, cy)
-    distance = line.distance(point)
-    return distance <= threshold
-
-
-def box_intersects_line(bounding_box: tuple, line:Polygon) -> bool:
-    """
-    Determines if a bounding box intersects with a line.
+    Determine if a centroid is near or has crossed a region.
     """
     x1, y1, x2, y2 = bounding_box
     box_polygon = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
-    return box_polygon.intersects(line)
+    return region.distance(box_polygon.centroid) <= threshold
+
+
+def box_intersects_line(bounding_box: tuple, region:MultiPolygon) -> bool:
+    """
+    Determines if a bounding box intersects with a threshold region.
+    """
+    x1, y1, x2, y2 = bounding_box
+    box_polygon = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2)])
+    return box_polygon.intersects(region)
 
 
 
