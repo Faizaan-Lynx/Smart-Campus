@@ -343,7 +343,7 @@ const Dashboard = () => {
           cameras={cameras}
           selectedCamera={selectedCamera} // Pass selectedCamera
           setSelectedCamera={setSelectedCamera} // Pass setter function
-        />{" "}
+        />
         {/* Line Graph Added Below the Video Row */}
         {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}

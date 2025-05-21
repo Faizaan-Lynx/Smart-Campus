@@ -1,0 +1,38 @@
+.gate__main {
+  max-height: 100%;
+  width: calc(100% - 200px);
+  margin-left: 200px;
+  font-family: "Poppins", sans-serif;
+  transition: var(--tran-05);
+}
+
+/* When the sidebar is collapsed */
+.sidebar.close ~ .gate__main {
+  width: calc(100% - 50px);
+  margin-left: 35px;
+}
+
+.gate__content {
+  margin-top: 70px;
+  margin-left: 103px;
+  padding: 10px;
+}
+
+.gate__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.gate__heading {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.footfall__container {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 18000px; /* or whatever max you want */
+  justify-content: center;
+  align-items: center;
+}
