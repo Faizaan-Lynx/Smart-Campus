@@ -24,6 +24,7 @@ async def redis_listener():
     pubsub.psubscribe("camera_alerts:*")
 
     while True:
+        try:
             message = pubsub.get_message(ignore_subscribe_messages=True)
             if message:
                 logging.info(f"📨 Redis Message Received: {message}")  # Debug log
@@ -33,8 +34,11 @@ async def redis_listener():
 
                 logging.info(f"Received alert for camera {camera_id}: {alert_data}")
                 await broadcast_alert(camera_id, alert_data)
-
             await asyncio.sleep(0.1)  # Prevents busy-waiting
+        
+        except Exception as e:
+            logging.error(f"Error in Redis listener: {e}")
+            await asyncio.sleep(1)  # Wait before retrying
             
 async def broadcast_alert(camera_id: str, alert_data: str):
     """Sends alert messages to all WebSocket clients subscribed to a specific camera and all cameras."""
@@ -62,8 +66,8 @@ async def broadcast_alert(camera_id: str, alert_data: str):
     for conn in to_remove:
         for camera in camera_connections.keys():
             camera_connections[camera].discard(conn)
-        if not camera_connections[camera]:
-            del camera_connections[camera]
+            if not camera_connections[camera]:
+                del camera_connections[camera]
 
         all_connections.discard(conn)      
 
