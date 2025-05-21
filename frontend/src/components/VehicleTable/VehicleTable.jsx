@@ -76,6 +76,34 @@ export default function VehicleTable() {
       name: "Emily Brown",
       license_plate: "TES-2025",
     },
+    {
+      id: 5,
+      timestamp: "2025-05-21 10:05:47",
+      vehicle_name: "Ford F-150",
+      name: "Mike Johnson",
+      license_plate: "LMN-9012",
+    },
+    {
+      id: 6,
+      timestamp: "2025-05-21 10:30:15",
+      vehicle_name: "Tesla Model 3",
+      name: "Emily Brown",
+      license_plate: "TES-2025",
+    },
+    {
+      id: 7,
+      timestamp: "2025-05-21 10:05:47",
+      vehicle_name: "Ford F-150",
+      name: "Mike Johnson",
+      license_plate: "LMN-9012",
+    },
+    {
+      id: 8,
+      timestamp: "2025-05-21 10:30:15",
+      vehicle_name: "Tesla Model 3",
+      name: "Emily Brown",
+      license_plate: "TES-2025",
+    },
   ];
 
   const handleChangePage = (event, newPage) => {
