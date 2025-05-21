@@ -229,6 +229,12 @@ export default function VehicleTable() {
                       >
                         Delete
                       </button>
+                        <button
+                          className="feed-button"
+                          onClick={() => handleFeedClick(row.id)}
+                        >
+                          View Feed
+                        </button>
                     </div>
                   </StyledTableCell>
                 </StyledTableRow>
