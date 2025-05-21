@@ -49,11 +49,10 @@ def mouse_click(event, x, y, flags, params):
 
 # Function to redraw all polygons from memory
 def redraw_polygons():
-    global frame, all_polygons, resize_dims
+    global frame, original_frame, all_polygons, resize_dims
     # Clear the frame and redraw all polygons
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to the first frame for a fresh start
-    ret, frame = cap.read()
-    frame = cv2.resize(frame, resize_dims)
+    frame = original_frame
     if not ret:
         print("Error: Could not read frame.")
         exit()
@@ -70,13 +69,20 @@ def redraw_polygons():
 
 # load the first frame
 ret, frame = cap.read()
-if not ret:
+while not ret:
     print("Error: Could not read frame.")
-    exit()
+    ret, frame = cap.read()
+    continue
 
 # resize the frame if required
 resize_dims = eval(os.getenv("FEED_DIMS", "(640,480)"))
 frame = cv2.resize(frame, resize_dims)
+original_frame = frame
+
+print(  "Left click to draw polygons\n" \
+        "Right click to create/close polygon after drawing 3 points.\n" \
+        "Press 'x' to remove last drawn polygon\n" \
+        "Press 'q' to quit\n\n")
 
 # global variables
 points = []
@@ -102,8 +108,8 @@ while True:
 
     elif key == ord('q'):  # If 'q' is pressed, exit
         print("Exiting...")
-        print(f"Final polygons: {all_polygons}")
+        print(f"Final polygons (without spaces): {all_polygons.__str__().replace(' ', '')}")
+        cap.release()
         break
 
 cv2.destroyAllWindows()
-cap.release()
