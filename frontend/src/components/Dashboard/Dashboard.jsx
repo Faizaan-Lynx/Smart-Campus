@@ -17,17 +17,12 @@ import FeedPopup from "../FootTable/FeedPopUp";
 import { jwtDecode } from "jwt-decode";
 
 const Dashboard = () => {
-  const selectedOptionRedux = useSelector((state) => state.auth.selectedOption);
-  const [selectedOption, setSelectedOption] = useState();
   const dispatch = useDispatch();
-  const [visitData, setVisitData] = useState();
-  const [visitData1, setVisitData1] = useState();
 
   const [loading, setLoading] = useState(false);
 
   const [popupActive, setPopupActive] = useState(false);
 
-  const { siteId } = useParams();
   // Camera Related Variables
   const [cameras, setCameras] = useState([]);
 
@@ -47,12 +42,12 @@ const Dashboard = () => {
     const startFeeds = () => {
       console.log("▶️ Attempting to start feeds...");
       const token = localStorage.getItem("token");
-  
+
       if (!token) {
         console.warn("🔒 No token found in localStorage.");
         return;
       }
-  
+
       axios
         .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", {
           headers: {
@@ -69,11 +64,7 @@ const Dashboard = () => {
           alert("Failed to start feeds. Check console for details.");
         });
     };
-
-    
   }, []);
-  
-
 
   // Fetch Cameras
 
@@ -103,61 +94,72 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCameras = async () => {
       const token = localStorage.getItem("token");
-  
+
       if (!token) {
         if (!toast.isActive("token-error")) {
-          toast.error("No authentication token found!", { toastId: "token-error" });
+          toast.error("No authentication token found!", {
+            toastId: "token-error",
+          });
         }
         setLoading(false);
         return;
       }
-  
+
       try {
         const decodedToken = jwtDecode(token);
         const isAdmin = decodedToken.role === "admin";
-  
+
         let response;
         if (isAdmin) {
           response = await axios.get("http://127.0.0.1:8000/camera/", {
-            headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           });
         } else {
           const userId = decodedToken.id;
-          const userResponse = await axios.get(`http://127.0.0.1:8000/users/${userId}`, {
-            headers: { accept: "application/json", Authorization: `Bearer ${token}` },
-          });
-  
+          const userResponse = await axios.get(
+            `http://127.0.0.1:8000/users/${userId}`,
+            {
+              headers: {
+                accept: "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
           const user = userResponse.data;
           if (!user || !user.cameras.length) {
             if (!toast.isActive("no-cameras")) {
-              toast.error("No cameras assigned to this user.", { toastId: "no-cameras" });
+              toast.error("No cameras assigned to this user.", {
+                toastId: "no-cameras",
+              });
             }
             setLoading(false);
             return;
           }
-  
+
           response = { data: await fetchCameraDetails(user.cameras, token) };
         }
-  
+
         setCameras(response.data);
         const sortedCameras = response.data.sort((a, b) => a.id - b.id);
         setSelectedCamera(sortedCameras[0]?.id || null);
-
-        
       } catch (error) {
         console.error("Error fetching cameras:", error);
         if (!toast.isActive("fetch-error")) {
-          toast.error("Failed to fetch cameras. Please try again later.", { toastId: "fetch-error" });
+          toast.error("Failed to fetch cameras. Please try again later.", {
+            toastId: "fetch-error",
+          });
         }
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchCameras();
   }, []);
-  
-
 
   //Fetch Alerts
   useEffect(() => {
@@ -177,8 +179,9 @@ const Dashboard = () => {
         if (isAdmin) {
           alertUrls = ["ws://localhost:8000/ws/alerts"]; // ✅ Single WebSocket for Admin
         } else {
-        
-          alertUrls = cameras.map((camera) => `ws://localhost:8000/ws/alerts/${camera.id}`);
+          alertUrls = cameras.map(
+            (camera) => `ws://localhost:8000/ws/alerts/${camera.id}`
+          );
         }
 
         console.log("Connecting to WebSockets:", alertUrls);
@@ -186,7 +189,9 @@ const Dashboard = () => {
         // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
           ? "http://127.0.0.1:8000/alerts/"
-          : `http://127.0.0.1:8000/alerts?camera_ids=${cameras.map((c) => c.id).join(",")}`;
+          : `http://127.0.0.1:8000/alerts?camera_ids=${cameras
+              .map((c) => c.id)
+              .join(",")}`;
 
         const response = await axios.get(alertEndpoint, {
           headers: {
@@ -198,7 +203,9 @@ const Dashboard = () => {
         if (response.data && response.data.length > 0) {
           const filteredAlerts = isAdmin
             ? response.data
-            : response.data.filter((alert) => cameras.some((camera) => camera.id === alert.camera_id));
+            : response.data.filter((alert) =>
+                cameras.some((camera) => camera.id === alert.camera_id)
+              );
 
           setAlerts(filteredAlerts);
         }
@@ -219,40 +226,42 @@ const Dashboard = () => {
 
           socket.onmessage = (event) => {
             const newAlert = JSON.parse(event.data);
-            console.log("🔔 New Alert Received:", newAlert); 
-        
+            console.log("🔔 New Alert Received:", newAlert);
+
             // 🔍 Check if alert field exists and parse it
             let alertData;
             try {
-                alertData = JSON.parse(newAlert.alert); // ✅ Parse the alert JSON string
+              alertData = JSON.parse(newAlert.alert); // ✅ Parse the alert JSON string
             } catch (error) {
-                console.error("❌ Failed to parse alert data:", newAlert.alert, error);
-                return;
+              console.error(
+                "❌ Failed to parse alert data:",
+                newAlert.alert,
+                error
+              );
+              return;
             }
-        
+
             console.log("✅ Parsed Alert Data:", alertData);
-        
+
             if (!alertData.file_path) {
-                console.error("❌ Missing file_path in alertData:", alertData);
-                return;
+              console.error("❌ Missing file_path in alertData:", alertData);
+              return;
             }
-        
+
             setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
-        
+
             toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
-                duration: 50000,
-                position: "top-right",
-                style: {
-                    background: "#333",
-                    color: "white",
-                    cursor: "pointer",
-                },
-                onClick: () => handleToastClick(alertData.file_path, alertData.camera_id), // ✅ Use alertData.file_path
+              duration: 50000,
+              position: "top-right",
+              style: {
+                background: "#333",
+                color: "white",
+                cursor: "pointer",
+              },
+              onClick: () =>
+                handleToastClick(alertData.file_path, alertData.camera_id), // ✅ Use alertData.file_path
             });
-        };
-        
-          
-          
+          };
 
           socket.onerror = (error) => {
             console.error(`❌ WebSocket Error (${url}):`, error);
@@ -275,45 +284,13 @@ const Dashboard = () => {
     };
   }, [cameras]);
 
-
-//   const handleToastClick = (url, cameraId) => {
-//     console.log("handleToastClick called with URL:", url, "Camera ID:", cameraId);
-
-//     if (!url) {
-//         console.error(`Error: URL is undefined for Camera ID: ${cameraId}`);
-//         toast.error(`No valid video URL for Camera ${cameraId}`);
-//         return;
-//     }
-
-//     const getYouTubeEmbedUrl = (url) => {
-//         const videoIdMatch = url.match(
-//             /(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]+)/
-//         );
-//         return videoIdMatch ? `https://www.youtube.com/embed/${videoIdMatch[1]}` : null;
-//     };
-
-//     const youtubeEmbedUrl = getYouTubeEmbedUrl(url);
-//     if (!youtubeEmbedUrl) {
-//         console.error(`Invalid YouTube URL: ${url}`);
-//         toast.error("Invalid YouTube URL provided.");
-//         return;
-//     }
-
-//     setAlertUrl(youtubeEmbedUrl);
-//     setSelectedCamera(cameraId);
-//     setPopupActive(true);
-//     setLoading(true);
-// };
-
-  // Runs only once when component mount
-
   const handleToastClick = (data, cameraId) => {
     console.log("handleToastClick called with Camera ID:", cameraId);
 
     if (!data) {
-        console.error(`Error: No video data received for Camera ID: ${cameraId}`);
-        toast.error(`No valid video feed for Camera ${cameraId}`);
-        return;
+      console.error(`Error: No video data received for Camera ID: ${cameraId}`);
+      toast.error(`No valid video feed for Camera ${cameraId}`);
+      return;
     }
 
     // Convert byte data into a Blob URL
@@ -324,13 +301,12 @@ const Dashboard = () => {
     setAlertUrl(blobUrl); // Set blob URL to display the image
     setPopupActive(true);
     setLoading(false);
-};
-
+  };
 
   const handleOptionChange = (e) => {
     const newOption = e.target.value;
     setSelectedOption(newOption); // Update local state
-     // console.log("Selected Camera: ", cameraId);
+    // console.log("Selected Camera: ", cameraId);
     // Dispatch action to update Redux store
     dispatch(updateSelectedOption(newOption));
   };
@@ -364,8 +340,6 @@ const Dashboard = () => {
         </div>
         <BoxRow alerts={alerts} />
         <FootFallRow
-          visitData={visitData}
-          siteId={siteId}
           cameras={cameras}
           selectedCamera={selectedCamera} // Pass selectedCamera
           setSelectedCamera={setSelectedCamera} // Pass setter function
