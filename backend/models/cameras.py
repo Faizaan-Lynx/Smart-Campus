@@ -24,3 +24,6 @@ class Camera(Base):
     alerts = relationship("Alert", back_populates="camera", cascade="all, delete-orphan")
 
     intrusions = relationship("Intrusion", back_populates="camera", cascade="all, delete-orphan")
+
+    # Relationship with license plate detections
+    license_detection = relationship("License", back_populates="camera", cascade="all, delete-orphan")

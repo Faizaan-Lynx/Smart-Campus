@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from models.base import Base
 
-class Intrusion(Base):
+class License(Base):
     __tablename__ = 'license_detection'
 
     id = Column(Integer, primary_key=True, index=True)
