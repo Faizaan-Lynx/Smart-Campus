@@ -43,79 +43,79 @@ async def stop_license_plate_worker_route(camera_id: int, current_user: UserResp
     stop_license_plate_worker.apply_async(queue='license_plate_tasks', args=[camera_id], priority=0)
     return {"status": f"Stopping license plate detection for Camera {camera_id}..."}
 
-@router.get("/test_dummy_video")
-async def test_dummy_video(
-    current_user: UserResponseSchema = Depends(is_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Test the license plate detection model on the dummy video and store results in the database.
-    """
-    try:
-        # Initialize models
-        model = YOLO(model="./yolo-models/yolo-license-plates.pt")
-        ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+# @router.get("/test_dummy_video")
+# async def test_dummy_video(
+#     current_user: UserResponseSchema = Depends(is_admin),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Test the license plate detection model on the dummy video and store results in the database.
+#     """
+#     try:
+#         # Initialize models
+#         model = YOLO(model="./yolo-models/yolo-license-plates.pt")
+#         ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
         
-        # Open the dummy video
-        video_path = "/app/alert_images/dummy.mp4"
-        print("Video Path:", video_path)
-        print("File Exists:", os.path.exists(video_path))
-        cap = cv2.VideoCapture(video_path)
+#         # Open the dummy video
+#         video_path = "/app/alert_images/dummy.mp4"
+#         print("Video Path:", video_path)
+#         print("File Exists:", os.path.exists(video_path))
+#         cap = cv2.VideoCapture(video_path)
         
-        if not cap.isOpened():
-            raise HTTPException(status_code=404, detail=f"Could not open dummy video at path: {video_path}")
+#         if not cap.isOpened():
+#             raise HTTPException(status_code=404, detail=f"Could not open dummy video at path: {video_path}")
         
-        # Read first frame
-        ret, frame = cap.read()
-        if not ret:
-            raise HTTPException(status_code=500, detail="Could not read frame from video")
+#         # Read first frame
+#         ret, frame = cap.read()
+#         if not ret:
+#             raise HTTPException(status_code=500, detail="Could not read frame from video")
         
-        results = model.predict(frame, verbose=False)
+#         results = model.predict(frame, verbose=False)
 
-        detected_plates = []
-        for res in results:
-            for detection in res.boxes:
-                if detection.conf < 0.30:
-                    continue
+#         detected_plates = []
+#         for res in results:
+#             for detection in res.boxes:
+#                 if detection.conf < 0.30:
+#                     continue
                 
-                x1, y1, x2, y2 = map(int, detection.xyxy[0])
-                plate_region = frame[y1:y2, x1:x2]
+#                 x1, y1, x2, y2 = map(int, detection.xyxy[0])
+#                 plate_region = frame[y1:y2, x1:x2]
                 
-                ocr_results = ocr.ocr(plate_region, cls=True)
+#                 ocr_results = ocr.ocr(plate_region, cls=True)
                 
-                if len(ocr_results) > 0 and ocr_results[0] is not None:
-                    for line in ocr_results[0]:
-                        text = line[1][0]
-                        confidence = float(line[1][1])
+#                 if len(ocr_results) > 0 and ocr_results[0] is not None:
+#                     for line in ocr_results[0]:
+#                         text = line[1][0]
+#                         confidence = float(line[1][1])
 
-                        detected_plate = {
-                            "text": text,
-                            "confidence": confidence,
-                            "bbox": [x1, y1, x2, y2]
-                        }
-                        detected_plates.append(detected_plate)
+#                         detected_plate = {
+#                             "text": text,
+#                             "confidence": confidence,
+#                             "bbox": [x1, y1, x2, y2]
+#                         }
+#                         detected_plates.append(detected_plate)
 
-                        # Save to database
-                        camera_id = 1  # Replace with appropriate camera_id logic
-                        # camera = db.query(Camera).filter(Camera.id == camera_id).first()
-                        # if not camera:
-                        #     raise HTTPException(status_code=404, detail="Camera not found")
+#                         # Save to database
+#                         camera_id = 1  # Replace with appropriate camera_id logic
+#                         # camera = db.query(Camera).filter(Camera.id == camera_id).first()
+#                         # if not camera:
+#                         #     raise HTTPException(status_code=404, detail="Camera not found")
 
-                        new_license = License(
-                            camera_id=camera_id,
-                            license_number=text,
-                        )
-                        db.add(new_license)
-                        db.commit()
-                        db.refresh(new_license) 
+#                         new_license = License(
+#                             camera_id=camera_id,
+#                             license_number=text,
+#                         )
+#                         db.add(new_license)
+#                         db.commit()
+#                         db.refresh(new_license) 
 
-        return {
-            "status": "success",
-            "detected_plates": detected_plates
-        }
+#         return {
+#             "status": "success",
+#             "detected_plates": detected_plates
+#         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 # Create a license plate detection record
 @router.post("/", response_model=LicensePlateResponse)

@@ -17,6 +17,5 @@ sqlmodel
 sqlalchemy
 ultralytics
 uvicorn[standard]
-paddlepaddle
 paddleocr[all]
 pandas==2.2.0

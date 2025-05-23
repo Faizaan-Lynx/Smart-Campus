@@ -40,7 +40,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
-      - D:/Smart-Campus/alert_images:/app/alert_images
+      - /alert_images:/app/alert_images
       - pip-cache:/root/.cache/pip
     depends_on:
       - postgres-db

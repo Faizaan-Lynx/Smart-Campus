@@ -21,7 +21,7 @@ from paddleocr import PaddleOCR
 license_plate_worker_app = Celery('license_plate_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 
 # Initialize OCR and CLAHE globally
-ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+# ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
 ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 def unsharp_mask(image: np.ndarray, kernel_size=(5, 5), sigma=1.0, amount=0.5) -> np.ndarray:
@@ -71,6 +71,8 @@ def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, floa
     """
     # preprocess the image
     preprocessed_image = lp_image_processing(plate_img)
+    from paddleocr import PaddleOCR
+    ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
     
     # perform OCR
     lp_results = ocr.ocr(preprocessed_image, cls=True)
