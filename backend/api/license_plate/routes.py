@@ -12,10 +12,8 @@ import cv2
 import numpy as np
 import os
 from ultralytics import YOLO
-from paddleocr import PaddleOCR
 
 router = APIRouter(prefix="/license-plates", tags=["License Plates"])
-
 # admin only routes
 @router.get("/start_all_workers")
 async def start_all_license_plate_workers_route(current_user: UserResponseSchema = Depends(is_admin), db: Session = Depends(get_db)):  

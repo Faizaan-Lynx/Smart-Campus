@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
-from paddleocr import PaddleOCR
+from api.license_plate.ocr_instance import ocr
 
 # celery worker for processing video feeds for license plate detection
 license_plate_worker_app = Celery('license_plate_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
@@ -71,8 +71,6 @@ def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, floa
     """
     # preprocess the image
     preprocessed_image = lp_image_processing(plate_img)
-    from paddleocr import PaddleOCR
-    ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
     
     # perform OCR
     lp_results = ocr.ocr(preprocessed_image, cls=True)
