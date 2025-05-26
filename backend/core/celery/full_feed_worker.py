@@ -19,6 +19,10 @@ from shapely.geometry import Polygon, MultiPolygon
 
 # celery worker for processing video feeds
 full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+# remove the many h264 & rtsp warnings that get logged
+os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
+os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
+# cv2.utils.logging.setLogLevel(cv2.utils.logging.ERROR)
 
 ## ===== General Video Processing ===== ##
 
@@ -31,10 +35,8 @@ def process_feed(camera_id: int):
         camera_id (int): The ID of the camera to process.
     """
     try:
-        # get all cameras
-        db: Session = SessionLocal()
-        camera = db.query(Camera).filter(Camera.id == camera_id).first()
-        db.close()
+        # get all polygons and the camera
+        threshold_polygons, line_points, camera = update_polygons_and_camera(camera_id)
 
         if not camera:
             logging.error(f"Camera {camera_id} not found.")
@@ -48,8 +50,6 @@ def process_feed(camera_id: int):
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         stop_check_counter = 300
-
-        threshold_polygons = get_polygons(camera_id)
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-models/yolov8n.pt")
@@ -85,7 +85,7 @@ def process_feed(camera_id: int):
                         annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box for no intrusion
 
             if settings.SHOW_INTRUSION_LINES == "True":
-                annotated_frame = cv2.line(annotated_frame, eval(camera.lines)[0], eval(camera.lines)[1], (0,0,255), 1)
+                annotated_frame = cv2.polylines(annotated_frame, line_points, True, (0,0,255), 1)
             
             redis_intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
             if settings.SHOW_INTRUSION_FLAG == "True" and redis_intrusion_flag == b"True":
@@ -102,10 +102,13 @@ def process_feed(camera_id: int):
             stop_check_counter -= 1
             if stop_check_counter <= 0:
                 stop_check_counter = 300
-                camera_running = redis_client.get(f"camera_{camera_id}_running")
+                camera_running = redis_client.get(f"feed_worker_{camera_id}_running")
                 global_cameras_running = redis_client.get("feed_workers_running")
 
-                threshold_polygons = get_polygons(camera_id)
+                threshold_polygons, line_points, camera = update_polygons_and_camera(camera_id)
+                if threshold_polygons is None and line_points is None:
+                    raise Exception(f"Camera {camera_id} not found.")
+
                 if threshold_polygons is None:
                     logging.error(f"Failed to get polygons for camera {camera_id}.")
                     break
@@ -119,29 +122,42 @@ def process_feed(camera_id: int):
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
+        redis_client.set(f"feed_worker_{camera_id}_running", "False")
+        redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+
         redis_client.close()
         logging.info(f"Stopped feed processing for camera {camera_id}")
 
     return {"status": "Feed processing stopped."}
 
 
-def get_polygons(camera_id: int):
+def update_polygons_and_camera(camera_id: int):
     """
     Get the polygons for a specific camera.
+
+    Args:
+        camera_id (int) : The id number of the camera needed
+
+    Returns:
+        Polygons (shapely.geometry.MultiPolygon) : The Polygons which are needed to detect intrusions
+        line_points (list[numpy.array]) : The points of the polygons as needed by cv2.polylines() function
+        camera (Camera) : The updated camera info
     """
-    db: Session = SessionLocal()
-    camera = db.query(Camera).filter(Camera.id == camera_id).first()
-    db.close()
+    with SessionLocal() as db:
+        camera = db.query(Camera).filter(Camera.id == camera_id).first()
+
     if not camera:
         logging.error(f"Camera {camera_id} not found.")
-        return {"error": "Camera not found"}
+        return (None, None, None)
+    
     try:
         temp = ast.literal_eval(camera.lines)
         polygons = MultiPolygon([Polygon(poly) for poly in temp])
-        return polygons
+        line_points = [ np.array(polygon.exterior.coords, dtype=np.int32).reshape((-1, 1, 2)) for polygon in polygons.geoms ]
+        return polygons, line_points, camera
     except Exception as e:
         logging.error(f"Error creating polygon/line threshold for camera {camera_id}: {e}")
-        return {"error": "Invalid lines data"}
+        return (MultiPolygon(), [], camera)
 
 
 @full_feed_worker_app.task
