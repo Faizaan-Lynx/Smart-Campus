@@ -53,7 +53,7 @@ def process_feed(camera_id: int):
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-models/yolov8n.pt")
-        model.to("cuda:0")
+        # model.to("cuda:0")
         logging.info(f"Loaded YOLO model for camera {camera_id}.")
 
         while True:

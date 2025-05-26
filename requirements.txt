@@ -1,7 +1,7 @@
 aioredis
 alembic
 celery[redis]
-fastapi[all]
+fastapi[all] 
 flower
 httpx 
 jwt
