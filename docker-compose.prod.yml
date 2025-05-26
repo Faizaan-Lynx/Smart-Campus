@@ -56,7 +56,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     hostname: worker1
-    command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${MODEL_WORKERS} ${STREAM_WORKERS}
+    command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${MODEL_WORKERS} ${STREAM_WORKERS} ${LICENSE_WORKERS}
     environment:
       - CELERY_MODULE=${CELERY_MODULE}
     volumes:
@@ -79,7 +79,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    command: celery -A ${CELERY_MODULE}.worker.celery_app -A ${CELERY_MODULE}.feed_worker.feed_worker_app -A ${CELERY_MODULE}.model_worker.model_worker_app flower --port=5555
+    command: celery -A ${CELERY_MODULE}.worker.celery_app -A ${CELERY_MODULE}.feed_worker.feed_worker_app -A ${CELERY_MODULE}.model_worker.model_worker_app -A ${CELERY_MODULE}.license_plate_worker.license_plate_worker_app flower --port=5555
     volumes:
       - .:/app
       - pip-cache:/root/.cache/pip

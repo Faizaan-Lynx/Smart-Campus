@@ -30,6 +30,7 @@ class Settings:
     CELERY_WORKERS = int(os.getenv("CELERY_WORKERS", 1))
     FEED_WORKERS = int(os.getenv("FEED_WORKERS", 2))
     MODEL_WORKERS = int(os.getenv("MODEL_WORKERS", 1))
+    LICENSE_WORKERS= int(os.getenv("LICENSE_WORKERS", 2))
 
     # JWT settings
     SECRET_KEY = os.getenv("SECRET_KEY", "use_random_secret_key") 
