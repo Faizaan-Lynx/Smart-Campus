@@ -24,6 +24,7 @@ import Hosts from "./pages/Hosts/Hosts";
 import Guests from "./pages/Guests/Guests";
 import CCTVPage from "./components/CCTV/CCTVPage";
 import { logout } from "./redux/actions/authActions";
+import Gate from "./pages/Gates/Gate";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -114,10 +115,15 @@ function App() {
                 element={user ? <CCTVPage /> : <Navigate to="/login" replace />}
               />
 
+              <Route
+                path="/gate"
+                element={user ? <Gate /> : <Navigate to="/login" replace />}
+              />
+
               {/* Route For user routing */}
 
               <Route path="/userDashboard" element=<Dashboard /> />
-            
+
               {/* <Route
                 path="/host/:hostId/visits/:siteId"
                 element={
