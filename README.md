@@ -4,6 +4,12 @@ The **Smart-Campus** system is developed by **Lynx InfoSec**.
 
 <br>
 
+## Demo
+
+This is a demo video recorded for the project:
+
+[Demo Video](./assets/SmartCampus%20Demo.mp4)
+
 ## Setup Instructions
 
 Before building or pulling the repository, ensure the following two commands are executed to ensure correct line endings:
