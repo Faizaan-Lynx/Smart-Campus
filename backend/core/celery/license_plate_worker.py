@@ -114,7 +114,12 @@ def process_feed(camera_id: int):
         if not camera:
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
-        
+
+        # Only open capture if detect_intrusions is False
+        if camera.detect_intrusions:
+            logging.info(f"Camera {camera_id} has intrusion detection enabled. Skipping license plate processing.")
+            return {"status": "Skipped due to intrusion detection enabled"}
+
         # Initialize Redis license plate detection flag
         redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_license_plate_flag", "False")
@@ -146,7 +151,7 @@ def process_feed(camera_id: int):
             license_plate_detected = False
             for res in results:
                 for detection in res.boxes:
-                    if detection.conf < 0.30:  # Confidence threshold
+                    if detection.conf < 0.60:  # Confidence threshold
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     

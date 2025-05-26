@@ -33,14 +33,14 @@ const CameraFeedsButtons = () => {
     };
   
     // First API call - start feed workers
-    // axios
-    //   .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", { headers })
-    //   .then((response) => {
-    //     console.log("✅ Feed Workers Response:", response.data);
-    //   })
-    //   .catch((error) => {
-    //     console.error("❌ Failed to start feed workers:", error);
-    //   });
+    axios
+      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", { headers })
+      .then((response) => {
+        console.log("✅ Feed Workers Response:", response.data);
+      })
+      .catch((error) => {
+        console.error("❌ Failed to start feed workers:", error);
+      });
   
     // Second API call - start license plate workers
     axios
@@ -67,14 +67,14 @@ const CameraFeedsButtons = () => {
     };
   
     // First API call - stop feed workers
-    // axios
-    //   .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers", { headers })
-    //   .then((response) => {
-    //     console.log("✅ Feed Workers Stop Response:", response.data);
-    //   })
-    //   .catch((error) => {
-    //     console.error("❌ Failed to stop feed workers:", error);
-    //   });
+    axios
+      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers", { headers })
+      .then((response) => {
+        console.log("✅ Feed Workers Stop Response:", response.data);
+      })
+      .catch((error) => {
+        console.error("❌ Failed to stop feed workers:", error);
+      });
   
     // Second API call - stop license plate workers
     axios

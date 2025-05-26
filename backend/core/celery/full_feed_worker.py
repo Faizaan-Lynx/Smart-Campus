@@ -46,6 +46,11 @@ def process_feed(camera_id: int):
         redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
 
+        # Only open capture and process frames if detect_intrusions is True
+        if not camera.detect_intrusions:
+            logging.info(f"Camera {camera_id} detect_intrusions is False. Skipping capture and processing.")
+            return {"status": "Intrusion detection disabled for this camera."}
+
         cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         logging.info('Camera Url:' + camera.url)
@@ -131,7 +136,6 @@ def process_feed(camera_id: int):
 
     return {"status": "Feed processing stopped."}
 
-
 def update_polygons_and_camera(camera_id: int):
     """
     Get the polygons for a specific camera.
@@ -178,6 +182,11 @@ def process_feed_without_model(camera_id: int):
         if not camera:
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
+        
+        # Only open capture and process frames if detect_intrusions is True
+        if not camera.detect_intrusions:
+            logging.info(f"Camera {camera_id} detect_intrusions is False. Skipping capture and processing.")
+            return {"status": "Intrusion detection disabled for this camera."}
 
         # cap = cv2.VideoCapture(camera.url)
         cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)

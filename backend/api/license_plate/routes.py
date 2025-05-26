@@ -143,6 +143,13 @@ def get_license_plates_by_camera(camera_id: int, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail="No license plate detections found for this camera")
     return license_plates
 
+# Delete all license plates detected
+@router.delete("/delete_all")
+def delete_all_license_plates(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
+    deleted_count = db.query(License).delete()
+    db.commit()
+    return {"message": f"Deleted {deleted_count} license plate detection(s) successfully"}
+
 # Delete a license plate detection by ID
 @router.delete("/{license_id}")
 def delete_license_plate(license_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
