@@ -147,7 +147,7 @@ const Dashboard = () => {
         const filteredCameras = response.data.filter(camera => camera.detect_intrusions === true);
         const sortedCameras = filteredCameras.sort((a, b) => a.id - b.id);
         setCameras(sortedCameras);
-        
+
         setSelectedCamera(sortedCameras[0]?.id || null);
       } catch (error) {
         console.error("Error fetching cameras:", error);
@@ -193,8 +193,8 @@ const Dashboard = () => {
         const alertEndpoint = isAdmin
           ? "http://127.0.0.1:8000/alerts/"
           : `http://127.0.0.1:8000/alerts?camera_ids=${cameras
-              .map((c) => c.id)
-              .join(",")}`;
+            .map((c) => c.id)
+            .join(",")}`;
 
         const response = await axios.get(alertEndpoint, {
           headers: {
@@ -207,11 +207,29 @@ const Dashboard = () => {
           const filteredAlerts = isAdmin
             ? response.data
             : response.data.filter((alert) =>
-                cameras.some((camera) => camera.id === alert.camera_id)
-              );
+              cameras.some((camera) => camera.id === alert.camera_id)
+            );
 
-          setAlerts(filteredAlerts);
+          const sortedFormattedAlerts = filteredAlerts
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .map((item) => {
+              const utcDate = new Date(item.timestamp + "Z"); // Append Z to mark UTC
+              return {
+                ...item,
+                timestamp: utcDate.toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }),
+              };
+            });
+
+          setAlerts(sortedFormattedAlerts);
         }
+
 
         // Open WebSocket connections
         alertUrls.forEach((url) => {
@@ -244,7 +262,16 @@ const Dashboard = () => {
               return;
             }
 
-            console.log("✅ Parsed Alert Data:", alertData);
+            const utcDate = new Date(alertData.timestamp + "Z");
+            alertData.timestamp = utcDate.toLocaleString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+
 
             if (!alertData.file_path) {
               console.error("❌ Missing file_path in alertData:", alertData);

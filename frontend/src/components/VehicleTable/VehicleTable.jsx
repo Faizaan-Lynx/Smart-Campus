@@ -55,23 +55,44 @@ export default function VehicleTable() {
     const fetchLicensePlates = async () => {
       const token = localStorage.getItem("token");
       if (!token) return;
-
+  
       try {
         const response = await axios.get("http://127.0.0.1:8000/license-plates/", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        setData(response.data);
+  
+        // Sort and format with local system time
+        const sortedFormattedData = response.data
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .map(item => {
+            const utcDate = new Date(item.timestamp + "Z"); // Append Z to mark UTC
+            return {
+              ...item,
+              timestamp: utcDate.toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              }),
+            };
+          });
+          
+  
+        setData(sortedFormattedData);
+  
       } catch (error) {
         console.error("Error fetching license plates:", error);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchLicensePlates();
-  }, []);
+  }, []);  
 
 
   const handleChangePage = (event, newPage) => {
@@ -83,33 +104,33 @@ export default function VehicleTable() {
     setPage(0);
   };
 
-  const handleFeedClick = async (alertId) => {
-    console.log("Feed Clicked", alertId);
-
+  const handleFeedClick = async (licenseId) => {
+  
     try {
       const token = localStorage.getItem("token");
-
+  
       const response = await axios.get(
-        `http://127.0.0.1:8000/alerts/${alertId}/image`,
+        `http://127.0.0.1:8000/license-plates/${licenseId}/image`, // ✅ Updated endpoint
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          responseType: "blob", // Expecting the response to be a blob (image)
+          responseType: "blob", // Expecting the response to be an image blob
         }
       );
-
+  
       if (response.headers["content-type"]?.startsWith("image/")) {
-        console.log("Image blob received", response.data);
-        setSelectedFeed(response.data); // Set the blob directly to state
+        console.log("License image blob received", response.data);
+        setSelectedFeed(response.data); // Update state with the image blob
       } else {
         const errorText = await response.data.text();
         console.error("Expected image, got:", errorText);
       }
     } catch (error) {
-      console.error("Error fetching the image:", error);
+      console.error("Error fetching license image:", error);
     }
   };
+  
 
   return (
     <div className="foottable__div__main">

@@ -19,6 +19,8 @@ from api.license_plate.ocr_instance import ocr
 
 # celery worker for processing video feeds for license plate detection
 license_plate_worker_app = Celery('license_plate_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
+os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
 # Initialize OCR and CLAHE globally
 # ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
@@ -49,15 +51,27 @@ def lp_image_processing(image: np.ndarray) -> np.ndarray:
 def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
     """
     Applies rules to the extracted license plate number to make it more readable.
+    Trims known regional keywords like 'ICT-ISLAMABAD', 'PUNJAB', 'SINDH', etc.
     Logs the original and cleaned license plate text.
     """
-    logging.info(f"Original OCR license plate: {license_plate}")
     
-    text = license_plate.replace(' ', '')
-    logging.info(f"Cleaned license plate (no spaces): {text}")
+    # Remove spaces and convert to uppercase
+    text = license_plate.replace(' ', '').upper()
+    # List of known region keywords to trim
+    banned_keywords = ['ICTISLAMABAD', 'ICT-', 'PUNJAB', 'SINDH', 'KPK', 'BALOCHISTAN', 'AJK', 'GILGIT', 'ISLAMABAD']
     
-    car_bus_pattern = r'^[A-Za-z]{2,3}-?\d{3,4}[A-Za-z]?$'  # 2-3 letters, 3-4 digits, optional dash, optional letter at end
-    motorcycle_pattern = r'^[A-Za-z]{2,3}-?\d{3,4}[A-Za-z]?$'  # same pattern for now
+    # Remove banned keywords if found at the start
+    for keyword in banned_keywords:
+        if text.startswith(keyword):
+            text = text[len(keyword):]
+            break  # Trim only the first matching keyword
+    
+    # Remove any remaining leading hyphens
+    text = text.lstrip('-')
+
+    # Define patterns for different vehicle classes
+    car_bus_pattern = r'^[A-Z]{2,3}-?\d{3,4}[A-Z]?$'
+    motorcycle_pattern = r'^[A-Z]{2,3}-?\d{3,4}[A-Z]?$'
 
     if class_name in ("car", "bus"):
         if re.match(car_bus_pattern, text):
@@ -68,7 +82,7 @@ def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
         if re.match(motorcycle_pattern, text):
             logging.info(f"License plate matched pattern for class '{class_name}'")
             return True, text
-        
+
     logging.info(f"License plate did not match any pattern for class '{class_name}'")
     return False, text
 
@@ -158,7 +172,7 @@ def process_feed(camera_id: int):
             license_plate_detected = False
             for res in results:
                 for detection in res.boxes:
-                    if detection.conf < 0.60:  # Confidence threshold
+                    if detection.conf < 0.57:  # Confidence threshold
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     
@@ -271,7 +285,7 @@ def handle_license_plate_event(camera_id: int, license_number: str, frame: np.nd
     if frame is not None:
         # Save the frame to a file
         timestamp = int(datetime.now().timestamp())
-        file_path = f"/app/alert_images/license_plate_{camera_id}_{timestamp}.jpg"
+        file_path = f"/app/alert_images/license_plates/license_plate_{camera_id}_{timestamp}.jpg"
         cv2.imwrite(file_path, frame)
 
     # Create database record
@@ -280,7 +294,8 @@ def handle_license_plate_event(camera_id: int, license_number: str, frame: np.nd
         new_license = License(
             camera_id=camera_id,
             license_number=license_number,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
+            file_path=file_path
         )
         db.add(new_license)
         db.commit()

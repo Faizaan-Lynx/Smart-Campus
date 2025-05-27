@@ -18,9 +18,7 @@ const BoxRow = ({ alerts }) => {
         if (isNaN(alertDate.getTime())) return false;
         
         return now - alertDate <= 24 * 60 * 60 * 1000; // within last 24 hours
-      });
-      console.log("Updated Alerts", updatedAlerts);
-  
+      });  
       setFilteredAlerts(updatedAlerts);
     };
   
