@@ -111,54 +111,6 @@ export default function VehicleTable() {
     }
   };
 
-  const handleAcknowledge = async (alertId) => {
-    const token = localStorage.getItem("token");
-    try {
-      await axios.patch(
-        `http://127.0.0.1:8000/alerts/${alertId}/acknowledge`,
-        {
-          is_acknowledged: true,
-        },
-        {
-          headers: {
-            accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Update the alert list locally
-      setAlerts((prevAlerts) =>
-        prevAlerts.map((alert) =>
-          alert.id === alertId ? { ...alert, is_acknowledged: true } : alert
-        )
-      );
-    } catch (error) {
-      console.error("Failed to acknowledge alert:", error);
-    }
-  };
-
-  const handleDelete = async (alertId) => {
-    const token = localStorage.getItem("token");
-    try {
-      await axios.delete(`http://127.0.0.1:8000/alerts/${alertId}`, {
-        headers: {
-          accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token})}`,
-        },
-      });
-
-      // Update the alert list locally
-      setAlerts((prevAlerts) =>
-        prevAlerts.filter((alert) => alert.id !== alertId)
-      );
-    } catch (error) {
-      console.error("Failed to delete alert:", error);
-    }
-  };
-
   return (
     <div className="foottable__div__main">
       <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
@@ -185,18 +137,6 @@ export default function VehicleTable() {
                   ))}
                   <StyledTableCell align="center">
                     <div className="action-buttons">
-                      <button
-                        className="acknowledge-button"
-                        onClick={() => handleAcknowledge(row.id)}
-                      >
-                        Acknowledge
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDelete(row.id)}
-                      >
-                        Delete
-                      </button>
                       <button
                         className="feed-button"
                         onClick={() => handleFeedClick(row.id)}
