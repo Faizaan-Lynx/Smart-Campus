@@ -59,7 +59,7 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
         {imageSrc ? (
           <img className="camera__feed__image" src={imageSrc} alt="Live Stream" ref={imgRef} />
         ) : (
-          <p>No feed available</p>
+          <div className="loader"></div>
         )}
       </div>
 

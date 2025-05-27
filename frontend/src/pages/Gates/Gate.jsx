@@ -124,6 +124,7 @@ const Gate = () => {
             cameras={cameras}
             selectedCamera={selectedCamera}
             setSelectedCamera={setSelectedCamera}
+            loading={loading}
           />
         </div>
         <VehicleTable />

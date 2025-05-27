@@ -306,14 +306,6 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleOptionChange = (e) => {
-    const newOption = e.target.value;
-    setSelectedOption(newOption); // Update local state
-    // console.log("Selected Camera: ", cameraId);
-    // Dispatch action to update Redux store
-    dispatch(updateSelectedOption(newOption));
-  };
-
   return (
     <div className="dashboard__main">
       <ToastContainer
@@ -346,6 +338,7 @@ const Dashboard = () => {
           cameras={cameras}
           selectedCamera={selectedCamera} // Pass selectedCamera
           setSelectedCamera={setSelectedCamera} // Pass setter function
+          loading={loading}
         />
         {/* Line Graph Added Below the Video Row */}
         {/* <FootFall visitData={visitData} /> */}

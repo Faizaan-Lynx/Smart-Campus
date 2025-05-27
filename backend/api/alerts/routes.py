@@ -64,6 +64,12 @@ def get_all_alerts(db: Session = Depends(get_db), current_user: UserResponseSche
     """Fetch all alerts."""
     return db.query(Alert).all()
 
+@router.delete("/all")
+def delete_all_alerts(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
+    """Delete all alerts."""
+    deleted = db.query(Alert).delete()
+    db.commit()
+    return {"message": f"{deleted} alerts deleted successfully"}
 
 @router.delete("/{alert_id}")
 def delete_alert(alert_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
@@ -74,7 +80,6 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db), current_user: Use
     db.delete(alert)
     db.commit()
     return {"message": "Alert deleted successfully"}
-
 
 @router.patch("/{alert_id}/acknowledge", response_model=AlertResponse)
 def update_alert_acknowledgment(

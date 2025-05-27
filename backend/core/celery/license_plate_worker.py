@@ -49,20 +49,27 @@ def lp_image_processing(image: np.ndarray) -> np.ndarray:
 def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
     """
     Applies rules to the extracted license plate number to make it more readable.
+    Logs the original and cleaned license plate text.
     """
-    text = license_plate.replace(' ', '')
+    logging.info(f"Original OCR license plate: {license_plate}")
     
-    car_bus_pattern = r'^[A-Za-z]{3}\d{3}[A-Za-z]{1}$'  # 3 letters, 3 digits, 1 letter
-    motorcycle_pattern = r'^[A-Za-z]{2}\d{3}[A-Za-z]{1}$'  # 2 letters, 3 digits, 1 letter
+    text = license_plate.replace(' ', '')
+    logging.info(f"Cleaned license plate (no spaces): {text}")
+    
+    car_bus_pattern = r'^[A-Za-z]{2,3}-?\d{3,4}[A-Za-z]?$'  # 2-3 letters, 3-4 digits, optional dash, optional letter at end
+    motorcycle_pattern = r'^[A-Za-z]{2,3}-?\d{3,4}[A-Za-z]?$'  # same pattern for now
 
     if class_name in ("car", "bus"):
         if re.match(car_bus_pattern, text):
+            logging.info(f"License plate matched pattern for class '{class_name}'")
             return True, text
         
     if class_name == "motorcycle":
         if re.match(motorcycle_pattern, text):
+            logging.info(f"License plate matched pattern for class '{class_name}'")
             return True, text
         
+    logging.info(f"License plate did not match any pattern for class '{class_name}'")
     return False, text
 
 def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, float, bool]:
@@ -160,6 +167,9 @@ def process_feed(camera_id: int):
                     
                     # Perform OCR on the license plate
                     lp_number, confidence, valid = license_plate_ocr(plate_region, "car")  # Assuming car for now
+                    # If not valid, retry as motorcycle
+                    if not valid:
+                        lp_number, confidence, valid = license_plate_ocr(plate_region, "motorcycle")
                     
                     # Draw bounding box and text
                     color = (0, 255, 0) if valid else (0, 0, 255)
@@ -176,8 +186,16 @@ def process_feed(camera_id: int):
                 publish_frame(camera_id, annotated_frame)
 
             # handle license plate detection event if detected
-            if license_plate_detected:
-                handle_license_plate_event(camera_id, lp_number, annotated_frame)
+            if license_plate_detected and lp_number and valid:
+                # Redis key: unique per camera and plate number
+                redis_key = f"camera_{camera_id}_lp_{lp_number}"
+                
+                if not redis_client.exists(redis_key):
+                    handle_license_plate_event(camera_id, lp_number, annotated_frame)
+                    redis_client.set(redis_key, "1", ex=60)  # 1 minute TTL
+                else:
+                    logging.info(f"Plate {lp_number} already handled recently for camera {camera_id}. Skipping DB insert.")
+
             
             stop_check_counter -= 1
             if stop_check_counter <= 0:
