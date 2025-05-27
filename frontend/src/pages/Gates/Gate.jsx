@@ -2,12 +2,18 @@ import React, { useEffect, useState, useRef } from "react";
 import FootFallRow from "../../components/FootFallRow/FootFallRow";
 import "./Gate.css";
 import VehicleTable from "../../components/VehicleTable/VehicleTable";
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 const Gate = () => {
   // Camera Related Variables
   const [cameras, setCameras] = useState([]);
 
   const [selectedCamera, setSelectedCamera] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  
+  // Fetch Cameras
 
   const fetchCameraDetails = async (cameraIds, token) => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
@@ -84,8 +90,11 @@ const Gate = () => {
           response = { data: await fetchCameraDetails(user.cameras, token) };
         }
 
-        setCameras(response.data);
-        const sortedCameras = response.data.sort((a, b) => a.id - b.id);
+
+        const filteredCameras = response.data.filter(camera => camera.detect_intrusions === false);
+        const sortedCameras = filteredCameras.sort((a, b) => a.id - b.id);
+        setCameras(sortedCameras);
+        
         setSelectedCamera(sortedCameras[0]?.id || null);
       } catch (error) {
         console.error("Error fetching cameras:", error);

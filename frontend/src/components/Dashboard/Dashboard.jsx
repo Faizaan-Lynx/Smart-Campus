@@ -143,8 +143,11 @@ const Dashboard = () => {
           response = { data: await fetchCameraDetails(user.cameras, token) };
         }
 
-        setCameras(response.data);
-        const sortedCameras = response.data.sort((a, b) => a.id - b.id);
+
+        const filteredCameras = response.data.filter(camera => camera.detect_intrusions === true);
+        const sortedCameras = filteredCameras.sort((a, b) => a.id - b.id);
+        setCameras(sortedCameras);
+        
         setSelectedCamera(sortedCameras[0]?.id || null);
       } catch (error) {
         console.error("Error fetching cameras:", error);

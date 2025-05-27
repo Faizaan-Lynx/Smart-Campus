@@ -274,15 +274,15 @@ def handle_license_plate_event(camera_id: int, license_number: str, frame: np.nd
         db.close()
 
     # Create alert for the detection
-    alert_data = AlertBase(
-        camera_id=camera_id, 
-        timestamp=str(datetime.now().replace(microsecond=0)), 
-        is_acknowledged=False, 
-        file_path=file_path
-    )
-    db = SessionLocal()
-    create_alert(alert_data, db)
-    db.close()
+    # alert_data = AlertBase(
+    #     camera_id=camera_id, 
+    #     timestamp=str(datetime.now().replace(microsecond=0)), 
+    #     is_acknowledged=False, 
+    #     file_path=file_path
+    # )
+    # db = SessionLocal()
+    # create_alert(alert_data, db)
+    # db.close()
 
 ## ====== Celery Tasks for Starting and Stopping License Plate Workers ===== ##
 
