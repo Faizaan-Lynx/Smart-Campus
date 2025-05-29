@@ -19,6 +19,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 # pytorch with gpu support
 RUN --mount=type=cache,target=/root/.cache/pip pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+# paddlepaddle with gpu support
+RUN --mount=type=cache,target=/root/.cache/pip pip install paddlepaddle-gpu==3.0.0 --index-url https://www.paddlepaddle.org.cn/packages/stable/cu126/
 
 # backend code and .env file
 COPY backend/ ./backend

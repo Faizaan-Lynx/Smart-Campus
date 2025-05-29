@@ -14,7 +14,7 @@ const Sidebar = () => {
   const dispatch = useDispatch();
   const [userInfo, setUserInfo] = useState(null);
   const [siteData, setSiteData] = useState([]);
-  console.log("Siderbar component",userInfo);
+  console.log("Siderbar component", userInfo);
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("Sidebar", token);
@@ -154,8 +154,14 @@ const Sidebar = () => {
               </a>
             </li> */}
 
+            <li className="nav-link">
+              <a onClick={() => navigate("/gate")}>
+                <i className="bx bx-camera icon"></i>
+                <span className="text nav-text">Gates</span>
+              </a>
+            </li>
+            
             {userInfo?.role === "admin" && (
-             
               <li className="nav-link">
                 <a onClick={() => navigate("/settings")}>
                   <i className="bx bx-cog icon"></i>
@@ -163,6 +169,7 @@ const Sidebar = () => {
                 </a>
               </li>
             )}
+
             {/* <li className="nav-link">
               <a onClick={() => navigate("/settings")}>
                 <i className="bx bx-cog icon"></i>

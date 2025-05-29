@@ -26,40 +26,69 @@ const CameraFeedsButtons = () => {
   const startFeeds = () => {
     console.log("▶️ Attempting to start feeds...");
     const token = localStorage.getItem("token");
-
+  
+    const headers = {
+      accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  
+    // First API call - start feed workers
     axios
-      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", {
-        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
-      })
+      .get("http://127.0.0.1:8000/intrusions/start_all_feed_workers", { headers })
       .then((response) => {
-        console.log("✅ API Response:", response.data);
-        alert("Feeds started successfully");
+        console.log("✅ Feed Workers Response:", response.data);
       })
       .catch((error) => {
-        console.error("❌ Failed to start feeds:", error);
-        alert("Failed to start feeds. Check console for details.");
+        console.error("❌ Failed to start feed workers:", error);
+      });
+  
+    // Second API call - start license plate workers
+    axios
+      .get("http://127.0.0.1:8000/license-plates/start_all_workers", { headers })
+      .then((response) => {
+        console.log("✅ License Plate Workers Response:", response.data);
+        alert("Feeds and license plate workers started successfully.");
+      })
+      .catch((error) => {
+        console.error("❌ Failed to start license plate workers:", error);
+        alert("Failed to start license plate workers. Check console for details.");
       });
   };
+  
 
   // 🔴 Stop feeds
   const stopFeeds = () => {
     console.log("⏹️ Attempting to stop feeds...");
     const token = localStorage.getItem("token");
-
+  
+    const headers = {
+      accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  
+    // First API call - stop feed workers
     axios
-      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers", {
-        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
-      })
+      .get("http://127.0.0.1:8000/intrusions/stop_all_feed_workers", { headers })
       .then((response) => {
-        console.log("✅ API Response:", response.data);
-        alert("Feeds stopped successfully.");
+        console.log("✅ Feed Workers Stop Response:", response.data);
       })
       .catch((error) => {
-        console.error("❌ Failed to stop feeds:", error);
-        alert("Failed to stop feeds. Check console for details.");
+        console.error("❌ Failed to stop feed workers:", error);
+      });
+  
+    // Second API call - stop license plate workers
+    axios
+      .get("http://127.0.0.1:8000/license-plates/stop_all_workers", { headers })
+      .then((response) => {
+        console.log("✅ License Plate Workers Stop Response:", response.data);
+        alert("Feeds and license plate workers stopped successfully.");
+      })
+      .catch((error) => {
+        console.error("❌ Failed to stop license plate workers:", error);
+        alert("Failed to stop license plate workers. Check console for details.");
       });
   };
-
+  
   // 🕒 Show loading if userInfo not ready
   if (!userInfo) {
     return <p>Loading...</p>;
