@@ -8,7 +8,10 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
-import { color1 } from "../../utils";
+import TextField from "@mui/material/TextField"; // Import TextField for the search input
+import InputAdornment from "@mui/material/InputAdornment"; // For search icon
+import SearchIcon from "@mui/icons-material/Search"; // For search icon
+import { color1 } from "../../utils"; // Assuming color1 is defined here
 import FeedPopup from "../FootTable/FeedPopUp";
 import axios from "axios";
 
@@ -42,27 +45,26 @@ const columns = [
   { Header: "License Plate", accessor: "license_number" },
 ];
 
-
 export default function VehicleTable() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedFeed, setSelectedFeed] = useState(null);
-
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(""); // State for search term
 
   useEffect(() => {
     const fetchLicensePlates = async () => {
       const token = localStorage.getItem("token");
       if (!token) return;
-  
+
       try {
         const response = await axios.get("http://127.0.0.1:8000/license-plates/", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-  
+
         // Sort and format with local system time
         const sortedFormattedData = response.data
           .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -80,20 +82,18 @@ export default function VehicleTable() {
               }),
             };
           });
-          
-  
+
         setData(sortedFormattedData);
-  
+
       } catch (error) {
         console.error("Error fetching license plates:", error);
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchLicensePlates();
-  }, []);  
 
+    fetchLicensePlates();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -105,23 +105,21 @@ export default function VehicleTable() {
   };
 
   const handleFeedClick = async (licenseId) => {
-  
     try {
       const token = localStorage.getItem("token");
-  
       const response = await axios.get(
-        `http://127.0.0.1:8000/license-plates/${licenseId}/image`, // ✅ Updated endpoint
+        `http://127.0.0.1:8000/license-plates/${licenseId}/image`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          responseType: "blob", // Expecting the response to be an image blob
+          responseType: "blob",
         }
       );
-  
+
       if (response.headers["content-type"]?.startsWith("image/")) {
         console.log("License image blob received", response.data);
-        setSelectedFeed(response.data); // Update state with the image blob
+        setSelectedFeed(response.data);
       } else {
         const errorText = await response.data.text();
         console.error("Expected image, got:", errorText);
@@ -130,10 +128,52 @@ export default function VehicleTable() {
       console.error("Error fetching license image:", error);
     }
   };
-  
+
+  // Filtered data based on searchTerm
+  const filteredData = data.filter((row) => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return (
+      row.license_number.toLowerCase().includes(lowerCaseSearchTerm) ||
+      row.timestamp.toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  });
 
   return (
     <div className="foottable__div__main">
+      <Paper elevation={3} sx={{ borderRadius: "11px", marginBottom: "20px", padding: "15px" }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search by License Plate or Timestamp..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: "8px",
+              "& fieldset": {
+                borderColor: "#5e37ff", // Border color
+              },
+              "&:hover fieldset": {
+                borderColor: "#5e37ff !important", // Hover border color
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: "#5e37ff !important", // Focused border color
+              },
+            },
+          }}
+          sx={{
+            "& .MuiInputBase-input": {
+              padding: "12px 14px",
+            },
+          }}
+        />
+      </Paper>
+
       <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
         <Table sx={{ minWidth: 700 }} aria-label="vehicle table">
           <TableHead>
@@ -147,7 +187,7 @@ export default function VehicleTable() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data
+            {filteredData
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row) => (
                 <StyledTableRow key={row.id}>
@@ -173,7 +213,7 @@ export default function VehicleTable() {
         <TablePagination
           rowsPerPageOptions={[5, 10, 15, 20]}
           component="div"
-          count={data.length}
+          count={filteredData.length} // Use filteredData length for pagination
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
