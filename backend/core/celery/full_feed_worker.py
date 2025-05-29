@@ -22,7 +22,7 @@ full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backe
 # remove the many h264 & rtsp warnings that get logged
 os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
-# cv2.utils.logging.setLogLevel(cv2.utils.logging.ERROR)
+
 
 ## ===== General Video Processing ===== ##
 
