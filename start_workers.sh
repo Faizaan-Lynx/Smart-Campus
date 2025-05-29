@@ -34,7 +34,7 @@ for i in $(seq 1 $FEED_WORKERS); do
 done
 
 # License workers start up
-LICENSE_WORKERS=${2:-3}
+LICENSE_WORKERS=${3:-3}
 echo "Scaling Feed workers to $LICENSE_WORKERS..."
 
 for i in $(seq 1 $LICENSE_WORKERS); do

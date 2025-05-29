@@ -23,7 +23,6 @@ os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
 # Initialize OCR and CLAHE globally
-# ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
 ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 def unsharp_mask(image: np.ndarray, kernel_size=(5, 5), sigma=1.0, amount=0.5) -> np.ndarray:
@@ -153,9 +152,6 @@ def process_feed(camera_id: int):
         # load yolo model for license plate detection
         model = YOLO(model="./yolo-models/yolo-license-plates.pt")  # Replace with your license plate model path
         logging.info(f"Loaded license plate detection model for camera {camera_id}.")
-
-        # Dictionary to store detected license plates
-        lp_dict = {}  # {vehicle_id: (lp_num, lp_conf, cls_name, valid)}
 
         while True:
             ret, frame = cap.read()
