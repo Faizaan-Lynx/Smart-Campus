@@ -11,7 +11,7 @@ class CameraBase(BaseModel):
     detect_intrusions: Optional[bool] = True
 
 class CameraCreate(CameraBase):
-    pass
+    id: Optional[int] = None  # Allow specifying the ID manually
 
 class CameraUpdate(CameraBase):
     url: Optional[str] = None

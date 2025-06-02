@@ -1,5 +1,6 @@
 from typing import List
 from celery import group
+from sqlalchemy import text
 from config import settings
 from core.database import get_db
 from sqlalchemy.orm import Session
@@ -15,14 +16,28 @@ router = APIRouter(prefix="/camera", tags=["Cameras"])
 
 @router.post("/", response_model=Camera, status_code=status.HTTP_201_CREATED)
 def create_camera(camera: CameraCreate, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
-    db_camera = CameraModel(url=camera.url, location=camera.location, detection_threshold=camera.detection_threshold,
-                            resize_dims=camera.resize_dims, crop_region=camera.crop_region, lines=camera.lines, 
-                            detect_intrusions=camera.detect_intrusions)
+    if camera.id is not None:
+        existing = db.query(CameraModel).filter(CameraModel.id == camera.id).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Camera with ID {camera.id} already exists."
+            )
+        db_camera = CameraModel(id=camera.id, **camera.model_dump(exclude={"id"}))
+    else:
+        db_camera = CameraModel(**camera.model_dump())
+
     db.add(db_camera)
     db.commit()
     db.refresh(db_camera)
 
-    # create a task group to update the cameras list for all model workers
+    # Ensure sequence is up-to-date
+    db.execute(
+        text("SELECT setval('cameras_id_seq', (SELECT MAX(id) FROM cameras))")
+    )
+    db.commit()
+
+    # update model workers
     task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
     task_group.apply_async(queue='model_tasks')
 
