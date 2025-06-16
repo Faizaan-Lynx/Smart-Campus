@@ -15,8 +15,9 @@ class Users(Base):
     is_admin = Column(Boolean, default=False)
     ip_address = Column(String, nullable=True)
     license_plate = Column(String, nullable=True)
-    entered_at_timestamp = Column(DateTime, default=datetime.utcnow)
-    exit_at_timestamp = Column(DateTime, default=datetime.utcnow)
+    entered_at_timestamp = Column(DateTime, nullable=True) # using this for now
+    exit_at_timestamp = Column(DateTime, nullable=True)
+
 
 
     # Relationship with cameras

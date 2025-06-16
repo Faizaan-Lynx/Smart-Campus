@@ -16,6 +16,7 @@ from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 from api.license_plate.ocr_instance import ocr
+from models.users import Users
 
 # celery worker for processing video feeds for license plate detection
 license_plate_worker_app = Celery('license_plate_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
@@ -277,7 +278,7 @@ def handle_license_plate_event(camera_id: int, license_number: str, frame: np.nd
     logging.info(f"License plate detected for camera {camera_id}: {license_number}")
 
     file_path = None
-
+    current_time = datetime.now()
     if frame is not None:
         # Save the frame to a file
         timestamp = int(datetime.now().timestamp())
@@ -294,6 +295,11 @@ def handle_license_plate_event(camera_id: int, license_number: str, frame: np.nd
             file_path=file_path
         )
         db.add(new_license)
+         # Update Users table if match is found
+        user = db.query(Users).filter(Users.license_plate == license_number).first()
+        if user:
+            user.entered_at_timestamp = current_time
+            logging.info(f"Updated entered_at_timestamp for user {user.username}")
         db.commit()
         db.refresh(new_license)
     except Exception as e:

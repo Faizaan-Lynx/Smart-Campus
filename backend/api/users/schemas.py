@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from passlib.context import CryptContext
+from datetime import datetime
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")    
 
@@ -12,8 +13,8 @@ class UserBase(BaseModel):
     ip_address: Optional[str] = None
     cameras: List[int] = []
     license_plate: Optional[str] = None  # Optional field for license plate
-    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
-    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
+    entered_at_timestamp: Optional[datetime] = None # Use str for ISO format
+    exit_at_timestamp: Optional[datetime] = None   # Use str for ISO format
     class Config:
         from_attributes = True
 
@@ -41,8 +42,8 @@ class UserCreate(BaseModel):
     ip_address: Optional[str] = None
     cameras: List[int] = []
     license_plate: Optional[str] = None  # Optional field for license plate
-    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
-    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
+    entered_at_timestamp: Optional[datetime] = None  # Use str for ISO format
+    exit_at_timestamp: Optional[datetime] = None   # Use str for ISO format
 
     def hash_password(self):
         """Hash the password before storing"""
@@ -57,8 +58,8 @@ class UserUpdate(BaseModel):  # No need to inherit from UserBase to keep fields 
     ip_address: Optional[str] = None
     cameras: Optional[List[int]] = None  # Make cameras optional
     license_plate: Optional[str] = None  # Optional field for license plate
-    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
-    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
+    entered_at_timestamp: Optional[datetime] = None  # Use str for ISO format
+    exit_at_timestamp: Optional[datetime] = None   # Use str for ISO format
 
     class Config:
         from_attributes = True
