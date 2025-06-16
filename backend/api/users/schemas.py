@@ -11,7 +11,9 @@ class UserBase(BaseModel):
     is_admin: Optional[bool] = False
     ip_address: Optional[str] = None
     cameras: List[int] = []
-
+    license_plate: Optional[str] = None  # Optional field for license plate
+    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
+    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
     class Config:
         from_attributes = True
 
@@ -24,7 +26,10 @@ class UserBase(BaseModel):
             email=obj.email,
             is_admin=obj.is_admin,
             ip_address=obj.ip_address,
-            cameras=[camera.id for camera in obj.cameras] if hasattr(obj, "cameras") else []
+            cameras=[camera.id for camera in obj.cameras] if hasattr(obj, "cameras") else [],
+            license_plate=obj.license_plate,
+            entered_at_timestamp=obj.entered_at_timestamp,
+            exit_at_timestamp=obj.exit_at_timestamp
         )
 
 
@@ -35,6 +40,9 @@ class UserCreate(BaseModel):
     is_admin: Optional[bool] = False
     ip_address: Optional[str] = None
     cameras: List[int] = []
+    license_plate: Optional[str] = None  # Optional field for license plate
+    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
+    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
 
     def hash_password(self):
         """Hash the password before storing"""
@@ -48,6 +56,9 @@ class UserUpdate(BaseModel):  # No need to inherit from UserBase to keep fields 
     is_admin: Optional[bool] = None
     ip_address: Optional[str] = None
     cameras: Optional[List[int]] = None  # Make cameras optional
+    license_plate: Optional[str] = None  # Optional field for license plate
+    entered_at_timestamp: Optional[str] = None  # Use str for ISO format
+    exit_at_timestamp: Optional[str] = None  # Use str for ISO format
 
     class Config:
         from_attributes = True

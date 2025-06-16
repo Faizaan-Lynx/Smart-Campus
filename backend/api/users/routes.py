@@ -26,7 +26,10 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
         hashed_password=hashed_password,  # Store hashed password
         is_admin=user.is_admin,
-        ip_address=user.ip_address
+        ip_address=user.ip_address,
+        license_plate=user.license_plate,
+        entered_at_timestamp=user.entered_at_timestamp,
+        exit_at_timestamp=user.exit_at_timestamp
     )
 
     db.add(new_user)
