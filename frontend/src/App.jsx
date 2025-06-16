@@ -25,6 +25,7 @@ import Guests from "./pages/Guests/Guests";
 import CCTVPage from "./components/CCTV/CCTVPage";
 import { logout } from "./redux/actions/authActions";
 import Gate from "./pages/Gates/Gate";
+import UserEntryAnalytics from "./components/UserEntryAnalytics/UserEntryAnalytics";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -118,6 +119,11 @@ function App() {
               <Route
                 path="/gate"
                 element={user ? <Gate /> : <Navigate to="/login" replace />}
+              />
+
+              <Route
+                path="/user-analytics"
+                element={user ? <UserEntryAnalytics /> : <Navigate to="/login" replace />}
               />
 
               {/* Route For user routing */}

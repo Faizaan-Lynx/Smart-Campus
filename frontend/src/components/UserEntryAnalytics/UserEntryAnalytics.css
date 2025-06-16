@@ -1,0 +1,23 @@
+.user-analytics__main {
+  max-height: 100%;
+  width: calc(100% - 200px);
+  margin-left: 200px;
+  font-family: "Poppins", sans-serif;
+  transition: var(--tran-05);
+}
+
+/* When the sidebar is closed */
+.sidebar.close ~ .user-analytics__main {
+  width: calc(100% - 50px);
+  margin-left: 35px;
+}
+
+.user-analytics__content {
+  margin-top: 70px;
+  margin-left: 103px;
+  padding: 10px;
+}
+
+.foottable__div__main {
+  padding: 20px;
+} 

@@ -114,8 +114,8 @@ const Gate = () => {
     <div className="gate__main">
       <div className="gate__content">
         <div className="gate__text__main">
-          <div className="gate__text">
-            <p className="gate__heading">Gate Feeds</p>
+          <div className="dashboard__text">
+            <p className="dash__text">Gate Feeds</p>
           </div>
         </div>
 
