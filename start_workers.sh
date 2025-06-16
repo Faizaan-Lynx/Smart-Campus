@@ -33,7 +33,21 @@ for i in $(seq 1 $FEED_WORKERS); do
   sleep 0.5
 done
 
+# License workers start up
+LICENSE_WORKERS=${3:-3}
+echo "Scaling Feed workers to $LICENSE_WORKERS..."
+
+for i in $(seq 1 $LICENSE_WORKERS); do
+  WORKER_NAME="license_plate_worker$i"
+
+  echo "Starting worker: $WORKER_NAME"
+  celery -A ${celery_mod}.license_plate_worker.license_plate_worker_app worker -n $WORKER_NAME -Q license_plate_tasks --pool=threads --loglevel=info &
+
+  sleep 0.5
+done
+
 wait
+
 
 
 # MODEL_WORKERS=${3:-3}

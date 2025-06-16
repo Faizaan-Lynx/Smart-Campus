@@ -5,36 +5,13 @@ import { toast } from "react-toastify";
 import "./FootFallRow.css";
 import CameraList from "../CCTVCamList/CCTVCamList";
 
-const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera }) => {
-  const [loading, setLoading] = useState(false);
-
-  // Handle camera selection and trigger the API
-  const handleCameraSelect = async (cameraId) => {
-    setLoading(true);
-
-    try {
-      const response = await axios.post("http://127.0.0.1:8000/test_publish_feed/", {
-        camera_id: cameraId,
-      });
-
-      console.log(response.data);
-      setSelectedCamera(cameraId);
-
-
-      // toast.success(`Camera feed started for ID: ${cameraId}`);
-    } catch (error) {
-      toast.error("Failed to start camera feed.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera, loading }) => {
 
   return (
     <div className="app__container__row">
       <div className="video__container__row">
         {loading ? (
-          <p>Loading cameras...</p>
+          <div className="loader" />
         ) : (
           <CameraList cameras={cameras} selectedCamera={selectedCamera} setSelectedCamera={setSelectedCamera} />
         )}
