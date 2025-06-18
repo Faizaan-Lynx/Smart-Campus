@@ -42,6 +42,7 @@ const columns = [
   { Header: "Username", accessor: "username" },
   { Header: "License Plate", accessor: "license_plate" },
   { Header: "Entry Time", accessor: "entered_at_timestamp" },
+  { Header: "Exit Time", accessor: "exit_at_timestamp" },
 ];
 
 export default function UserEntryAnalytics() {
@@ -69,9 +70,18 @@ export default function UserEntryAnalytics() {
           .map(item => {
             try {
               const utcDate = new Date(item.entered_at_timestamp + "Z"); // Append Z to mark UTC
+              const exitutcDate = new Date(item.exit_at_timestamp + "Z"); // Append Z to mark UTC
               return {
                 ...item,
                 entered_at_timestamp: isNaN(utcDate.getTime()) ? "" : utcDate.toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }),
+                exit_at_timestamp: isNaN(exitutcDate.getTime()) ? "" : exitutcDate.toLocaleString("en-GB", {
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
@@ -84,6 +94,7 @@ export default function UserEntryAnalytics() {
               return {
                 ...item,
                 entered_at_timestamp: "",
+                exit_at_timestamp: "",
               };
             }
           });

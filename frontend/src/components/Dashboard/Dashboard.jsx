@@ -192,7 +192,7 @@ const Dashboard = () => {
         // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
           ? "http://127.0.0.1:8000/alerts/"
-          : `http://127.0.0.1:8000/alerts?camera_ids=${cameras
+          : `http://127.0.0.1:8000/alerts?camera_id=${cameras
             .map((c) => c.id)
             .join(",")}`;
 

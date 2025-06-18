@@ -7,11 +7,12 @@ from models import Camera, Users
 from sqlalchemy.orm import Session
 from fastapi.responses import FileResponse
 from api.auth.schemas import UserResponseSchema
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from api.auth.security import is_admin, get_current_user
 from core.celery.alert_tasks import publish_alert, send_email
 from core.celery.worker import celery_app
 from api.alerts.schemas import AlertBase, AlertResponse, AlertUpdateAcknowledgment
+from typing import Optional, List
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -59,10 +60,49 @@ def get_alert(alert_id: int, db: Session = Depends(get_db), current_user: UserRe
     return alert
 
 
-@router.get("/", response_model=list[AlertResponse])
-def get_all_alerts(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
-    """Fetch all alerts."""
-    return db.query(Alert).all()
+@router.get("/", response_model=List[AlertResponse])
+def get_alerts(
+    camera_id: Optional[str] = Query(None, description="Comma-separated list of integer camera IDs to filter alerts (e.g., '1,2,3')"),
+    db: Session = Depends(get_db), 
+    current_user: UserResponseSchema = Depends(get_current_user)
+):
+    """Fetch alerts with optional camera filtering."""
+    query = db.query(Alert)
+    
+    # If camera_id parameter is provided, filter by camera IDs
+    if camera_id:
+        try:
+            # Parse comma-separated string into list of integers
+            camera_ids = [int(cid.strip()) for cid in camera_id.split(",") if cid.strip()]
+            query = query.filter(Alert.camera_id.in_(camera_ids))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid camera_id format. Expected comma-separated integers (e.g., '1,2,3').")
+    
+    # If user is not admin, filter by their assigned cameras
+    if not current_user.is_admin:
+        user = db.query(Users).filter(Users.id == current_user.id).first()
+        if not user or not user.cameras:
+            return []  # Return empty list if user has no cameras assigned
+        
+        # Extract camera IDs from the Camera objects
+        user_camera_ids = [camera.id for camera in user.cameras]
+        
+        # If camera_id parameter was provided, ensure user has access to those cameras
+        if camera_id:
+            try:
+                requested_camera_ids = [int(cid.strip()) for cid in camera_id.split(",") if cid.strip()]
+                # Check if all requested camera IDs are in user's assigned cameras
+                if not all(cid in user_camera_ids for cid in requested_camera_ids):
+                    raise HTTPException(status_code=403, detail="Access denied to one or more requested cameras")
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid camera_id format. Expected comma-separated integers (e.g., '1,2,3').")
+        else:
+            # If no camera_id parameter, filter by user's assigned cameras
+            query = query.filter(Alert.camera_id.in_(user_camera_ids))
+    
+    # Get all matching alerts
+    alerts = query.all()
+    return alerts
 
 @router.delete("/all")
 def delete_all_alerts(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
@@ -107,7 +147,8 @@ def get_alert_image(alert_id: int, db: Session = Depends(get_db), current_user: 
     # check if the user has access to the camera
     if not current_user.is_admin:
         user = db.query(Users).filter(Users.id == current_user.id).first()
-        if alert.camera_id not in [camera_id for camera_id in user.cameras]:
+        user_camera_ids = [camera.id for camera in user.cameras]
+        if alert.camera_id not in user_camera_ids:
             raise HTTPException(status_code=403, detail="Access denied to this camera")    
     
     try:

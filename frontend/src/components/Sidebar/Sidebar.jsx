@@ -155,12 +155,13 @@ const Sidebar = () => {
               </a>
             </li>
 
-            <li className="nav-link">
+
+            {userInfo?.role === "admin" && (<li className="nav-link">
               <a onClick={() => navigate("/user-analytics")}>
                 <i className="bx bx-line-chart icon"></i>
                 <span className="text nav-text">User Analytics</span>
               </a>
-            </li>
+            </li>)}
 
             {userInfo?.role === "admin" && (
               <li className="nav-link">
