@@ -14,6 +14,7 @@ import SearchIcon from "@mui/icons-material/Search"; // For search icon
 import { color1 } from "../../utils"; // Assuming color1 is defined here
 import FeedPopup from "../FootTable/FeedPopUp";
 import axios from "axios";
+import { Select, MenuItem, FormControl } from "@mui/material"; // Add these imports
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -52,6 +53,7 @@ export default function VehicleTable() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(""); // State for search term
+  const [searchField, setSearchField] = useState("license_number"); // New state for search field
 
   useEffect(() => {
     const fetchLicensePlates = async () => {
@@ -129,14 +131,34 @@ export default function VehicleTable() {
     }
   };
 
-  // Filtered data based on searchTerm
+  // Filtered data based on searchTerm and searchField
   const filteredData = data.filter((row) => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return (
-      row.license_number.toLowerCase().includes(lowerCaseSearchTerm) ||
-      row.timestamp.toLowerCase().includes(lowerCaseSearchTerm)
-    );
+    if (!searchTerm) return true;
+    if (searchField === "license_number") {
+      return row.license_number.toLowerCase().includes(lowerCaseSearchTerm);
+    } else if (searchField === "timestamp") {
+      return row.timestamp.toLowerCase().includes(lowerCaseSearchTerm);
+    } else if (searchField === "camera_id") {
+      // Convert camera_id to string before searching to avoid errors
+      return String(row.camera_id).toLowerCase().includes(lowerCaseSearchTerm);
+    }
+    return false;
   });
+
+  // Helper function to get placeholder text with format
+  const getPlaceholderText = () => {
+    switch (searchField) {
+      case "license_number":
+        return "Search by License Plate (e.g., XXX-1234, XXX1234, XX-123, XX123)...";
+      case "timestamp":
+        return "Search by Timestamp (e.g., 02 jun 2025, 01:29 pm)...";
+      case "camera_id":
+        return "Search by Camera ID (e.g., 11, 13, 14)...";
+      default:
+        return "Search...";
+    }
+  };
 
   return (
     <div className="foottable__div__main">
@@ -144,13 +166,29 @@ export default function VehicleTable() {
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search by License Plate or Timestamp..."
+          placeholder={getPlaceholderText()}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <SearchIcon />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <FormControl variant="standard" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={searchField}
+                    onChange={(e) => setSearchField(e.target.value)}
+                    disableUnderline
+                    sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
+                  >
+                    <MenuItem value="license_number">License Plate</MenuItem>
+                    <MenuItem value="timestamp">Timestamp</MenuItem>
+                    <MenuItem value="camera_id">Camera ID</MenuItem>
+                  </Select>
+                </FormControl>
               </InputAdornment>
             ),
             sx: {

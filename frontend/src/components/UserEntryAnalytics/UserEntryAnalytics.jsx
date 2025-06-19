@@ -11,6 +11,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
+import { Select, MenuItem, FormControl } from "@mui/material";
 import axios from "axios";
 import "./UserEntryAnalytics.css";
 
@@ -51,6 +52,7 @@ export default function UserEntryAnalytics() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("username");
 
   useEffect(() => {
     const fetchUserEntries = async () => {
@@ -119,17 +121,40 @@ export default function UserEntryAnalytics() {
     setPage(0);
   };
 
-  // Filtered data based on searchTerm
+  // Filtered data based on searchTerm and searchField
   const filteredData = data.filter((row) => {
     if (!row) return false;
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return (
-      (row.username?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
-      (row.license_plate?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
-      (row.entered_at_timestamp?.toLowerCase() || '').includes(lowerCaseSearchTerm)
-    );
+    if (!searchTerm) return true;
+    
+    if (searchField === "username") {
+      return (row.username?.toLowerCase() || '').includes(lowerCaseSearchTerm);
+    } else if (searchField === "license_plate") {
+      return (row.license_plate?.toLowerCase() || '').includes(lowerCaseSearchTerm);
+    } else if (searchField === "entered_at_timestamp") {
+      return (row.entered_at_timestamp?.toLowerCase() || '').includes(lowerCaseSearchTerm);
+    } else if (searchField === "exit_at_timestamp") {
+      return (row.exit_at_timestamp?.toLowerCase() || '').includes(lowerCaseSearchTerm);
+    }
+    return false;
   });
+
+  // Helper function to get placeholder text with format
+  const getPlaceholderText = () => {
+    switch (searchField) {
+      case "username":
+        return "Search by Username (e.g., testuser)";
+      case "license_plate":
+        return "Search by License Plate (e.g., XXX-1234, XXX1234, XX-123, XX123)...";
+      case "entered_at_timestamp":
+        return "Search by Entry Time (e.g., 02 jun 2025, 01:29 pm)...";
+      case "exit_at_timestamp":
+        return "Search by Exit Time (e.g., 02 jun 2025, 01:29 pm)...";
+      default:
+        return "Search...";
+    }
+  };
 
   return (
     <div className="user-analytics__main">
@@ -142,13 +167,30 @@ export default function UserEntryAnalytics() {
             <TextField
               fullWidth
               variant="outlined"
-              placeholder="Search by Username, License Plate or Entry Time..."
+              placeholder={getPlaceholderText()}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <FormControl variant="standard" sx={{ minWidth: 120 }}>
+                      <Select
+                        value={searchField}
+                        onChange={(e) => setSearchField(e.target.value)}
+                        disableUnderline
+                        sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
+                      >
+                        <MenuItem value="username">Username</MenuItem>
+                        <MenuItem value="license_plate">License Plate</MenuItem>
+                        <MenuItem value="entered_at_timestamp">Entry Time</MenuItem>
+                        <MenuItem value="exit_at_timestamp">Exit Time</MenuItem>
+                      </Select>
+                    </FormControl>
                   </InputAdornment>
                 ),
                 sx: {
