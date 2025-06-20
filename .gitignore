@@ -4,8 +4,7 @@
 env/
 
 #files
-backend/points.py
-backend/test.py
+backend/testing_files
 # python specific
 __pycache__
 __pycache__/*
