@@ -5,6 +5,7 @@ import redis
 import logging
 import numpy as np
 import re
+import torch
 from config import settings
 from ultralytics import YOLO
 from datetime import datetime
@@ -25,6 +26,12 @@ os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
 # Initialize OCR and CLAHE globally
 ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+
+# Initialize face detection model globally
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+face_model = YOLO("./yolo-models/yolov8l_100e.pt")
+face_model.to(device)
+logging.info(f"Face detection model loaded on device: {device}")
 
 def unsharp_mask(image: np.ndarray, kernel_size=(5, 5), sigma=1.0, amount=0.5) -> np.ndarray:
     """
@@ -116,6 +123,34 @@ def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, floa
         return "", 0.0, False
     return license_plate_number, average_confidence, valid
 
+def detect_faces_in_frame(frame: np.ndarray) -> list:
+    """
+    Detect faces in the given frame using YOLOv8 face detection model.
+    Returns a list of face bounding boxes with confidence scores.
+    """
+    try:
+        # Run face detection on the frame (matching test file approach)
+        results = face_model(frame, device=device, verbose=False)[0]
+        
+        faces = []
+        for box in results.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            conf = float(box.conf[0])
+            
+            # Only include faces with confidence above threshold
+            if conf > 0.5:
+                faces.append({
+                    'bbox': (x1, y1, x2, y2),
+                    'confidence': conf
+                })
+        
+        logging.info(f"Detected {len(faces)} faces in frame")
+        return faces
+        
+    except Exception as e:
+        logging.error(f"Error in face detection: {e}")
+        return []
+
 ## ===== General Video Processing ===== ##
 
 @license_plate_worker_app.task
@@ -167,6 +202,9 @@ def process_feed(camera_id: int):
             results = model.predict(annotated_frame, verbose=False)
             
             license_plate_detected = False
+            lp_number = ""
+            valid = False
+            
             for res in results:
                 for detection in res.boxes:
                     if detection.conf < 0.6:  # Confidence threshold
@@ -192,6 +230,25 @@ def process_feed(camera_id: int):
                         cv2.putText(annotated_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
                         license_plate_detected = True
 
+            # Detect faces if license plate was detected
+            faces = []
+            if license_plate_detected and lp_number and valid:
+                logging.info(f"License plate detected: {lp_number}. Running face detection...")
+                faces = detect_faces_in_frame(annotated_frame)
+                
+                # Draw face bounding boxes
+                for face in faces:
+                    x1, y1, x2, y2 = face['bbox']
+                    conf = face['confidence']
+                    
+                    # Draw face bounding box in blue
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                    
+                    # Add face label
+                    face_label = f"Face {conf:.2f}"
+                    cv2.putText(annotated_frame, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 4, lineType=cv2.LINE_AA)
+                    cv2.putText(annotated_frame, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
+
             # only publish the frame if the websocket is open
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, annotated_frame)
@@ -202,7 +259,7 @@ def process_feed(camera_id: int):
                 redis_key = f"camera_{camera_id}_lp_{lp_number}"
                 
                 if not redis_client.exists(redis_key):
-                    handle_license_plate_event(camera_id, lp_number, annotated_frame)
+                    handle_license_plate_event(camera_id, lp_number, annotated_frame, len(faces))
                     redis_client.set(redis_key, "1", ex=60)  # 1 minute TTL
                 else:
                     logging.info(f"Plate {lp_number} already handled recently for camera {camera_id}. Skipping DB insert.")
@@ -271,19 +328,43 @@ def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
 
 ## ====== Handling License Plate Detection Logic ===== ##
 
-def handle_license_plate_event(camera_id: int, license_number: str, frame: np.ndarray = None):
+def handle_license_plate_event(camera_id: int, license_number: str, frame: np.ndarray = None, faces_detected: int = 0):
     """
     Handle a license plate detection event: create a database record and save the frame.
     """
-    logging.info(f"License plate detected for camera {camera_id}: {license_number}")
+    logging.info(f"License plate detected for camera {camera_id}: {license_number} with {faces_detected} faces")
 
     file_path = None
     current_time = datetime.now()
     if frame is not None:
-        # Save the frame to a file
+        # Ensure face bounding boxes are drawn on the image before saving
+        # If faces_detected > 0 but no blue boxes are visible, redetect and draw faces
+        frame_with_faces = frame.copy()
+        
+        # Check if we need to detect and draw faces (if faces_detected > 0 but no blue boxes)
+        if faces_detected > 0:
+            # Detect faces again to ensure they're drawn on the saved image
+            faces = detect_faces_in_frame(frame_with_faces)
+            
+            # Draw face bounding boxes if not already drawn
+            for face in faces:
+                x1, y1, x2, y2 = face['bbox']
+                conf = face['confidence']
+                
+                # Draw face bounding box in blue
+                cv2.rectangle(frame_with_faces, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                
+                # Add face label
+                face_label = f"Face {conf:.2f}"
+                cv2.putText(frame_with_faces, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 4, lineType=cv2.LINE_AA)
+                cv2.putText(frame_with_faces, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
+            
+            logging.info(f"Drew {len(faces)} face bounding boxes on saved image")
+        
+        # Save the frame with face annotations to a file
         timestamp = int(datetime.now().timestamp())
         file_path = f"/app/alert_images/license_plates/license_plate_{camera_id}_{timestamp}.jpg"
-        cv2.imwrite(file_path, frame)
+        cv2.imwrite(file_path, frame_with_faces)
 
     # Create database record
     db = SessionLocal()
