@@ -15,6 +15,9 @@ import { color1 } from "../../utils"; // Assuming color1 is defined here
 import FeedPopup from "../FootTable/FeedPopUp";
 import axios from "axios";
 import { Select, MenuItem, FormControl } from "@mui/material"; // Add these imports
+import RefreshIcon from "@mui/icons-material/Refresh"; // Add this import
+import IconButton from "@mui/material/IconButton"; // Add this import
+import CircularProgress from "@mui/material/CircularProgress"; // Add this import
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -55,45 +58,44 @@ export default function VehicleTable() {
   const [searchTerm, setSearchTerm] = useState(""); // State for search term
   const [searchField, setSearchField] = useState("license_number"); // New state for search field
 
-  useEffect(() => {
-    const fetchLicensePlates = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/license-plates/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+  const fetchLicensePlates = async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/license-plates/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const sortedFormattedData = response.data
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .map(item => {
+          const utcDate = new Date(item.timestamp + "Z");
+          return {
+            ...item,
+            timestamp: utcDate.toLocaleString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+          };
         });
+      setData(sortedFormattedData);
+    } catch (error) {
+      console.error("Error fetching license plates:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        // Sort and format with local system time
-        const sortedFormattedData = response.data
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-          .map(item => {
-            const utcDate = new Date(item.timestamp + "Z"); // Append Z to mark UTC
-            return {
-              ...item,
-              timestamp: utcDate.toLocaleString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              }),
-            };
-          });
-
-        setData(sortedFormattedData);
-
-      } catch (error) {
-        console.error("Error fetching license plates:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchLicensePlates();
   }, []);
 
@@ -162,55 +164,80 @@ export default function VehicleTable() {
 
   return (
     <div className="foottable__div__main">
-      <Paper elevation={3} sx={{ borderRadius: "11px", marginBottom: "20px", padding: "15px" }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder={getPlaceholderText()}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <FormControl variant="standard" sx={{ minWidth: 120 }}>
-                  <Select
-                    value={searchField}
-                    onChange={(e) => setSearchField(e.target.value)}
-                    disableUnderline
-                    sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
-                  >
-                    <MenuItem value="license_number">License Plate</MenuItem>
-                    <MenuItem value="timestamp">Timestamp</MenuItem>
-                    <MenuItem value="camera_id">Camera ID</MenuItem>
-                  </Select>
-                </FormControl>
-              </InputAdornment>
-            ),
-            sx: {
-              borderRadius: "8px",
-              "& fieldset": {
-                borderColor: "#5e37ff", // Border color
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+        <Paper elevation={3} sx={{ borderRadius: "11px", marginBottom: "20px", padding: "15px", flex: 1 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder={getPlaceholderText()}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <FormControl variant="standard" sx={{ minWidth: 120 }}>
+                    <Select
+                      value={searchField}
+                      onChange={(e) => setSearchField(e.target.value)}
+                      disableUnderline
+                      sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
+                    >
+                      <MenuItem value="license_number">License Plate</MenuItem>
+                      <MenuItem value="timestamp">Timestamp</MenuItem>
+                      <MenuItem value="camera_id">Camera ID</MenuItem>
+                    </Select>
+                  </FormControl>
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: "8px",
+                "& fieldset": {
+                  borderColor: "#5e37ff",
+                },
+                "&:hover fieldset": {
+                  borderColor: "#5e37ff !important",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#5e37ff !important",
+                },
               },
-              "&:hover fieldset": {
-                borderColor: "#5e37ff !important", // Hover border color
+            }}
+            sx={{
+              "& .MuiInputBase-input": {
+                padding: "12px 14px",
               },
-              "&.Mui-focused fieldset": {
-                borderColor: "#5e37ff !important", // Focused border color
-              },
-            },
-          }}
+            }}
+          />
+        </Paper>
+        <IconButton
+          aria-label="refresh"
+          onClick={fetchLicensePlates}
+          disabled={loading}
           sx={{
-            "& .MuiInputBase-input": {
-              padding: "12px 14px",
+            marginLeft: 2,
+            backgroundColor: '#5e37ff',
+            color: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(94, 55, 255, 0.15)',
+            transition: 'background 0.2s',
+            '&:hover': {
+              backgroundColor: '#4527a0',
+              color: '#fff',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#bdbdbd',
+              color: '#fff',
             },
           }}
-        />
-      </Paper>
+        >
+          {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : <RefreshIcon />}
+        </IconButton>
+      </div>
 
       <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
         <Table sx={{ minWidth: 700 }} aria-label="vehicle table">
