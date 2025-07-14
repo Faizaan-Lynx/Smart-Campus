@@ -15,6 +15,7 @@
     "@mui/icons-material": "^5.15.19",
     "@mui/material": "^5.15.19",
     "@mui/x-charts": "^7.6.1",
+    "@popperjs/core": "^2.11.8",
     "axios": "^1.7.2",
     "emailjs-com": "^3.2.0",
     "jwt-decode": "^4.0.0",

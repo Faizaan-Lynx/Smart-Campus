@@ -29,7 +29,7 @@ ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 # Initialize face detection model globally
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-face_model = YOLO("./yolo-models/yolov8l_100e.pt")
+face_model = YOLO("./yolo-detection-models/yolov8l_100e.pt")
 face_model.to(device)
 logging.info(f"Face detection model loaded on device: {device}")
 
@@ -186,7 +186,7 @@ def process_feed(camera_id: int):
         stop_check_counter = 300
 
         # load yolo model for license plate detection
-        model = YOLO(model="./yolo-models/yolo-license-plates.pt")  # Replace with your license plate model path
+        model = YOLO(model="./yolo-detection-models/yolo-license-plates.pt")  # Replace with your license plate model path
         logging.info(f"Loaded license plate detection model for camera {camera_id}.")
 
         while True:

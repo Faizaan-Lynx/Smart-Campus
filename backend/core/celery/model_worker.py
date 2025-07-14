@@ -19,7 +19,7 @@ model_worker_app.conf.update(
     worker_heartbeat=60,
 )
 
-model = YOLO(model="./yolo-models/yolov8n.pt")
+model = YOLO(model="./yolo-detection-models/yolov8n.pt")
 model.to("cuda:0")
 db = SessionLocal()
 cameras = db.query(Camera).all()
