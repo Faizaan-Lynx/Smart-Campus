@@ -101,7 +101,10 @@ networks:
     external: false
   stream-net:
     driver: bridge
-    external: true
+    ipam:
+      config:
+        - subnet: 172.23.55.0/24
+    external: false
 
 volumes:
   postgres_data:

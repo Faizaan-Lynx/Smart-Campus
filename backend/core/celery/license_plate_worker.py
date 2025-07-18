@@ -51,9 +51,12 @@ def lp_image_processing(image: np.ndarray) -> np.ndarray:
     processed_img = cv2.resize(processed_img, (2*processed_img.shape[1], 2*processed_img.shape[0]))
     # apply CLAHE
     processed_img = ocr_clahe.apply(processed_img)
+    # adaptive thresholding for better OCR
+    processed_img = cv2.adaptiveThreshold(processed_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
     # sharpen
     processed_img = unsharp_mask(processed_img)
     return processed_img
+
 
 def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
     """
@@ -76,9 +79,9 @@ def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
     # Remove any remaining leading hyphens
     text = text.lstrip('-')
 
-    # Define patterns for different vehicle classes
-    car_bus_pattern = r'^[A-Z]{2,3}-?\d{3,4}[A-Z]?$'
-    motorcycle_pattern = r'^[A-Z]{2,3}-?\d{3,4}[A-Z]?$'
+    # Relaxed patterns for different vehicle classes
+    car_bus_pattern = r'^[A-Z0-9\-]{5,10}$'  # Accepts 5-10 alphanumeric/hyphen chars
+    motorcycle_pattern = r'^[A-Z0-9\-]{5,10}$'
 
     if class_name in ("car", "bus"):
         if re.match(car_bus_pattern, text):
@@ -90,8 +93,9 @@ def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
             logging.info(f"License plate matched pattern for class '{class_name}'")
             return True, text
 
-    logging.info(f"License plate did not match any pattern for class '{class_name}'")
+    logging.info(f"License plate did not match any pattern for class '{class_name}' (text: {text})")
     return False, text
+
 
 def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, float, bool]:
     """
@@ -99,22 +103,50 @@ def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, floa
     """
     # preprocess the image
     preprocessed_image = lp_image_processing(plate_img)
+
+    # Ensure the image is 3-channel (BGR) for OCR
+    if len(preprocessed_image.shape) == 2 or (len(preprocessed_image.shape) == 3 and preprocessed_image.shape[2] == 1):
+        preprocessed_image = cv2.cvtColor(preprocessed_image, cv2.COLOR_GRAY2BGR)
     
     # perform OCR
-    lp_results = ocr.ocr(preprocessed_image, cls=True)
+    lp_results = ocr.ocr(preprocessed_image)
+    logging.info(f"Raw OCR results: {lp_results}")
 
     license_plate_number = ""
     confidence_scores = []
 
     if len(lp_results) == 0:
         return "", 0.0, False
-    
-    for lp_res in lp_results:
-        if lp_res is None:
-            continue
-        for line in lp_res:
-            license_plate_number += line[1][0]
-            confidence_scores.append(int(float(line[1][1]) * 100))
+
+    # Handle PaddleOCR dict output (newer versions)
+    if isinstance(lp_results, list) and len(lp_results) == 1 and isinstance(lp_results[0], dict):
+        ocr_dict = lp_results[0]
+        rec_texts = ocr_dict.get('rec_texts', [])
+        rec_scores = ocr_dict.get('rec_scores', [])
+        for text, score in zip(rec_texts, rec_scores):
+            license_plate_number += str(text)
+            try:
+                confidence_scores.append(int(float(score) * 100))
+            except Exception:
+                continue
+    else:
+        # Fallback to standard output
+        for lp_res in lp_results:
+            if lp_res is None:
+                continue
+            for line in lp_res:
+                if (
+                    isinstance(line, (list, tuple)) and len(line) > 1 and
+                    isinstance(line[1], (list, tuple)) and len(line[1]) > 1
+                ):
+                    license_plate_number += str(line[1][0])
+                    try:
+                        confidence_scores.append(int(float(line[1][1]) * 100))
+                    except Exception:
+                        continue
+                else:
+                    continue
+    logging.info(f"Intermediate license_plate_number: {license_plate_number}")
 
     valid, license_plate_number = apply_lp_ocr_rules(license_plate_number, class_name)
     average_confidence = np.mean(confidence_scores) if confidence_scores else 0.0
@@ -207,7 +239,7 @@ def process_feed(camera_id: int):
             
             for res in results:
                 for detection in res.boxes:
-                    if detection.conf < 0.615:  # Confidence threshold
+                    if detection.conf < 0.65:  # Confidence threshold
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     
@@ -254,15 +286,15 @@ def process_feed(camera_id: int):
                 publish_frame(camera_id, annotated_frame)
 
             # handle license plate detection event if detected
-            if license_plate_detected and lp_number and valid:
-                # Redis key: unique per camera and plate number
-                redis_key = f"camera_{camera_id}_lp_{lp_number}"
+            if license_plate_detected and lp_number and valid and confidence > 80:
+                normalized_lp = normalize_plate(lp_number)
+                redis_key = f"camera_{camera_id}_lp_{normalized_lp}"
                 
                 if not redis_client.exists(redis_key):
-                    handle_license_plate_event(camera_id, lp_number, annotated_frame, len(faces))
-                    redis_client.set(redis_key, "1", ex=60)  # 1 minute TTL
+                    handle_license_plate_event(camera_id, normalized_lp, annotated_frame, len(faces))
+                    redis_client.set(redis_key, "1", ex=300)  # 5 minute TTL
                 else:
-                    logging.info(f"Plate {lp_number} already handled recently for camera {camera_id}. Skipping DB insert.")
+                    logging.info(f"Plate {normalized_lp} already handled recently for camera {camera_id}. Skipping DB insert.")
 
             
             stop_check_counter -= 1
@@ -456,3 +488,6 @@ def stop_all_license_plate_workers():
     redis_client.set("license_plate_workers_running", "False")
     redis_client.close()
     return "All license plate detection workers stopping..."
+
+def normalize_plate(plate: str) -> str:
+    return plate.replace("-", "").replace(" ", "").upper()
