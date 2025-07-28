@@ -54,7 +54,7 @@ const UserAdmin = ({ columns }) => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://127.0.0.1:8000/users", {
+        const response = await axios.get("http://172.23.10.26:8000/users", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -83,7 +83,7 @@ const UserAdmin = ({ columns }) => {
       if (result.isConfirmed) {
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`http://127.0.0.1:8000/users/${id}`, {
+          await axios.delete(`http://172.23.10.26:8000/users/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/json",
@@ -147,11 +147,12 @@ const UserAdmin = ({ columns }) => {
           }}
         >
           All Users
-          <i
+          <span
             onClick={() => setShowAddModal(!showAddModal)}
-            style={{ fontSize: "27px", cursor: "pointer" }}
-            className="bx bxs-plus-square"
-          ></i>
+            style={{ fontSize: "18px", cursor: "pointer", marginLeft: "10px", color: "#1976d2", fontWeight: "bold" }}
+          >
+            Add User
+          </span>
         </p>
       </div>
 
@@ -220,25 +221,25 @@ const UserAdmin = ({ columns }) => {
                         }}
                         style={{
                           cursor: "pointer",
-                          fontSize: "20px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          fontSize: "15px",
+                          color: "#1976d2",
+                          fontWeight: "bold",
+                          margin: 0
                         }}
                       >
-                        <i className="bx bx-edit-alt"></i>
+                        Edit
                       </p>
                       <p
                         onClick={() => deleteUser(row.id)}
                         style={{
                           cursor: "pointer",
-                          fontSize: "20px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          fontSize: "15px",
+                          color: "#d32f2f",
+                          fontWeight: "bold",
+                          margin: 0
                         }}
                       >
-                        <i className="bx bx-trash"></i>
+                        Delete
                       </p>
                     </div>
                   </StyledTableCell>

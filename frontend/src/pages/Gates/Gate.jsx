@@ -19,7 +19,7 @@ const Gate = () => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
         const response = await axios.get(
-          `http://127.0.0.1:8000/camera/${cameraId}`,
+          `http://172.23.10.26:8000/camera/${cameraId}`,
           {
             headers: {
               accept: "application/json",
@@ -58,7 +58,7 @@ const Gate = () => {
 
         let response;
         if (isAdmin) {
-          response = await axios.get("http://127.0.0.1:8000/camera/", {
+          response = await axios.get("http://172.23.10.26:8000/camera/", {
             headers: {
               accept: "application/json",
               Authorization: `Bearer ${token}`,
@@ -67,7 +67,7 @@ const Gate = () => {
         } else {
           const userId = decodedToken.id;
           const userResponse = await axios.get(
-            `http://127.0.0.1:8000/users/${userId}`,
+            `http://172.23.10.26:8000/users/${userId}`,
             {
               headers: {
                 accept: "application/json",

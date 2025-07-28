@@ -59,7 +59,7 @@ export default function UsersAdminEditModal({
     const fetchCameras = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://127.0.0.1:8000/camera/", {
+        const response = await axios.get("http://172.23.10.26:8000/camera/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const sortedCameras = response.data.sort((a, b) => a.id - b.id);
@@ -115,7 +115,7 @@ export default function UsersAdminEditModal({
       const token = localStorage.getItem("token");
   
       await axios.put(
-        `http://127.0.0.1:8000/user-cameras/${rowData.id}`,
+        `http://172.23.10.26:8000/user-cameras/${rowData.id}`,
         { camera_ids: selectedCameras },
         {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

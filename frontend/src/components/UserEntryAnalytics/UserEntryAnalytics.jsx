@@ -60,7 +60,7 @@ export default function UserEntryAnalytics() {
       if (!token) return;
 
       try {
-        const response = await axios.get("http://127.0.0.1:8000/users/", {
+        const response = await axios.get("http://172.23.10.26:8000/users/", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

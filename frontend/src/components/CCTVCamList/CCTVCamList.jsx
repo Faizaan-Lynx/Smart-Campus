@@ -11,7 +11,7 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   useEffect(() => {
     if (!selectedCamera) return;
 
-    const socket = new WebSocket(`ws://localhost:8000/ws/frames/${selectedCamera}`);
+    const socket = new WebSocket(`ws://172.23.10.26:8000/ws/frames/${selectedCamera}`);
 
     socket.onopen = () => console.log(`Connected to WebSocket for Camera ${selectedCamera}`);
     
