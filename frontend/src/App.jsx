@@ -26,6 +26,7 @@ import CCTVPage from "./components/CCTV/CCTVPage";
 import { logout } from "./redux/actions/authActions";
 import Gate from "./pages/Gates/Gate";
 import UserEntryAnalytics from "./components/UserEntryAnalytics/UserEntryAnalytics";
+import { AlertProvider } from "./context/AlertContext";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -48,7 +49,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <AlertProvider>
       <Router>
         <div>
           <Routes>
@@ -147,7 +148,7 @@ function App() {
           </Routes>
         </div>
       </Router>
-    </>
+    </AlertProvider>
   );
 }
 

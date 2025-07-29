@@ -15,6 +15,7 @@ import { toast, ToastContainer } from "react-toastify";
 import FootFall from "../FootFall/FootFall";
 import FeedPopup from "../FootTable/FeedPopUp";
 import { jwtDecode } from "jwt-decode";
+import { useAlert } from "../../context/AlertContext";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -28,7 +29,7 @@ const Dashboard = () => {
 
   const [selectedCamera, setSelectedCamera] = useState(null);
   // Alert Related Variables
-  const [alerts, setAlerts] = useState([]);
+  const { alerts, setAlerts } = useAlert();
   const [alertUrl, setAlertUrl] = useState(null);
   const socketsRef = useRef({}); // Keep track of active WebSocket connections
 
@@ -335,13 +336,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard__main">
-      <ToastContainer
-        onClick={handleToastClick}
-        theme="light"
-        position="top-right"
-        className="toast-container"
-        toastClassName="toast-message"
-      />
+      {/* <ToastContainer ... /> removed, now global */}
 
       <div className="dashboard__content">
         <div className="dashboard__text__main">
