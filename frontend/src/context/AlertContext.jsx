@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import { jwtDecode } from "jwt-decode";
-import axios from "axios";
 
 export const AlertContext = createContext();
 
@@ -9,176 +7,69 @@ export const useAlert = () => useContext(AlertContext);
 
 export const AlertProvider = ({ children }) => {
   const [alerts, setAlerts] = useState([]);
-  const [cameras, setCameras] = useState([]);
-  const socketsRef = useRef({});
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
   const [openToasts, setOpenToasts] = useState(0);
+  const [activeToastIds, setActiveToastIds] = useState([]);
+  const [totalAlerts, setTotalAlerts] = useState(0); // Track total alerts for sound
+  const MAX_TOASTS = 2;
 
-  // Fetch cameras (copied from Dashboard logic)
-  useEffect(() => {
-    const fetchCameraDetails = async (cameraIds, token) => {
-      const cameraPromises = cameraIds.map(async (cameraId) => {
-        try {
-          const response = await axios.get(
-            `http://172.23.10.26:8000/camera/${cameraId}`,
-            {
-              headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          return response.data;
-        } catch (error) {
-          return null;
-        }
-      });
-      const cameras = await Promise.all(cameraPromises);
-      return cameras.filter((camera) => camera !== null);
-    };
+  // Function to manage toast limits
+  const manageToastLimit = () => {
+    if (activeToastIds.length >= MAX_TOASTS) {
+      // Remove the oldest toast (first in the array)
+      const oldestToastId = activeToastIds[0];
+      toast.dismiss(oldestToastId);
+      setActiveToastIds(prev => prev.slice(1));
+      // Don't decrement openToasts here - we want to keep the sound going
+    }
+  };
 
-    const fetchCameras = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const decodedToken = jwtDecode(token);
-        const isAdmin = decodedToken.role === "admin";
-        let response;
-        if (isAdmin) {
-          response = await axios.get("http://172.23.10.26:8000/camera/", {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          });
-        } else {
-          const userId = decodedToken.id;
-          const userResponse = await axios.get(
-            `http://172.23.10.26:8000/users/${userId}`,
-            {
-              headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          const user = userResponse.data;
-          if (!user || !user.cameras.length) return;
-          response = { data: await fetchCameraDetails(user.cameras, token) };
-        }
-        const filteredCameras = response.data.filter(camera => camera.detect_intrusions === true);
-        const sortedCameras = filteredCameras.sort((a, b) => a.id - b.id);
-        setCameras(sortedCameras);
-      } catch (error) {
-        // Ignore errors for global context
-      }
-    };
-    fetchCameras();
-  }, []);
+  // Function to add a new toast
+  const addToast = (message, options = {}) => {
+    // Check if we need to remove the oldest toast
+    manageToastLimit();
+    
+    // Create the new toast
+    const toastId = toast(message, {
+      autoClose: false,
+      closeOnClick: false,
+      position: "top-right",
+      style: {
+        background: "#333",
+        color: "white",
+        cursor: "pointer",
+        maxHeight: '80vh',
+        overflowY: 'auto',
+      },
+      ...options
+    });
+    
+    // Add the new toast ID to our tracking array
+    setActiveToastIds(prev => [...prev, toastId]);
+    setTotalAlerts(prev => prev + 1); // Increment total alerts for sound tracking
+    
+    return toastId;
+  };
 
-  // Fetch alerts and setup WebSocket
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const decodedToken = jwtDecode(token);
-        const isAdmin = decodedToken.role === "admin";
-        let alertUrls = [];
-        if (isAdmin) {
-          alertUrls = ["ws://172.23.10.26:8000/ws/alerts"];
-        } else {
-          alertUrls = cameras.map(
-            (camera) => `ws://172.23.10.26:8000/ws/alerts/${camera.id}`
-          );
-        }
-        // Fetch initial alerts
-        const alertEndpoint = isAdmin
-          ? "http://172.23.10.26:8000/alerts/"
-          : `http://172.23.10.26:8000/alerts?camera_id=${cameras
-              .map((c) => c.id)
-              .join(",")}`;
-        const response = await axios.get(alertEndpoint, {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.data && response.data.length > 0) {
-          const filteredAlerts = isAdmin
-            ? response.data
-            : response.data.filter((alert) =>
-                cameras.some((camera) => camera.id === alert.camera_id)
-              );
-          const sortedFormattedAlerts = filteredAlerts
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .map((item) => {
-              const utcDate = new Date(item.timestamp + "Z");
-              return {
-                ...item,
-                timestamp: utcDate.toLocaleString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                }),
-              };
-            });
-          setAlerts(sortedFormattedAlerts);
-        }
-        // Open WebSocket connections
-        alertUrls.forEach((url) => {
-          if (socketsRef.current[url]) return;
-          const socket = new WebSocket(url);
-          socketsRef.current[url] = socket;
-          socket.onmessage = (event) => {
-            const newAlert = JSON.parse(event.data);
-            let alertData;
-            try {
-              alertData = JSON.parse(newAlert.alert);
-            } catch (error) {
-              return;
-            }
-            const utcDate = new Date(alertData.timestamp + "Z");
-            alertData.timestamp = utcDate.toLocaleString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
-            if (!alertData.file_path) return;
-            setAlerts((prevAlerts) => [alertData, ...prevAlerts]);
-            toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
-              autoClose: false,
-              closeOnClick: false,
-              position: "top-right",
-              style: {
-                background: "#333",
-                color: "white",
-                cursor: "pointer",
-                maxHeight: '80vh',
-                overflowY: 'auto',
-              },
-            });
-          };
-          socket.onclose = () => {
-            delete socketsRef.current[url];
-          };
-        });
-      } catch (error) {
-        // Ignore errors for global context
-      }
-    };
-    fetchAlerts();
-    return () => {
-      Object.values(socketsRef.current).forEach((socket) => socket.close());
-    };
-  }, [cameras]);
+  // Function to remove a toast from tracking
+  const removeToastFromTracking = (toastId) => {
+    setActiveToastIds(prev => prev.filter(id => id !== toastId));
+    setOpenToasts(prev => Math.max(0, prev - 1));
+  };
+
+  // Function to manually dismiss all toasts and stop sound
+  const dismissAllToasts = () => {
+    toast.dismiss(); // Dismiss all toasts
+    setActiveToastIds([]);
+    setOpenToasts(0);
+    setTotalAlerts(0); // Reset total alerts to stop sound
+  };
+
+  // Camera fetching is now handled in Dashboard component
+
+  // Note: WebSocket connections and alert fetching are now handled in Dashboard component
+  // This context only provides the toast management functionality
 
   // Play sound when there are active toasts
   useEffect(() => {
@@ -189,14 +80,24 @@ export const AlertProvider = ({ children }) => {
         audioRef.current.play();
       }
     };
+    
+    // Helper to stop the sound immediately
+    const stopSound = () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+    
     // If there are alerts, start interval
-    if (openToasts > 0) {
+    if (totalAlerts > 0) {
       if (!intervalRef.current) {
         playSound();
         intervalRef.current = setInterval(playSound, 2000);
       }
     } else {
-      // No alerts, stop sound
+      // No alerts, stop sound immediately
+      stopSound();
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -204,15 +105,29 @@ export const AlertProvider = ({ children }) => {
     }
     // Cleanup on unmount
     return () => {
+      stopSound();
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [openToasts]);
+  }, [totalAlerts]);
+
+  // Periodically clean up stale toast IDs
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      // Get all active toast IDs from react-toastify
+      const allToastIds = toast.getToastIds();
+      
+      // Remove any IDs from our tracking that are no longer active
+      setActiveToastIds(prev => prev.filter(id => allToastIds.includes(id)));
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
 
   return (
-    <AlertContext.Provider value={{ alerts, setAlerts }}>
+    <AlertContext.Provider value={{ alerts, setAlerts, addToast, dismissAllToasts }}>
       <audio ref={audioRef} src="/alert.mp3" preload="auto" />
       <ToastContainer
         theme="light"
@@ -224,7 +139,11 @@ export const AlertProvider = ({ children }) => {
         draggable={false}
         style={{ maxHeight: '80vh', overflowY: 'auto' }}
         onOpen={() => setOpenToasts((count) => count + 1)}
-        onClose={() => setOpenToasts((count) => Math.max(0, count - 1))}
+        onClose={(toastId) => {
+          setOpenToasts((count) => Math.max(0, count - 1));
+          // If user manually closes a toast, decrement total alerts
+          setTotalAlerts((count) => Math.max(0, count - 1));
+        }}
       />
       {children}
     </AlertContext.Provider>

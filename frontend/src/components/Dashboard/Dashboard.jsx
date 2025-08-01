@@ -29,7 +29,7 @@ const Dashboard = () => {
 
   const [selectedCamera, setSelectedCamera] = useState(null);
   // Alert Related Variables
-  const { alerts, setAlerts } = useAlert();
+  const { alerts, setAlerts, addToast, dismissAllToasts } = useAlert();
   const [alertUrl, setAlertUrl] = useState(null);
   const socketsRef = useRef({}); // Keep track of active WebSocket connections
 
@@ -281,14 +281,7 @@ const Dashboard = () => {
 
             setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
 
-            toast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
-              duration: 50000,
-              position: "top-right",
-              style: {
-                background: "#333",
-                color: "white",
-                cursor: "pointer",
-              },
+            addToast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
               onClick: () =>
                 handleToastClick(alertData.file_path, alertData.camera_id), // ✅ Use alertData.file_path
             });
