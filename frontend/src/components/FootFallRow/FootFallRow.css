@@ -17,6 +17,47 @@
   flex: 2; /* Make the video container take more space */
 }
 
+/* Layout Toggle Styles */
+.layout-toggle-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  padding-right: 20px;
+}
+
+.toggle-btn {
+  background-color: #f8f9fa;
+  border: 2px solid #7272fa;
+  color: #7272fa;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toggle-btn:hover {
+  background-color: #7272fa;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(114, 114, 250, 0.3);
+}
+
+.toggle-btn.active {
+  background-color: #7272fa;
+  color: white;
+}
+
+.toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(114, 114, 250, 0.2);
+}
+
 /* Responsive Adjustments */
 @media screen and (max-width: 1150px) {
   .app__container__row {
@@ -31,5 +72,10 @@
 
   .video__container__row {
     flex: 1; /* Reset flex in column layout */
+  }
+  
+  .layout-toggle-container {
+    justify-content: center;
+    padding-right: 0;
   }
 }

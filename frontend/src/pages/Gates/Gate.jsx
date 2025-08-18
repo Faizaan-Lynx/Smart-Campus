@@ -4,6 +4,7 @@ import "./Gate.css";
 import VehicleTable from "../../components/VehicleTable/VehicleTable";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const Gate = () => {
   // Camera Related Variables

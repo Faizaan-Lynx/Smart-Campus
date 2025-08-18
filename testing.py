@@ -1,31 +1,31 @@
 import cv2
 
-# Replace with your IP camera stream URL
-# Example: "http://192.168.1.100:8080/video" or RTSP: "rtsp://user:pass@192.168.1.100:554/stream"
-stream_url = "rtsp://ncsael:Rawalians1234@172.23.10.137"
+# IP camera stream URL (RTSP example)
+stream_url = "rtsp://ncsael:Rawalians1234@172.23.10.75"
 
-# Open the video stream
+# Try to open the video stream
 cap = cv2.VideoCapture(stream_url)
 
 if not cap.isOpened():
-    print("Error: Could not open video stream.")
+    print("❌ Error: Could not open video stream.")
     exit()
 
-print("Streaming started... Press 'q' to quit.")
+print("✅ Streaming started... Press 'q' to quit.")
 
 while True:
     ret, frame = cap.read()
     if not ret:
-        print("Failed to retrieve frame. Exiting...")
+        print("⚠️ Warning: Failed to retrieve frame.")
         break
 
-    # Display the resulting frame
+    # Display the frame
     cv2.imshow('IP Camera Stream', frame)
 
-    # Exit on pressing 'q'
+    # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        print("⏹ Quitting stream.")
         break
 
-# Release the video capture object and close display window
+# Cleanup
 cap.release()
 cv2.destroyAllWindows()
