@@ -254,6 +254,7 @@ const Dashboard = () => {
             let alertData;
             try {
               alertData = JSON.parse(newAlert.alert); // ✅ Parse the alert JSON string
+              console.log("📋 Parsed Alert Data:", alertData); // Debug: Log the parsed alert data
             } catch (error) {
               console.error(
                 "❌ Failed to parse alert data:",
@@ -283,7 +284,7 @@ const Dashboard = () => {
 
             addToast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
               onClick: () =>
-                handleToastClick(alertData.file_path, alertData.camera_id), // ✅ Use alertData.file_path
+                handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id), // Use alert ID from newAlert or alertData, otherwise file_path
             });
           };
 
@@ -308,23 +309,43 @@ const Dashboard = () => {
     };
   }, [cameras]);
 
-  const handleToastClick = (data, cameraId) => {
-    console.log("handleToastClick called with Camera ID:", cameraId);
+  const handleToastClick = async (alertId, cameraId) => {
+    console.log("handleToastClick called with Alert ID:", alertId, "Camera ID:", cameraId);
 
-    if (!data) {
-      console.error(`Error: No video data received for Camera ID: ${cameraId}`);
-      toast.error(`No valid video feed for Camera ${cameraId}`);
+    if (!alertId) {
+      console.error(`Error: No alert ID received for Camera ID: ${cameraId}`);
+      toast.error(`No valid alert data for Camera ${cameraId}`);
       return;
     }
 
-    // Convert byte data into a Blob URL
-    const blob = new Blob([data], { type: "image/jpeg" }); // Assuming JPEG format
-    const blobUrl = URL.createObjectURL(blob);
-
+    setLoading(true);
     setSelectedCamera(cameraId);
-    setAlertUrl(blobUrl); // Set blob URL to display the image
-    setPopupActive(true);
-    setLoading(false);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: 'blob', // Expecting the response to be a blob (image)
+      });
+
+      if (response.headers["content-type"]?.startsWith("image/")) {
+        console.log("Image blob received", response.data);
+        setAlertUrl(response.data); // Set the blob directly to state
+        setPopupActive(true);
+      } else {
+        const errorText = await response.data.text();
+        console.error("Expected image, got:", errorText);
+        toast.error(`Failed to load image for Camera ${cameraId}`);
+      }
+    } catch (error) {
+      console.error("Error fetching the image:", error);
+      toast.error(`Failed to load image for Camera ${cameraId}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
