@@ -7,7 +7,7 @@ import CameraList from "../CCTVCamList/CCTVCamList";
 import CameraGrid from "../CameraGrid/CameraGrid";
 
 const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera, loading }) => {
-  const [isGridLayout, setIsGridLayout] = useState(true); // Default to grid layout
+  const [isGridLayout, setIsGridLayout] = useState(false); // Default to grid layout
 
   const toggleLayout = () => {
     setIsGridLayout(!isGridLayout);
@@ -18,12 +18,12 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera, loading }) =>
       <div className="video__container__row">
         {/* Layout Toggle */}
         <div className="layout-toggle-container">
-          <button 
+          {/* <button 
             className={`toggle-btn ${isGridLayout ? 'active' : ''}`}
             onClick={toggleLayout}
           >
             {isGridLayout ? '📱 List View' : '🔲 Grid View'}
-          </button>
+          </button> */}
         </div>
         
         {loading ? (

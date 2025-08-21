@@ -39,7 +39,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
-  { Header: "Location (Camera ID)", accessor: "camera_id" },
+  { Header: "Location (Camera Location)", accessor: "camera_id" },
   { Header: "Status", accessor: "is_acknowledged" },
   { Header: "View Image", accessor: "file_path" },
 ];

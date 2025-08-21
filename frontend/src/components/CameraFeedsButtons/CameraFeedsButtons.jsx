@@ -43,16 +43,16 @@ const CameraFeedsButtons = () => {
       });
   
     // Second API call - start license plate workers
-    axios
-      .get("http://172.23.10.26:8000/license-plates/start_all_workers", { headers })
-      .then((response) => {
-        console.log("✅ License Plate Workers Response:", response.data);
-        alert("Feeds and license plate workers started successfully.");
-      })
-      .catch((error) => {
-        console.error("❌ Failed to start license plate workers:", error);
-        alert("Failed to start license plate workers. Check console for details.");
-      });
+    // axios
+    //   .get("http://172.23.10.26:8000/license-plates/start_all_workers", { headers })
+    //   .then((response) => {
+    //     console.log("✅ License Plate Workers Response:", response.data);
+    //     alert("Feeds and license plate workers started successfully.");
+    //   })
+    //   .catch((error) => {
+    //     console.error("❌ Failed to start license plate workers:", error);
+    //     alert("Failed to start license plate workers. Check console for details.");
+    //   });
   };
   
 
@@ -77,16 +77,16 @@ const CameraFeedsButtons = () => {
       });
   
     // Second API call - stop license plate workers
-    axios
-      .get("http://172.23.10.26:8000/license-plates/stop_all_workers", { headers })
-      .then((response) => {
-        console.log("✅ License Plate Workers Stop Response:", response.data);
-        alert("Feeds and license plate workers stopped successfully.");
-      })
-      .catch((error) => {
-        console.error("❌ Failed to stop license plate workers:", error);
-        alert("Failed to stop license plate workers. Check console for details.");
-      });
+    // axios
+    //   .get("http://172.23.10.26:8000/license-plates/stop_all_workers", { headers })
+    //   .then((response) => {
+    //     console.log("✅ License Plate Workers Stop Response:", response.data);
+    //     alert("Feeds and license plate workers stopped successfully.");
+    //   })
+    //   .catch((error) => {
+    //     console.error("❌ Failed to stop license plate workers:", error);
+    //     alert("Failed to stop license plate workers. Check console for details.");
+    //   });
   };
   
   // 🕒 Show loading if userInfo not ready

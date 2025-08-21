@@ -49,7 +49,7 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
             className={`camera-card ${selectedCamera === camera.id ? "active" : ""}`}
             onClick={() => setSelectedCamera(camera.id)}
           >
-            <p>Camera {camera.id}</p>
+            <p>{camera.location}</p>
           </div>
         ))}
       </div>
