@@ -6,10 +6,10 @@ import numpy as np  # Make sure numpy is imported for filling polygons
 load_dotenv(override=True)
 
 # Initialize video capture
-# cap = cv2.VideoCapture("rtsp://ncsael:Rawalians1234@172.23.10.71")
-# cap = cv2.VideoCapture("rtsp://ncsael:Rawal@1234@172.23.10.71")
-# cap = cv2.VideoCapture("rtsp://ncsael:123Pakrwp@172.23.10.180")  #MCS VIEW-1
-# cap = cv2.VideoCapture("rtsp://ncsael:Rawal09876@172.23.10.180") #MCS VIEW-2
+# cap = cv2.VideoCapture("rtsp://ncsael:Rawalians1234@172.23.10.82")
+# cap = cv2.VideoCapture("rtsp://ncsael:Rawal@1234@172.23.10.155")
+cap = cv2.VideoCapture("rtsp://ncsael:123Pakrwp@172.23.10.99")  #MCS VIEW-1
+# cap = cv2.VideoCapture("rtsp://ncsael:Rawal09876@172.23.10.155") #MCS VIEW-2
 if not cap.isOpened():
     print("Error: Could not open video.")
     exit()
