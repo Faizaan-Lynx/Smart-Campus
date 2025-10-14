@@ -15,6 +15,7 @@ from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 from shapely.geometry import Polygon, MultiPolygon
+import torch
 
 
 # celery worker for processing video feeds
@@ -59,7 +60,10 @@ def process_feed(camera_id: int):
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-detection-models/yolov8n.pt")
-        model.to("cuda:0")
+        if torch.cuda.is_available():
+            model.to("cuda:0")
+        else:
+            model.to("cpu")
         logging.info(f"Loaded YOLO model for camera {camera_id}.")
 
         while True:
@@ -94,16 +98,39 @@ def process_feed(camera_id: int):
                 annotated_frame = cv2.polylines(annotated_frame, line_points, True, (0,0,255), 1)
             
             redis_intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
-            if settings.SHOW_INTRUSION_FLAG == "True" and redis_intrusion_flag == b"True":
+            intrusion_time_key = f"camera_{camera_id}_intrusion_time"
+            last_intrusion_time = redis_client.get(intrusion_time_key)
+            if last_intrusion_time:
+                last_intrusion_time = float(last_intrusion_time)
+            else:
+                last_intrusion_time = 0
+            current_time = time.time()
+            ALERT_DURATION = 2  # seconds
+            # Add cooldown logic
+            COOLDOWN = 5  # seconds between alerts
+            alert_time_key = f"camera_{camera_id}_last_alert_time"
+            last_alert_time = redis_client.get(alert_time_key)
+            if last_alert_time:
+                last_alert_time = float(last_alert_time)
+            else:
+                last_alert_time = 0
+
+            if settings.SHOW_INTRUSION_FLAG == "True" and redis_intrusion_flag == b"True" and (current_time - last_intrusion_time) < ALERT_DURATION:
                 annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            elif redis_intrusion_flag == b"True" and (current_time - last_intrusion_time) >= ALERT_DURATION:
+                redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
 
             # only publish the frame if the websocket is open
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, annotated_frame)
 
-            # handle intrusion event if detected, and the flag is not already set (to avoid duplicate alerts)
-            if intrusion_detected and redis_intrusion_flag == b"False":
-                handle_intrusion_event(camera_id, annotated_frame)
+            # handle intrusion event if detected, always allow new alerts but with cooldown
+            if intrusion_detected:
+                if (current_time - last_alert_time) > COOLDOWN:
+                    handle_intrusion_event(camera_id, annotated_frame)
+                    redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+                    redis_client.set(intrusion_time_key, str(current_time))
+                    redis_client.set(alert_time_key, str(current_time))
             
             stop_check_counter -= 1
             if stop_check_counter <= 0:

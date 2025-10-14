@@ -49,21 +49,21 @@ const Dashboard = () => {
         return;
       }
 
-      axios
-        .get("http://172.23.10.26:8000/intrusions/start_all_feed_workers", {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .then((response) => {
-          console.log("✅ API Response:", response.data);
-          alert("Feeds started successfully");
-        })
-        .catch((error) => {
-          console.error("❌ Failed to start feeds:", error);
-          alert("Failed to start feeds. Check console for details.");
-        });
+      // axios
+      //   .get("http://172.18.0.1:8000/intrusions/start_all_feed_workers", {
+      //     headers: {
+      //       accept: "application/json",
+      //       Authorization: `Bearer ${token}`,
+      //     },
+      //   })
+      //   .then((response) => {
+      //     console.log("✅ API Response:", response.data);
+      //     alert("Feeds started successfully");
+      //   })
+      //   .catch((error) => {
+      //     console.error("❌ Failed to start feeds:", error);
+      //     alert("Failed to start feeds. Check console for details.");
+      //   });
     };
   }, []);
 
@@ -73,7 +73,7 @@ const Dashboard = () => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
         const response = await axios.get(
-          `http://172.23.10.26:8000/camera/${cameraId}`,
+          `http://172.18.0.1:8000/camera/${cameraId}`,
           {
             headers: {
               accept: "application/json",
@@ -112,7 +112,7 @@ const Dashboard = () => {
 
         let response;
         if (isAdmin) {
-          response = await axios.get("http://172.23.10.26:8000/camera/", {
+          response = await axios.get("http://172.18.0.1:8000/camera/", {
             headers: {
               accept: "application/json",
               Authorization: `Bearer ${token}`,
@@ -121,7 +121,7 @@ const Dashboard = () => {
         } else {
           const userId = decodedToken.id;
           const userResponse = await axios.get(
-            `http://172.23.10.26:8000/users/${userId}`,
+            `http://172.18.0.1:8000/users/${userId}`,
             {
               headers: {
                 accept: "application/json",
@@ -167,6 +167,9 @@ const Dashboard = () => {
 
   //Fetch Alerts
   useEffect(() => {
+    // Only run if cameras are loaded (for non-admin users)
+    if (cameras.length === 0) return;
+
     const fetchAlerts = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -181,10 +184,11 @@ const Dashboard = () => {
         let alertUrls = [];
 
         if (isAdmin) {
-          alertUrls = ["ws://172.23.10.26:8000/ws/alerts"]; // ✅ Single WebSocket for Admin
+          alertUrls = ["ws://172.18.0.1:8000/ws/alerts"];
         } else {
+          if (cameras.length === 0) return; // Guard: don't open sockets if no cameras
           alertUrls = cameras.map(
-            (camera) => `ws://172.23.10.26:8000/ws/alerts/${camera.id}`
+            (camera) => `ws://172.18.0.1:8000/ws/alerts/${camera.id}`
           );
         }
 
@@ -192,10 +196,10 @@ const Dashboard = () => {
 
         // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
-          ? "http://172.23.10.26:8000/alerts/"
-          : `http://172.23.10.26:8000/alerts?camera_id=${cameras
-            .map((c) => c.id)
-            .join(",")}`;
+          ? "http://172.18.0.1:8000/alerts/"
+          : `http://172.18.0.1:8000/alerts?camera_id=${cameras
+              .map((c) => c.id)
+              .join(",")}`;
 
         const response = await axios.get(alertEndpoint, {
           headers: {
@@ -208,13 +212,13 @@ const Dashboard = () => {
           const filteredAlerts = isAdmin
             ? response.data
             : response.data.filter((alert) =>
-              cameras.some((camera) => camera.id === alert.camera_id)
-            );
+                cameras.some((camera) => camera.id === alert.camera_id)
+              );
 
           const sortedFormattedAlerts = filteredAlerts
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .map((item) => {
-              const utcDate = new Date(item.timestamp + "Z"); // Append Z to mark UTC
+              const utcDate = new Date(item.timestamp + "Z");
               return {
                 ...item,
                 timestamp: utcDate.toLocaleString("en-GB", {
@@ -231,16 +235,15 @@ const Dashboard = () => {
           setAlerts(sortedFormattedAlerts);
         }
 
-
         // Open WebSocket connections
         alertUrls.forEach((url) => {
           if (socketsRef.current[url]) {
             console.log(`🔄 WebSocket already connected: ${url}`);
-            return; // Prevent duplicate WebSocket connections
+            return;
           }
 
           const socket = new WebSocket(url);
-          socketsRef.current[url] = socket; // Store reference
+          socketsRef.current[url] = socket;
 
           socket.onopen = () => {
             console.log(`✅ WebSocket Connected: ${url}`);
@@ -250,11 +253,10 @@ const Dashboard = () => {
             const newAlert = JSON.parse(event.data);
             console.log("🔔 New Alert Received:", newAlert);
 
-            // 🔍 Check if alert field exists and parse it
             let alertData;
             try {
-              alertData = JSON.parse(newAlert.alert); // ✅ Parse the alert JSON string
-              console.log("📋 Parsed Alert Data:", alertData); // Debug: Log the parsed alert data
+              alertData = JSON.parse(newAlert.alert);
+              console.log("📋 Parsed Alert Data:", alertData);
             } catch (error) {
               console.error(
                 "❌ Failed to parse alert data:",
@@ -274,17 +276,16 @@ const Dashboard = () => {
               hour12: true,
             });
 
-
             if (!alertData.file_path) {
               console.error("❌ Missing file_path in alertData:", alertData);
               return;
             }
 
-            setAlerts((prevAlerts) => [alertData, ...prevAlerts]); // ✅ Use parsed alertData
+            setAlerts((prevAlerts) => [alertData, ...prevAlerts]);
 
             addToast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
               onClick: () =>
-                handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id), // Use alert ID from newAlert or alertData, otherwise file_path
+                handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id),
             });
           };
 
@@ -294,7 +295,7 @@ const Dashboard = () => {
 
           socket.onclose = () => {
             console.log(`⚠️ WebSocket Disconnected: ${url}`);
-            delete socketsRef.current[url]; // Remove reference when closed
+            delete socketsRef.current[url];
           };
         });
       } catch (error) {
@@ -324,7 +325,7 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
+      const response = await axios.get(`http://172.18.0.1:8000/alerts/${alertId}/image`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

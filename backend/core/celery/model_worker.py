@@ -3,6 +3,7 @@ import redis
 import logging
 import datetime
 import numpy as np
+import time
 from config import settings
 from ultralytics import YOLO
 from models.cameras import Camera
@@ -20,7 +21,11 @@ model_worker_app.conf.update(
 )
 
 model = YOLO(model="./yolo-detection-models/yolov8n.pt")
-model.to("cuda:0")
+import torch
+if torch.cuda.is_available():
+    model.to("cuda:0")
+else:
+    model.to("cpu")
 db = SessionLocal()
 cameras = db.query(Camera).all()
 cameras_dict = {c.id: c for c in cameras} # quick lookup for cameras {id : camera}
@@ -88,6 +93,13 @@ def process_frame(camera_id: int, frame):
         
         redis_client = redis.from_url(settings.REDIS_URL)
         intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
+        intrusion_time_key = f"camera_{camera_id}_intrusion_time"
+        last_intrusion_time = redis_client.get(intrusion_time_key)
+        if last_intrusion_time:
+            last_intrusion_time = float(last_intrusion_time)
+        else:
+            last_intrusion_time = 0
+        current_time = time.time()
         
         for res in results:
             if res.boxes.id is None:
@@ -100,10 +112,12 @@ def process_frame(camera_id: int, frame):
                 
                 threshold_crossed_flag = centroid_near_line(cx, cy, cv2lines[0], cv2lines[1], threshold=det_threshold)
                 
-                if threshold_crossed_flag and intrusion_flag == b"False":
+                if threshold_crossed_flag:
                     annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # draw red box around object
+                    # Always allow new alerts
                     handle_intrusion_event(camera_id)
                     redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+                    redis_client.set(intrusion_time_key, str(current_time))
                     intrusion_flag = b"True"
                 
                 elif threshold_crossed_flag and intrusion_flag == b"True":
@@ -112,8 +126,13 @@ def process_frame(camera_id: int, frame):
                 else:
                     annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # draw green box around object
         
-        if intrusion_flag == b"True":
+        # Show alert text only for a short duration (e.g., 2 seconds)
+        ALERT_DURATION = 2  # seconds
+        if intrusion_flag == b"True" and (current_time - last_intrusion_time) < ALERT_DURATION:
             annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        elif intrusion_flag == b"True" and (current_time - last_intrusion_time) >= ALERT_DURATION:
+            # Reset flag after duration
+            redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
 
         redis_client.close()
 

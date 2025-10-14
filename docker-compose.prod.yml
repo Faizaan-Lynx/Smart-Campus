@@ -83,7 +83,6 @@ services:
     volumes:
       - .:/app
       - pip-cache:/root/.cache/pip
-      - paddlex_models:/root/.paddlex/official_models
     ports:
       - "5555:5555"
     depends_on:
@@ -110,4 +109,3 @@ volumes:
   postgres_data:
   pip-cache:
   alert_images:
-  paddlex_models:

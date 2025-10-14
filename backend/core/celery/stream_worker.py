@@ -18,7 +18,6 @@ redis_client = redis.from_url(settings.REDIS_URL)
 @stream_worker_app.task
 def publish_frame(camera_id: int, annotated_frame: bytes):
     try:
-        logging.info(f"Publishing frame for camera_id: {camera_id}")
 
         if not isinstance(annotated_frame, bytes):
             logging.error("Frame is not in bytes format.")

@@ -66,7 +66,7 @@ export default function VehicleTable() {
       return;
     }
     try {
-      const response = await axios.get("http://172.23.10.26:8000/license-plates/", {
+      const response = await axios.get("http://172.18.0.1:8000/license-plates/", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -112,7 +112,7 @@ export default function VehicleTable() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://172.23.10.26:8000/license-plates/${licenseId}/image`,
+        `http://172.18.0.1:8000/license-plates/${licenseId}/image`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

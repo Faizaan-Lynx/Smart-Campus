@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
-from api.license_plate.ocr_instance import ocr
+# from api.license_plate.ocr_instance import ocr
 from models.users import Users
 
 # celery worker for processing video feeds for license plate detection
@@ -109,51 +109,52 @@ def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, floa
         preprocessed_image = cv2.cvtColor(preprocessed_image, cv2.COLOR_GRAY2BGR)
     
     # perform OCR
-    lp_results = ocr.ocr(preprocessed_image)
-    logging.info(f"Raw OCR results: {lp_results}")
+    # lp_results = ocr.ocr(preprocessed_image)
+    # logging.info(f"Raw OCR results: {lp_results}")
 
-    license_plate_number = ""
-    confidence_scores = []
+    # license_plate_number = ""
+    # confidence_scores = []
 
-    if len(lp_results) == 0:
-        return "", 0.0, False
+    # if len(lp_results) == 0:
+    #     return "", 0.0, False
 
-    # Handle PaddleOCR dict output (newer versions)
-    if isinstance(lp_results, list) and len(lp_results) == 1 and isinstance(lp_results[0], dict):
-        ocr_dict = lp_results[0]
-        rec_texts = ocr_dict.get('rec_texts', [])
-        rec_scores = ocr_dict.get('rec_scores', [])
-        for text, score in zip(rec_texts, rec_scores):
-            license_plate_number += str(text)
-            try:
-                confidence_scores.append(int(float(score) * 100))
-            except Exception:
-                continue
-    else:
-        # Fallback to standard output
-        for lp_res in lp_results:
-            if lp_res is None:
-                continue
-            for line in lp_res:
-                if (
-                    isinstance(line, (list, tuple)) and len(line) > 1 and
-                    isinstance(line[1], (list, tuple)) and len(line[1]) > 1
-                ):
-                    license_plate_number += str(line[1][0])
-                    try:
-                        confidence_scores.append(int(float(line[1][1]) * 100))
-                    except Exception:
-                        continue
-                else:
-                    continue
-    logging.info(f"Intermediate license_plate_number: {license_plate_number}")
+    # # Handle PaddleOCR dict output (newer versions)
+    # if isinstance(lp_results, list) and len(lp_results) == 1 and isinstance(lp_results[0], dict):
+    #     ocr_dict = lp_results[0]
+    #     rec_texts = ocr_dict.get('rec_texts', [])
+    #     rec_scores = ocr_dict.get('rec_scores', [])
+    #     for text, score in zip(rec_texts, rec_scores):
+    #         license_plate_number += str(text)
+    #         try:
+    #             confidence_scores.append(int(float(score) * 100))
+    #         except Exception:
+    #             continue
+    # else:
+    #     # Fallback to standard output
+    #     for lp_res in lp_results:
+    #         if lp_res is None:
+    #             continue
+    #         for line in lp_res:
+    #             if (
+    #                 isinstance(line, (list, tuple)) and len(line) > 1 and
+    #                 isinstance(line[1], (list, tuple)) and len(line[1]) > 1
+    #             ):
+    #                 license_plate_number += str(line[1][0])
+    #                 try:
+    #                     confidence_scores.append(int(float(line[1][1]) * 100))
+    #                 except Exception:
+    #                     continue
+    #             else:
+    #                 continue
+    # logging.info(f"Intermediate license_plate_number: {license_plate_number}")
 
-    valid, license_plate_number = apply_lp_ocr_rules(license_plate_number, class_name)
-    average_confidence = np.mean(confidence_scores) if confidence_scores else 0.0
+    # valid, license_plate_number = apply_lp_ocr_rules(license_plate_number, class_name)
+    # average_confidence = np.mean(confidence_scores) if confidence_scores else 0.0
 
-    if license_plate_number == "":
-        return "", 0.0, False
-    return license_plate_number, average_confidence, valid
+    # if license_plate_number == "":
+    #     return "", 0.0, False
+    # return license_plate_number, average_confidence, valid
+    return "", 0.0, False  # PaddleOCR removed, always return empty result
 
 def detect_faces_in_frame(frame: np.ndarray) -> list:
     """
