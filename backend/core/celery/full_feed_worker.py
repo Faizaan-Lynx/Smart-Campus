@@ -82,7 +82,14 @@ def process_feed(camera_id: int):
 
             for res in results:
                 for detection in res.boxes:
-                    if detection.conf < 0.30:
+                    if detection.conf < 0.57:
+                        continue
+                    # Get class index and label
+                    class_idx = int(detection.cls[0]) if hasattr(detection, 'cls') else None
+                    # If your model has a .names attribute, use it to get the label
+                    class_label = model.names[class_idx] if hasattr(model, 'names') and class_idx is not None else str(class_idx)
+                    # Only process if class is 'person' (COCO: class 0)
+                    if class_idx != 0:
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     bbox = detection.xyxy[0]
@@ -285,7 +292,6 @@ def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
             time.sleep(timeout)
     logging.error(f"Failed to create Capture object for Camera {camera_id}")
     raise Exception(f"Failed to create Capture object for Camera {camera_id}")
-
 
 
 ## ====== Handling Intrusion Logic ===== ##

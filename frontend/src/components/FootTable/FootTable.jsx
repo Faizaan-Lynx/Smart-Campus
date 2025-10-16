@@ -39,12 +39,12 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
-  { Header: "Location (Camera Location)", accessor: "camera_id" },
+  { Header: "Location", accessor: "camera_id" },
   { Header: "Status", accessor: "is_acknowledged" },
   { Header: "View Image", accessor: "file_path" },
 ];
 
-const FootTable = ({ alerts, setAlerts }) => {
+const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedFeed, setSelectedFeed] = useState(null);
@@ -159,7 +159,12 @@ const FootTable = ({ alerts, setAlerts }) => {
                           View Feed
                         </button>
                       ) : column.accessor === "camera_id" ? (
-                        `Camera ${row[column.accessor]}`
+                        <span className="nowrap-location">
+                          {(() => {
+                            const cam = cameras.find(c => c.id === row.camera_id);
+                            return cam && cam.location ? cam.location : `Camera ${row.camera_id}`;
+                          })()}
+                        </span>
                       ) : column.accessor === "is_acknowledged" ? (
                         row[column.accessor] ? (
                           "✅ Acknowledged"

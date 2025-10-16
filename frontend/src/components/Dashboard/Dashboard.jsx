@@ -283,7 +283,10 @@ const Dashboard = () => {
 
             setAlerts((prevAlerts) => [alertData, ...prevAlerts]);
 
-            addToast(`🚨 New Alert at Camera ${alertData.camera_id}`, {
+            // Find camera location for toast
+            const cam = cameras.find(c => c.id === alertData.camera_id);
+            const locationText = cam && cam.location ? cam.location : `Camera ${alertData.camera_id}`;
+            addToast(`🚨 New Alert at ${locationText}`, {
               onClick: () =>
                 handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id),
             });
@@ -381,10 +384,17 @@ const Dashboard = () => {
         {/* <FootFall visitData={visitData} /> */}
         {/* <GenderRatioRow visitData={visitData} /> */}
         {/* <EngagementRow visitData={visitData} /> */}
-        <FootTable alerts={alerts} setAlerts={setAlerts} />
+        <FootTable alerts={alerts} setAlerts={setAlerts} cameras={cameras} />
       </div>
       {popupActive && (
-        <FeedPopup filePath={alertUrl} onClose={handleClosePopup} />
+        <FeedPopup 
+          filePath={alertUrl} 
+          onClose={handleClosePopup}
+          location={(() => {
+            const cam = cameras.find(c => c.id === selectedCamera);
+            return cam && cam.location ? cam.location : `Camera ${selectedCamera}`;
+          })()}
+        />
       )}
     </div>
   );

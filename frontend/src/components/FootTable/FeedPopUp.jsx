@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./FeedPopup.css";
 
-const FeedPopup = ({ filePath, onClose }) => {
+const FeedPopup = ({ filePath, onClose, location }) => {
   const [imageUrl, setImageUrl] = React.useState(null);
 
   // If the blob data is received, create an object URL for it
@@ -21,7 +21,11 @@ const FeedPopup = ({ filePath, onClose }) => {
     <div className="popup-overlay">
       <div className="popup-content">
         <h3>Camera Feed</h3>
-
+        {location && (
+          <div style={{ fontWeight: 'bold', marginBottom: 8, whiteSpace: 'nowrap' }}>
+            Location: {location}
+          </div>
+        )}
         {imageUrl ? (
           <img
             src={imageUrl} // Use the generated object URL for the blob
