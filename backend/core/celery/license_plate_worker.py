@@ -240,7 +240,7 @@ def process_feed(camera_id: int):
             
             for res in results:
                 for detection in res.boxes:
-                    if detection.conf < 0.65:  # Confidence threshold
+                    if detection.conf < 0.8:  # Confidence threshold increased from 0.65 to 0.8
                         continue
                     x1, y1, x2, y2 = map(int, detection.xyxy[0])
                     
