@@ -54,7 +54,7 @@ const UserAdmin = ({ columns }) => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://172.18.0.1:8000/users", {
+        const response = await axios.get("http://172.23.10.26:8000/users", {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -83,7 +83,7 @@ const UserAdmin = ({ columns }) => {
       if (result.isConfirmed) {
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`http://172.18.0.1:8000/users/${id}`, {
+          await axios.delete(`http://172.23.10.26:8000/users/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/json",

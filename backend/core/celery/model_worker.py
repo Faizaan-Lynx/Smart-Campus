@@ -20,7 +20,7 @@ model_worker_app.conf.update(
     worker_heartbeat=60,
 )
 
-model = YOLO(model="./yolo-detection-models/yolov8n.pt")
+model = YOLO(model="./yolo-detection-models/yolov8n-o.pt")
 import torch
 if torch.cuda.is_available():
     model.to("cuda:0")

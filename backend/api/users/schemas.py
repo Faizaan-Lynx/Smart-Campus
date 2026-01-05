@@ -46,8 +46,12 @@ class UserCreate(BaseModel):
     exit_at_timestamp: Optional[datetime] = None   # Use str for ISO format
 
     def hash_password(self):
-        """Hash the password before storing"""
-        self.password = pwd_context.hash(self.password)
+        """Hash the password before storing, truncating to 72 bytes for bcrypt."""
+        password_bytes = self.password.encode("utf-8")[:72]
+        result = password_bytes.decode("utf-8", errors="ignore")
+        while len(result.encode("utf-8")) > 72:
+            result = result[:-1]
+        self.password = pwd_context.hash(result)
 
 
 class UserUpdate(BaseModel):  # No need to inherit from UserBase to keep fields optional

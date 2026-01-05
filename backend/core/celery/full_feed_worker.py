@@ -59,7 +59,7 @@ def process_feed(camera_id: int):
         stop_check_counter = 300
 
         # load yolo and move to GPU
-        model = YOLO(model="./yolo-detection-models/yolov8n.pt")
+        model = YOLO(model="./yolo-detection-models/yolov8n-o.pt")
         if torch.cuda.is_available():
             model.to("cuda:0")
         else:

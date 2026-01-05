@@ -16,7 +16,7 @@ const CameraGrid = ({ cameras, selectedCamera, setSelectedCamera }) => {
     const newWsConnections = {};
 
     cameras.forEach((camera) => {
-      const socket = new WebSocket(`ws://172.18.0.1:8000/ws/frames/${camera.id}`);
+      const socket = new WebSocket(`ws://172.23.10.26:8000/ws/frames/${camera.id}`);
       socket.onopen = () => console.log(`Connected to WebSocket for Camera ${camera.id}`);
       socket.onmessage = (event) => {
         const imageBlob = new Blob([event.data], { type: "image/jpeg" });
@@ -39,7 +39,7 @@ const CameraGrid = ({ cameras, selectedCamera, setSelectedCamera }) => {
   useEffect(() => {
     if (!popupActive || !popupCameraId) return;
     // Open a new WebSocket for the popup
-    const socket = new WebSocket(`ws://172.18.0.1:8000/ws/frames/${popupCameraId}`);
+    const socket = new WebSocket(`ws://172.23.10.26:8000/ws/frames/${popupCameraId}`);
     popupWsRef.current = socket;
     socket.onopen = () => console.log(`Popup WS connected for Camera ${popupCameraId}`);
     socket.onmessage = (event) => {

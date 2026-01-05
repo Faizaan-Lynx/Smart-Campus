@@ -102,7 +102,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.23.55.0/24
+        - subnet: 172.23.55.0/24 
     external: false
 
 volumes:

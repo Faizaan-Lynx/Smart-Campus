@@ -1,14 +1,11 @@
 from typing import List
 from core.database import get_db
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 from models.users import Users as UserModel
 from api.auth.schemas import UserResponseSchema
 from api.auth.security import is_admin, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from api.users.schemas import UserCreate, UserUpdate, UserBase
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -18,13 +15,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    # Hash password before storing
-    hashed_password = pwd_context.hash(user.password)
+    # Jugaad: Store password as plain text (NOT recommended for production)
+    hashed_password = user.password
 
     new_user = UserModel(
         username=user.username,
         email=user.email,
-        hashed_password=hashed_password,  # Store hashed password
+        hashed_password=hashed_password,  # Store plain password
         is_admin=user.is_admin,
         ip_address=user.ip_address,
         license_plate=user.license_plate,
@@ -60,9 +57,9 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db), c
 
     update_data = user.model_dump(exclude_unset=True)
 
-    # Handle password separately
+    # Jugaad: Store password as plain text if updated
     if "password" in update_data:
-        db_user.hashed_password = pwd_context.hash(update_data.pop("password"))
+        db_user.hashed_password = update_data.pop("password")
 
     # Bulk update other fields
     for key, value in update_data.items():

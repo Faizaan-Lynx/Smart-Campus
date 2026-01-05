@@ -64,7 +64,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
     try {
       const token = localStorage.getItem("token");
   
-      const response = await axios.get(`http://172.18.0.1:8000/alerts/${alertId}/image`, {
+      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -88,7 +88,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const handleAcknowledge = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.patch(`http://172.18.0.1:8000/alerts/${alertId}/acknowledge`, {
+      await axios.patch(`http://172.23.10.26:8000/alerts/${alertId}/acknowledge`, {
         is_acknowledged: true,
       }, {
         headers: {
@@ -112,7 +112,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const handleDelete = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://172.18.0.1:8000/alerts/${alertId}`,
+      await axios.delete(`http://172.23.10.26:8000/alerts/${alertId}`,
       {
         headers: {
           accept: "application/json",

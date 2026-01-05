@@ -50,7 +50,7 @@ const Dashboard = () => {
       }
 
       // axios
-      //   .get("http://172.18.0.1:8000/intrusions/start_all_feed_workers", {
+      //   .get("http://172.23.10.26:8000/intrusions/start_all_feed_workers", {
       //     headers: {
       //       accept: "application/json",
       //       Authorization: `Bearer ${token}`,
@@ -73,7 +73,7 @@ const Dashboard = () => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
         const response = await axios.get(
-          `http://172.18.0.1:8000/camera/${cameraId}`,
+          `http://172.23.10.26:8000/camera/${cameraId}`,
           {
             headers: {
               accept: "application/json",
@@ -112,7 +112,7 @@ const Dashboard = () => {
 
         let response;
         if (isAdmin) {
-          response = await axios.get("http://172.18.0.1:8000/camera/", {
+          response = await axios.get("http://172.23.10.26:8000/camera/", {
             headers: {
               accept: "application/json",
               Authorization: `Bearer ${token}`,
@@ -121,7 +121,7 @@ const Dashboard = () => {
         } else {
           const userId = decodedToken.id;
           const userResponse = await axios.get(
-            `http://172.18.0.1:8000/users/${userId}`,
+            `http://172.23.10.26:8000/users/${userId}`,
             {
               headers: {
                 accept: "application/json",
@@ -184,11 +184,11 @@ const Dashboard = () => {
         let alertUrls = [];
 
         if (isAdmin) {
-          alertUrls = ["ws://172.18.0.1:8000/ws/alerts"];
+          alertUrls = ["ws://172.23.10.26:8000/ws/alerts"];
         } else {
           if (cameras.length === 0) return; // Guard: don't open sockets if no cameras
           alertUrls = cameras.map(
-            (camera) => `ws://172.18.0.1:8000/ws/alerts/${camera.id}`
+            (camera) => `ws://172.23.10.26:8000/ws/alerts/${camera.id}`
           );
         }
 
@@ -196,8 +196,8 @@ const Dashboard = () => {
 
         // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
-          ? "http://172.18.0.1:8000/alerts/"
-          : `http://172.18.0.1:8000/alerts?camera_id=${cameras
+          ? "http://172.23.10.26:8000/alerts/"
+          : `http://172.23.10.26:8000/alerts?camera_id=${cameras
               .map((c) => c.id)
               .join(",")}`;
 
@@ -328,7 +328,7 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await axios.get(`http://172.18.0.1:8000/alerts/${alertId}/image`, {
+      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

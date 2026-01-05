@@ -14,7 +14,7 @@ export const token =
 // export const localurl = "http://54.179.81.103/api";
 // export const localurl = "http://app.pulsse.io/api";
 // export const localurl = "http://vs1.gpuhut.com/api";
-export const localurl = "http://172.18.0.1:8000";
+export const localurl = "http://172.23.10.26:8000";
 
 //export const localurl = "www.gpuhut.com/api";
 
