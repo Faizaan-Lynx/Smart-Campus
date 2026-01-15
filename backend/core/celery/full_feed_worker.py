@@ -21,7 +21,9 @@ import torch
 # celery worker for processing video feeds
 full_feed_worker_app = Celery('unified_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 # remove the many h264 & rtsp warnings that get logged
-os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
+os.environ['OPENCV_LOG_LEVEL'] = 'DEBUG'
+os.environ['OPENCV_VIDEOIO_DEBUG'] = '1'
+
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
 

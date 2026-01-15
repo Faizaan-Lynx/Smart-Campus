@@ -1,3 +1,7 @@
+import os
+# Set global OpenCV FFmpeg capture options to increase stream timeout to 60 seconds (60000000 microseconds)
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;60000000|max-delay;500000"
+
 import cv2
 import redis
 import logging
@@ -7,6 +11,12 @@ from models.cameras import Camera
 from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from celery import Celery, signals, group
+import time
+import random
+import subprocess
+
+# Ensure logging is configured to show INFO logs to console
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 feed_worker_app = Celery('feed_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 feed_worker_app.conf.update(
@@ -16,6 +26,28 @@ feed_worker_app.conf.update(
 
 worker_id = None
 capture_objects = {}
+ffmpeg_processes = {}
+
+
+# Start FFmpeg repair layer for each camera
+def start_ffmpeg_repair(camera: Camera, udp_port: int):
+    rtsp_url = camera.url
+    logging.info(f"Preparing to start FFmpeg repair for Camera {camera.id} on UDP port {udp_port} with URL: {rtsp_url}")
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-rtsp_transport", "tcp",
+        "-fflags", "+genpts+discardcorrupt",
+        "-use_wallclock_as_timestamps", "1",
+        "-reorder_queue_size", "1000",
+        "-i", rtsp_url,
+        "-f", "mpegts",
+        f"udp://127.0.0.1:{udp_port}"
+    ]
+    logging.info(f"FFmpeg command: {' '.join(ffmpeg_cmd)}")
+    proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    ffmpeg_processes[camera.id] = proc
+    logging.info(f"Started FFmpeg repair process for Camera {camera.id} (PID: {proc.pid})")
+    return proc
 
 
 @signals.worker_ready.connect # automatically trigger task on worker startup
@@ -98,34 +130,61 @@ from .model_worker import process_frame
 
 def capture_video_frames(camera: Camera):
     """
-    Capture frames from the video source (URL) using OpenCV and send them to a Celery queue.
+    Stateless capture: Always release and recreate VideoCapture for every frame.
+    Adds a small random sleep to stagger connections and sets FPS to 1 to reduce load.
+    Retries indefinitely until a frame is successfully captured.
+    Sets OpenCV capture open and read timeouts to 60 seconds.
+    Uses FFmpeg repair layer output (UDP stream) as input.
     """
-    if camera.id in capture_objects:
-        cap = capture_objects[camera.id]
-    else:
-        logging.info(f"Creating new VideoCapture object for camera {camera.id}")
-        cap = cv2.VideoCapture(camera.url)
+    retry_delay = 1  # seconds
+    attempt = 0
+    # Assign a unique UDP port per camera (e.g., 10000 + camera.id)
+    udp_port = 10000 + camera.id
+    if camera.id not in ffmpeg_processes or ffmpeg_processes[camera.id].poll() is not None:
+        logging.info(f"Calling start_ffmpeg_repair for Camera {camera.id} (not running or missing)")
+        start_ffmpeg_repair(camera, udp_port)
+    udp_url = f"udp://127.0.0.1:{udp_port}"
+    while True:
+        attempt += 1
+        time.sleep(random.uniform(0, 0.5))  # Stagger connections
+        cap = cv2.VideoCapture(udp_url, cv2.CAP_FFMPEG)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        cap.set(cv2.CAP_PROP_FPS, 5)
+        cap.set(cv2.CAP_PROP_FPS, 1)
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 60000)  # 60 seconds to open
+        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 60000)  # 60 seconds per read
         if not cap.isOpened():
-            logging.error(f"Could not open video stream for camera {camera.id} at URL {camera.url}")
-            return
-        redis_client = redis.from_url(settings.REDIS_URL)
-        redis_client.set(f"camera_{camera.id}_intrusion_flag", "False")
-        redis_client.close()
-        capture_objects[camera.id] = cap
-
-    # read the frame
-    # logging.info(f"Reading frame from camera {camera.id}, path {camera.url}...")
-    ret, frame = cap.read()
-    frame = cv2.convertScaleAbs(frame)
-
-    if not ret:
-        logging.warning(f"Failed to read frame from camera {camera.id}, URL {camera.url}")
-        return
-
-    frame = preprocess_frame(frame, camera)
-    process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
+            logging.error(f"Attempt {attempt} of stateless capture for Camera {camera.id} failed. URL: {camera.url}")
+            try:
+                cap.release()
+            except Exception:
+                pass
+            time.sleep(retry_delay)
+            continue
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            logging.warning(f"Failed to read frame from camera {camera.id} (stateless). URL: {camera.url}")
+            try:
+                cap.release()
+            except Exception:
+                pass
+            time.sleep(retry_delay)
+            continue
+        frame = cv2.convertScaleAbs(frame)
+        frame = preprocess_frame(frame, camera)
+        process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
+        try:
+            cap.release()
+        except Exception:
+            pass
+        break
+    else:
+        logging.error(f"Camera {camera.id} is unavailable after {max_retries} stateless attempts. URL: {camera.url}")
+        try:
+            redis_client = redis.from_url(settings.REDIS_URL)
+            redis_client.set(f"camera_{camera.id}_unavailable", "True")
+            redis_client.close()
+        except Exception as e:
+            logging.error(f"Failed to set unavailable flag in Redis for camera {camera.id}: {e}")
 
 
 def preprocess_frame(frame, camera: Camera):
@@ -150,17 +209,19 @@ def preprocess_frame(frame, camera: Camera):
 def update_cameras_for_feed_workers(cameras: List[Camera]):
     """
     Updates the cameras list for the feed workers.
+    Releases capture objects for cameras not in the new list.
     """
     try:
         global capture_objects
-
-        # release the capture objects for cameras that are not in the new list
-        for camera_id in capture_objects.keys():
-            if camera_id not in [c.id for c in cameras]:
+        current_ids = set(capture_objects.keys())
+        new_ids = set(c.id for c in cameras)
+        for camera_id in current_ids - new_ids:
+            try:
                 logging.info(f"Releasing VideoCapture object for camera {camera_id}")
                 capture_objects[camera_id].release()
-                del capture_objects[camera_id]
-
+            except Exception:
+                pass
+            capture_objects.pop(camera_id, None)
     except Exception as e:
         logging.exception(e)
 
