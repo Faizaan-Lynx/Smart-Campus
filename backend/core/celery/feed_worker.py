@@ -1,6 +1,7 @@
 import os
-# Set global OpenCV FFmpeg capture options to increase stream timeout to 60 seconds (60000000 microseconds)
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;60000000|max-delay;500000"
+# Set global OpenCV FFmpeg capture options for zero-delay streaming
+# max-delay set to 0 for real-time processing, stimeout reduced to 5 seconds
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;5000000|max-delay;0|fflags;nobuffer"
 
 import cv2
 import redis
@@ -36,15 +37,24 @@ def start_ffmpeg_repair(camera: Camera, udp_port: int):
     ffmpeg_cmd = [
         "ffmpeg",
         "-rtsp_transport", "tcp",
-        "-fflags", "+genpts+discardcorrupt",
+        "-stimeout", "5000000",  # 5 seconds timeout
+        "-max_delay", "0",  # Zero delay
+        "-fflags", "nobuffer+discardcorrupt",  # Discard corrupted frames, no buffering
+        "-flags", "+low_delay",  # Low latency mode
         "-use_wallclock_as_timestamps", "1",
-        "-reorder_queue_size", "1000",
+        "-reorder_queue_size", "0",  # No reordering
+        "-analyzeduration", "0",
+        "-probesize", "32",
+        "-reconnect", "1",
+        "-reconnect_streamed", "1",
+        "-reconnect_delay_max", "2",
         "-i", rtsp_url,
+        "-an",  # Disable audio
         "-f", "mpegts",
         f"udp://127.0.0.1:{udp_port}"
     ]
-    logging.info(f"FFmpeg command: {' '.join(ffmpeg_cmd)}")
-    proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.info(f"FFmpeg command for Camera {camera.id}: {' '.join(ffmpeg_cmd)}")
+    proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ffmpeg_processes[camera.id] = proc
     logging.info(f"Started FFmpeg repair process for Camera {camera.id} (PID: {proc.pid})")
     return proc
