@@ -39,7 +39,7 @@ def start_ffmpeg_repair(camera: Camera, udp_port: int):
         "-rtsp_transport", "tcp",
         "-stimeout", "5000000",  # 5 seconds timeout
         "-max_delay", "0",  # Zero delay
-        "-fflags", "nobuffer+discardcorrupt",  # Discard corrupted frames, no buffering
+        "-fflags", "nobuffer+discardcorrupt",  # No buffer, discard corrupt frames
         "-flags", "+low_delay",  # Low latency mode
         "-use_wallclock_as_timestamps", "1",
         "-reorder_queue_size", "0",  # No reordering
@@ -47,9 +47,13 @@ def start_ffmpeg_repair(camera: Camera, udp_port: int):
         "-probesize", "32",
         "-reconnect", "1",
         "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "2",
+        "-reconnect_delay_max", "1",
+        "-flush_packets", "1",
+        "-rtbufsize", "64k",   # Minimal buffer for lowest delay
+        "-tune", "zerolatency",  # For lowest latency
+        "-preset", "ultrafast",  # Fastest encoding
+        "-b:v", "4M",  # High bitrate for clarity (tune as needed)
         "-i", rtsp_url,
-        "-an",  # Disable audio
         "-f", "mpegts",
         f"udp://127.0.0.1:{udp_port}"
     ]
@@ -158,7 +162,7 @@ def capture_video_frames(camera: Camera):
         attempt += 1
         time.sleep(random.uniform(0, 0.5))  # Stagger connections
         cap = cv2.VideoCapture(udp_url, cv2.CAP_FFMPEG)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimal buffer for lowest delay
         cap.set(cv2.CAP_PROP_FPS, 1)
         cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 60000)  # 60 seconds to open
         cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 60000)  # 60 seconds per read
@@ -170,8 +174,14 @@ def capture_video_frames(camera: Camera):
                 pass
             time.sleep(retry_delay)
             continue
-        ret, frame = cap.read()
-        if not ret or frame is None:
+        # --- Discard all but the latest frame to avoid buffer delay ---
+        last_frame = None
+        for _ in range(10):  # Try to read up to 10 frames, keep only the last
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                break
+            last_frame = frame
+        if last_frame is None:
             logging.warning(f"Failed to read frame from camera {camera.id} (stateless). URL: {camera.url}")
             try:
                 cap.release()
@@ -179,7 +189,7 @@ def capture_video_frames(camera: Camera):
                 pass
             time.sleep(retry_delay)
             continue
-        frame = cv2.convertScaleAbs(frame)
+        frame = cv2.convertScaleAbs(last_frame)
         frame = preprocess_frame(frame, camera)
         process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
         try:

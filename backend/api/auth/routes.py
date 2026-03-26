@@ -20,8 +20,8 @@ def login(user_credentials: UserLoginSchema, db: Session = Depends(get_db)):
         )
 
     # Try bcrypt check first, fallback to plain text
-    password_valid = False
-    try:
+    password_valid = False                      
+    try:                    
         password_valid = bcrypt.checkpw(user_credentials.password.encode("utf-8"), user.hashed_password.encode("utf-8"))
     except Exception:
         # If bcrypt fails (e.g., invalid salt), try plain text match
