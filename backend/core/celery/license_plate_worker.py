@@ -223,6 +223,9 @@ def process_feed(camera_id: int):
         logging.info(f"Loaded license plate detection model for camera {camera_id}.")
 
         while True:
+            # Flush buffer: grab frames until only the latest remains
+            for _ in range(5):
+                cap.grab()
             ret, frame = cap.read()
             if not ret:
                 logging.warning(f"Failed to read frame from camera {camera_id}. Attempting to reopen capture object...")
@@ -345,17 +348,40 @@ def publish_frame(camera_id: int, annotated_frame: np.ndarray):
 
 def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
     """
-    Reopen video capture object if failed
+    Reopen video capture object if failed, using best-practice low-latency settings for RTSP.
     """
     for attempt in range(0, max_tries):
-        cap = cv2.VideoCapture(url)
-        if cap.isOpened():
-            logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
-            return cap
+        cap = None
+        if url.startswith("rtsp://"):
+            # Try GStreamer pipeline first
+            gst_str = (
+                f'rtspsrc location={url} latency=0 ! '
+                'rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! '
+                'appsink drop=1 max-buffers=1 sync=false'
+            )
+            cap = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
+            if cap.isOpened():
+                logging.info(f"[GStreamer] Video Capture object for Camera {camera_id} successfully created.")
+                return cap
+            else:
+                cap.release()
+                # Fallback to FFMPEG with TCP transport
+                cap = cv2.VideoCapture(f"{url}?rtsp_transport=tcp", cv2.CAP_FFMPEG)
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                if cap.isOpened():
+                    logging.info(f"[FFMPEG] Video Capture object for Camera {camera_id} successfully created with TCP transport.")
+                    return cap
+                else:
+                    cap.release()
         else:
-            logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
-            cap.release()
-            time.sleep(timeout)
+            cap = cv2.VideoCapture(url)
+            if cap.isOpened():
+                logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
+                return cap
+            else:
+                cap.release()
+        logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
+        time.sleep(timeout)
     logging.error(f"Failed to create Capture object for Camera {camera_id}")
     raise Exception(f"Failed to create Capture object for Camera {camera_id}")
 

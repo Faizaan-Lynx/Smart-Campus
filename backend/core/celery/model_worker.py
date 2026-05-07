@@ -4,6 +4,9 @@ import logging
 import datetime
 import numpy as np
 import time
+import threading
+import concurrent.futures
+import hashlib
 from config import settings
 from ultralytics import YOLO
 from models.cameras import Camera
@@ -236,3 +239,150 @@ def centroid_near_line(centroid_x:float, centroid_y:float, line_point1:tuple, li
     closest_distance = np.linalg.norm(np.array([centroid_x, centroid_y]) - closest_point)
 
     return closest_distance <= threshold
+
+
+class FrameGrabber(threading.Thread):
+    def __init__(self, cap_factory):
+        super().__init__()
+        self.cap_factory = cap_factory
+        self.cap = self.cap_factory()
+        self.latest_frame = None
+        self.running = True
+        self.lock = threading.Lock()
+        self.failed_reads = 0
+        self.max_failed_reads = 30
+        self.read_timeout = 2  # seconds
+        self.last_frame_hash = None
+        self.stuck_count = 0
+        self.max_stuck_count = 10  # reconnect if same frame seen 10 times
+
+    def run(self):
+        while self.running:
+            if self.cap is None or not self.cap.isOpened():
+                self._reconnect()
+            frame = self._timed_read()
+            if frame is not None:
+                frame_hash = hashlib.md5(frame.tobytes()).hexdigest()
+                if frame_hash == self.last_frame_hash:
+                    self.stuck_count += 1
+                else:
+                    self.stuck_count = 0
+                self.last_frame_hash = frame_hash
+                if self.stuck_count >= self.max_stuck_count:
+                    self._reconnect()
+                    self.stuck_count = 0
+                    continue
+                with self.lock:
+                    self.latest_frame = frame
+                self.failed_reads = 0
+            else:
+                self.failed_reads += 1
+                if self.failed_reads >= self.max_failed_reads:
+                    self._reconnect()
+                time.sleep(0.05)
+
+    def _timed_read(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._read_frame)
+            try:
+                ret, frame = future.result(timeout=self.read_timeout)
+                if ret:
+                    return frame
+            except Exception:
+                pass
+        return None
+
+    def _read_frame(self):
+        try:
+            return self.cap.read()
+        except Exception:
+            return False, None
+
+    def _reconnect(self):
+        if self.cap:
+            self.cap.release()
+        while self.running:
+            try:
+                self.cap = self.cap_factory()
+                if self.cap.isOpened():
+                    self.failed_reads = 0
+                    break
+            except Exception:
+                pass
+            time.sleep(2)
+
+    def get_latest_frame(self):
+        with self.lock:
+            return self.latest_frame.copy() if self.latest_frame is not None else None
+
+    def stop(self):
+        self.running = False
+        if self.cap:
+            self.cap.release()
+
+
+@model_worker_app.task
+def process_camera_stream(camera_id: int, stream_url: str):
+    """
+    Continuously grabs frames from the camera, processes with YOLO, and publishes annotated frames in real-time.
+    """
+    try:
+        def cap_factory():
+            return cv2.VideoCapture(stream_url)
+        grabber = FrameGrabber(cap_factory)
+        grabber.start()
+        redis_client = redis.from_url(settings.REDIS_URL)
+        camera = cameras_dict.get(camera_id, None)
+        if not camera:
+            logging.error(f"Camera {camera_id} not found.")
+            return None
+        det_threshold = camera.detection_threshold
+        cv2lines = camera.lines
+        while True:
+            frame = grabber.get_latest_frame()
+            if frame is None:
+                time.sleep(0.01)
+                continue
+            annotated_frame = np.array(frame, dtype=np.uint8)
+            results = model.predict(annotated_frame, classes=[0])
+            intrusion_flag = redis_client.get(f"camera_{camera_id}_intrusion_flag")
+            intrusion_time_key = f"camera_{camera_id}_intrusion_time"
+            last_intrusion_time = redis_client.get(intrusion_time_key)
+            if last_intrusion_time:
+                last_intrusion_time = float(last_intrusion_time)
+            else:
+                last_intrusion_time = 0
+            current_time = time.time()
+            for res in results:
+                if res.boxes.id is None:
+                    continue
+                for detection in res.boxes:
+                    x1, y1, x2, y2 = map(int, detection.xyxy[0])
+                    cx = (x1 + x2) / 2
+                    cy = (y1 + y2) / 2
+                    threshold_crossed_flag = centroid_near_line(cx, cy, cv2lines[0], cv2lines[1], threshold=det_threshold)
+                    if threshold_crossed_flag:
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                        handle_intrusion_event(camera_id)
+                        redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
+                        redis_client.set(intrusion_time_key, str(current_time))
+                        intrusion_flag = b"True"
+                    elif threshold_crossed_flag and intrusion_flag == b"True":
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    else:
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            ALERT_DURATION = 2
+            if intrusion_flag == b"True" and (current_time - last_intrusion_time) < ALERT_DURATION:
+                annotated_frame = cv2.putText(annotated_frame, "Intrusion Detected", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            elif intrusion_flag == b"True" and (current_time - last_intrusion_time) >= ALERT_DURATION:
+                redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+            _, buffer = cv2.imencode(".jpg", annotated_frame)
+            annotated_frame = buffer.tobytes()
+            publish_frame(camera_id, annotated_frame)
+    except Exception as e:
+        logging.exception(e)
+    finally:
+        grabber.stop()
+        grabber.join()
+        # No need to release cap, handled by grabber
+        redis_client.close()

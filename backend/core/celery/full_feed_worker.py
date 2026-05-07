@@ -16,6 +16,7 @@ from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 from shapely.geometry import Polygon, MultiPolygon
 import torch
+import threading
 
 
 # celery worker for processing video feeds
@@ -28,6 +29,55 @@ os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
 
 ## ===== General Video Processing ===== ##
+
+class FrameGrabber(threading.Thread):
+    def __init__(self, cap_factory):
+        super().__init__()
+        self.cap_factory = cap_factory  # function to create a new VideoCapture
+        self.cap = self.cap_factory()
+        self.latest_frame = None
+        self.running = True
+        self.lock = threading.Lock()
+        self.failed_reads = 0
+        self.max_failed_reads = 30  # ~0.3s if 100fps, tune as needed
+
+    def run(self):
+        while self.running:
+            if self.cap is None or not self.cap.isOpened():
+                self._reconnect()
+            ret, frame = self.cap.read()
+            if ret:
+                with self.lock:
+                    self.latest_frame = frame
+                self.failed_reads = 0
+            else:
+                self.failed_reads += 1
+                if self.failed_reads >= self.max_failed_reads:
+                    self._reconnect()
+                time.sleep(0.05)
+
+    def _reconnect(self):
+        if self.cap:
+            self.cap.release()
+        while self.running:
+            try:
+                self.cap = self.cap_factory()
+                if self.cap.isOpened():
+                    self.failed_reads = 0
+                    break
+            except Exception:
+                pass
+            time.sleep(2)  # Wait before retrying
+
+    def get_latest_frame(self):
+        with self.lock:
+            return self.latest_frame.copy() if self.latest_frame is not None else None
+
+    def stop(self):
+        self.running = False
+        if self.cap:
+            self.cap.release()
+
 
 @full_feed_worker_app.task
 def process_feed(camera_id: int):
@@ -54,9 +104,14 @@ def process_feed(camera_id: int):
             logging.info(f"Camera {camera_id} detect_intrusions is False. Skipping capture and processing.")
             return {"status": "Intrusion detection disabled for this camera."}
 
-        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        logging.info('Camera Url:' + camera.url)
+        def cap_factory():
+            cap = open_capture(camera.url, camera_id, max_tries=3, timeout=2)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            return cap
+
+        # Start frame grabber thread
+        grabber = FrameGrabber(cap_factory)
+        grabber.start()
 
         stop_check_counter = 300
 
@@ -69,12 +124,10 @@ def process_feed(camera_id: int):
         logging.info(f"Loaded YOLO model for camera {camera_id}.")
 
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                logging.warning(f"Failed to read frame from camera {camera_id}. Attempting to reopen capture object...")
-                cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
+            frame = grabber.get_latest_frame()
+            if frame is None:
+                time.sleep(0.01)
                 continue
-
             annotated_frame = preprocess_frame(frame, camera)
 
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
@@ -129,7 +182,7 @@ def process_feed(camera_id: int):
             elif redis_intrusion_flag == b"True" and (current_time - last_intrusion_time) >= ALERT_DURATION:
                 redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
 
-            # only publish the frame if the websocket is open
+            # Publish the latest frame regardless of detection
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, annotated_frame)
 
@@ -149,7 +202,7 @@ def process_feed(camera_id: int):
 
                 threshold_polygons, line_points, camera = update_polygons_and_camera(camera_id)
                 if threshold_polygons is None and line_points is None:
-                    raise Exception(f"Camera {camera_id} not found.")
+                    break
 
                 if threshold_polygons is None:
                     logging.error(f"Failed to get polygons for camera {camera_id}.")
@@ -159,14 +212,14 @@ def process_feed(camera_id: int):
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
                     break
                 
-        cap.release()
+        grabber.stop()
+        grabber.join()
 
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
         redis_client.set(f"feed_worker_{camera_id}_running", "False")
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
-
         redis_client.close()
         logging.info(f"Stopped feed processing for camera {camera_id}")
 
@@ -281,17 +334,56 @@ def publish_frame(camera_id: int, annotated_frame: np.ndarray):
 
 def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
     """
-    Reopen video capture object if failed
+    Reopen video capture object if failed, using best-practice low-latency settings for RTSP.
+    Applies hardware-accelerated decoding if available (Intel/NVIDIA),
+    and sets GStreamer latency to 50ms for smoother playback.
     """
+    # Try to auto-detect hardware decoder preference from environment or config
+    hw_decoder = os.environ.get("GST_HW_DECODER", "auto")  # 'intel', 'nvidia', or 'auto'
     for attempt in range(0, max_tries):
-        cap = cv2.VideoCapture(url)
-        if cap.isOpened():
-            logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
-            return cap
+        cap = None
+        if url.startswith("rtsp://"):
+            # Build GStreamer pipeline with hardware decoding if possible
+            gst_decoders = []
+            if hw_decoder == "intel":
+                gst_decoders = ["vaapidecode"]
+            elif hw_decoder == "nvidia":
+                gst_decoders = ["nvv4l2decoder"]
+            elif hw_decoder == "auto":
+                # Try NVIDIA first, then Intel, then software
+                gst_decoders = ["nvv4l2decoder", "vaapidecode"]
+            gst_decoders.append("avdec_h264")  # Always fallback to software
+
+            for decoder in gst_decoders:
+                gst_str = (
+                    f'rtspsrc location={url} latency=50 ! '
+                    'rtph264depay ! h264parse ! '
+                    f'{decoder} ! videoconvert ! '
+                    'appsink drop=1 max-buffers=1 sync=false'
+                )
+                cap = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
+                if cap.isOpened():
+                    logging.info(f"[GStreamer:{decoder}] Video Capture object for Camera {camera_id} successfully created.")
+                    return cap
+                else:
+                    cap.release()
+            # Fallback to FFMPEG with TCP transport
+            cap = cv2.VideoCapture(f"{url}?rtsp_transport=tcp", cv2.CAP_FFMPEG)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            if cap.isOpened():
+                logging.info(f"[FFMPEG] Video Capture object for Camera {camera_id} successfully created with TCP transport.")
+                return cap
+            else:
+                cap.release()
         else:
-            logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
-            cap.release()
-            time.sleep(timeout)
+            cap = cv2.VideoCapture(url)
+            if cap.isOpened():
+                logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
+                return cap
+            else:
+                cap.release()
+        logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
+        time.sleep(timeout)
     logging.error(f"Failed to create Capture object for Camera {camera_id}")
     raise Exception(f"Failed to create Capture object for Camera {camera_id}")
 

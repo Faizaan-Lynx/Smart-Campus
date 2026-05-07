@@ -18,3 +18,4 @@ sqlalchemy
 ultralytics
 uvicorn[standard]
 pandas==2.2.0
+PyGObject

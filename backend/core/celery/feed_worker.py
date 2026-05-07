@@ -1,11 +1,8 @@
 import os
-# Set global OpenCV FFmpeg capture options for zero-delay streaming
-# max-delay set to 0 for real-time processing, stimeout reduced to 5 seconds
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;5000000|max-delay;0|fflags;nobuffer"
-
 import cv2
 import redis
 import logging
+import numpy as np
 from typing import List
 from config import settings
 from models.cameras import Camera
@@ -15,6 +12,15 @@ from celery import Celery, signals, group
 import time
 import random
 import subprocess
+import gi
+import threading
+from queue import Queue
+
+# Initialize GStreamer
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+
+Gst.init(None)
 
 # Ensure logging is configured to show INFO logs to console
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -27,41 +33,134 @@ feed_worker_app.conf.update(
 
 worker_id = None
 capture_objects = {}
-ffmpeg_processes = {}
+gstreamer_pipelines = {}  # Stores GStreamer pipeline objects per camera
 
 
-# Start FFmpeg repair layer for each camera
-def start_ffmpeg_repair(camera: Camera, udp_port: int):
-    rtsp_url = camera.url
-    logging.info(f"Preparing to start FFmpeg repair for Camera {camera.id} on UDP port {udp_port} with URL: {rtsp_url}")
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-rtsp_transport", "tcp",
-        "-stimeout", "5000000",  # 5 seconds timeout
-        "-max_delay", "0",  # Zero delay
-        "-fflags", "nobuffer+discardcorrupt",  # No buffer, discard corrupt frames
-        "-flags", "+low_delay",  # Low latency mode
-        "-use_wallclock_as_timestamps", "1",
-        "-reorder_queue_size", "0",  # No reordering
-        "-analyzeduration", "0",
-        "-probesize", "32",
-        "-reconnect", "1",
-        "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "1",
-        "-flush_packets", "1",
-        "-rtbufsize", "64k",   # Minimal buffer for lowest delay
-        "-tune", "zerolatency",  # For lowest latency
-        "-preset", "ultrafast",  # Fastest encoding
-        "-b:v", "4M",  # High bitrate for clarity (tune as needed)
-        "-i", rtsp_url,
-        "-f", "mpegts",
-        f"udp://127.0.0.1:{udp_port}"
-    ]
-    logging.info(f"FFmpeg command for Camera {camera.id}: {' '.join(ffmpeg_cmd)}")
-    proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    ffmpeg_processes[camera.id] = proc
-    logging.info(f"Started FFmpeg repair process for Camera {camera.id} (PID: {proc.pid})")
-    return proc
+class GStreamerRTSPSource:
+    """
+    Low-latency RTSP source using GStreamer.
+    Provides frame extraction with minimal buffering.
+    """
+    def __init__(self, camera_id: int, rtsp_url: str):
+        self.camera_id = camera_id
+        self.rtsp_url = rtsp_url
+        self.frame_queue = Queue(maxsize=2)  # Keep only latest frames
+        self.pipeline = None
+        self.bus = None
+        self.thread = None
+        self.running = False
+        self._initialize_pipeline()
+
+    def _initialize_pipeline(self):
+        """Initialize GStreamer pipeline for low-latency RTSP streaming."""
+        try:
+            # GStreamer pipeline optimized for zero-latency
+            # Using rtspsrc with low-latency, queue with leaky=downstream to drop old frames
+            pipeline_str = f"""
+            rtspsrc location={self.rtsp_url} 
+                   protocols=tcp 
+                   latency=0 
+                   ntp-time-source=running-time 
+                   buffer-mode=0
+            ! rtph264depay 
+            ! h264parse 
+            ! avdec_h264 output-corrupt=false 
+            ! videoscale 
+            ! video/x-raw,format=BGR 
+            ! videoconvert 
+            ! appsink name=sink caps="video/x-raw,format=BGR" 
+                     max-buffers=1 
+                     drop=true 
+                     sync=false
+            """
+            
+            self.pipeline = Gst.parse_launch(pipeline_str)
+            self.bus = self.pipeline.get_bus()
+            self.bus.add_signal_watch()
+            self.bus.connect("message", self._on_bus_message)
+            
+            self.appsink = self.pipeline.get_by_name("sink")
+            self.appsink.connect("new-sample", self._on_new_sample)
+            
+            logging.info(f"GStreamer pipeline initialized for Camera {self.camera_id}")
+        except Exception as e:
+            logging.error(f"Failed to initialize GStreamer pipeline for Camera {self.camera_id}: {e}")
+            raise
+
+    def _on_new_sample(self, appsink):
+        """Callback when new sample is available."""
+        try:
+            sample = appsink.emit("pull-sample")
+            if sample:
+                buf = sample.get_buffer()
+                caps = sample.get_caps()
+                
+                # Get frame data
+                result, mapinfo = buf.map(Gst.MapFlags.READ)
+                if result:
+                    # Get frame dimensions from caps
+                    struct = caps.get_structure(0)
+                    width = struct.get_int("width")[1]
+                    height = struct.get_int("height")[1]
+                    
+                    # Convert buffer to numpy array
+                    data = bytes(mapinfo.data)
+                    frame = np.frombuffer(data, dtype=np.uint8).reshape((height, width, 3))
+                    
+                    # Put frame in queue (replace old frame if queue is full)
+                    try:
+                        self.frame_queue.put_nowait(frame.copy())
+                    except:
+                        try:
+                            self.frame_queue.get_nowait()  # Remove old frame
+                            self.frame_queue.put_nowait(frame.copy())
+                        except:
+                            pass
+                    
+                    buf.unmap(mapinfo)
+            return True
+        except Exception as e:
+            logging.error(f"Error processing sample for Camera {self.camera_id}: {e}")
+            return False
+
+    def _on_bus_message(self, bus, message):
+        """Handle GStreamer bus messages."""
+        message_type = message.type
+        if message_type == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            logging.error(f"GStreamer error for Camera {self.camera_id}: {err.message}")
+        elif message_type == Gst.MessageType.WARNING:
+            warn, debug = message.parse_warning()
+            logging.warning(f"GStreamer warning for Camera {self.camera_id}: {warn.message}")
+
+    def start(self):
+        """Start the GStreamer pipeline."""
+        try:
+            self.running = True
+            self.pipeline.set_state(Gst.State.PLAYING)
+            logging.info(f"Started GStreamer pipeline for Camera {self.camera_id}")
+        except Exception as e:
+            logging.error(f"Failed to start GStreamer pipeline for Camera {self.camera_id}: {e}")
+            self.running = False
+            raise
+
+    def get_frame(self, timeout=1.0):
+        """Get latest frame from the queue."""
+        try:
+            frame = self.frame_queue.get(timeout=timeout)
+            return frame
+        except:
+            return None
+
+    def stop(self):
+        """Stop the GStreamer pipeline."""
+        try:
+            self.running = False
+            if self.pipeline:
+                self.pipeline.set_state(Gst.State.NULL)
+            logging.info(f"Stopped GStreamer pipeline for Camera {self.camera_id}")
+        except Exception as e:
+            logging.error(f"Failed to stop GStreamer pipeline for Camera {self.camera_id}: {e}")
 
 
 @signals.worker_ready.connect # automatically trigger task on worker startup
@@ -144,67 +243,52 @@ from .model_worker import process_frame
 
 def capture_video_frames(camera: Camera):
     """
-    Stateless capture: Always release and recreate VideoCapture for every frame.
-    Adds a small random sleep to stagger connections and sets FPS to 1 to reduce load.
-    Retries indefinitely until a frame is successfully captured.
-    Sets OpenCV capture open and read timeouts to 60 seconds.
-    Uses FFmpeg repair layer output (UDP stream) as input.
+    Capture frames using GStreamer with zero-latency configuration.
+    GStreamer ensures minimal buffering and provides real-time frame delivery.
     """
-    retry_delay = 1  # seconds
     attempt = 0
-    # Assign a unique UDP port per camera (e.g., 10000 + camera.id)
-    udp_port = 10000 + camera.id
-    if camera.id not in ffmpeg_processes or ffmpeg_processes[camera.id].poll() is not None:
-        logging.info(f"Calling start_ffmpeg_repair for Camera {camera.id} (not running or missing)")
-        start_ffmpeg_repair(camera, udp_port)
-    udp_url = f"udp://127.0.0.1:{udp_port}"
-    while True:
-        attempt += 1
-        time.sleep(random.uniform(0, 0.5))  # Stagger connections
-        cap = cv2.VideoCapture(udp_url, cv2.CAP_FFMPEG)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimal buffer for lowest delay
-        cap.set(cv2.CAP_PROP_FPS, 1)
-        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 60000)  # 60 seconds to open
-        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 60000)  # 60 seconds per read
-        if not cap.isOpened():
-            logging.error(f"Attempt {attempt} of stateless capture for Camera {camera.id} failed. URL: {camera.url}")
-            try:
-                cap.release()
-            except Exception:
-                pass
-            time.sleep(retry_delay)
-            continue
-        # --- Discard all but the latest frame to avoid buffer delay ---
-        last_frame = None
-        for _ in range(10):  # Try to read up to 10 frames, keep only the last
-            ret, frame = cap.read()
-            if not ret or frame is None:
-                break
-            last_frame = frame
-        if last_frame is None:
-            logging.warning(f"Failed to read frame from camera {camera.id} (stateless). URL: {camera.url}")
-            try:
-                cap.release()
-            except Exception:
-                pass
-            time.sleep(retry_delay)
-            continue
-        frame = cv2.convertScaleAbs(last_frame)
-        frame = preprocess_frame(frame, camera)
-        process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
+    retry_delay = 2  # seconds
+    max_retries = 5
+    
+    # Initialize or retrieve GStreamer source
+    if camera.id not in gstreamer_pipelines or gstreamer_pipelines[camera.id] is None:
         try:
-            cap.release()
-        except Exception:
-            pass
-        break
-    else:
-        logging.error(f"Camera {camera.id} is unavailable after {max_retries} stateless attempts. URL: {camera.url}")
-        try:
-            redis_client = redis.from_url(settings.REDIS_URL)
-            redis_client.set(f"camera_{camera.id}_unavailable", "True")
-            redis_client.close()
+            gstream_source = GStreamerRTSPSource(camera.id, camera.url)
+            gstream_source.start()
+            gstreamer_pipelines[camera.id] = gstream_source
+            time.sleep(1)  # Give pipeline time to start
         except Exception as e:
-            logging.error(f"Failed to set unavailable flag in Redis for camera {camera.id}: {e}")
+            logging.error(f"Failed to initialize GStreamer source for Camera {camera.id}: {e}")
+            return
+    
+    gstream_source = gstreamer_pipelines[camera.id]
+    
+    # Try to get frame
+    while attempt < max_retries:
+        try:
+            frame = gstream_source.get_frame(timeout=5.0)
+            if frame is not None:
+                frame = cv2.convertScaleAbs(frame)
+                frame = preprocess_frame(frame, camera)
+                process_frame.apply_async(args=[camera.id, frame.tolist()], queue='model_tasks')
+                return
+            else:
+                attempt += 1
+                logging.warning(f"No frame received from Camera {camera.id} (attempt {attempt}/{max_retries})")
+                time.sleep(retry_delay)
+        except Exception as e:
+            attempt += 1
+            logging.error(f"Error capturing frame from Camera {camera.id}: {e} (attempt {attempt}/{max_retries})")
+            time.sleep(retry_delay)
+    
+    # If all retries failed, log error and mark camera as unavailable
+    logging.error(f"Camera {camera.id} is unavailable after {max_retries} attempts. URL: {camera.url}")
+    try:
+        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client.set(f"camera_{camera.id}_unavailable", "True")
+        redis_client.close()
+    except Exception as e:
+        logging.error(f"Failed to set unavailable flag in Redis for camera {camera.id}: {e}")
 
 
 def preprocess_frame(frame, camera: Camera):
@@ -309,8 +393,18 @@ def stop_feed_worker(worker_id: int):
 
 def release_capture_objects():
     """
-    Release all the capture objects when done.
+    Release all the capture objects and GStreamer pipelines when done.
     """
     for camera_id, cap in capture_objects.items():
         logging.info(f"Releasing VideoCapture object for camera {camera_id}")
-        cap.release()
+        try:
+            cap.release()
+        except Exception as e:
+            logging.error(f"Error releasing VideoCapture for camera {camera_id}: {e}")
+    
+    for camera_id, gstream_source in gstreamer_pipelines.items():
+        logging.info(f"Stopping GStreamer pipeline for camera {camera_id}")
+        try:
+            gstream_source.stop()
+        except Exception as e:
+            logging.error(f"Error stopping GStreamer pipeline for camera {camera_id}: {e}")
