@@ -53,16 +53,18 @@ async def broadcast_frame(camera_id: str, frame_data: bytes):
         for connection in frame_connections[camera_id]:
             try:
                 await connection.send_bytes(frame_data)  # Send as raw bytes
-            except Exception:
+            except Exception as e:
+                logging.warning(f"Failed to send frame to client on camera {camera_id}: {e}")
                 to_remove.add(connection)
 
     # Remove disconnected clients
     for conn in to_remove:
-        for camera in frame_connections.keys():
+        for camera in list(frame_connections.keys()):
             frame_connections[camera].discard(conn)
-        if not frame_connections[camera]:
-            del frame_connections[camera]
-            redis_client.set(f"camera_{camera_id}_websocket_active", "False")
+            if not frame_connections[camera]:
+                del frame_connections[camera]
+                redis_client.set(f"camera_{camera_id}_websocket_active", "False")
+                logging.info(f"Removed inactive connection for camera {camera_id}")
 
 
 # WebSocket for Frames (Per Camera) 

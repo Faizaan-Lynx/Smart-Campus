@@ -98,6 +98,9 @@ def process_feed(camera_id: int):
         # Initialize Redis intrusion flag
         redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+        
+        # Mark this camera as active
+        redis_client.set(f"feed_worker_{camera_id}_running", "True", ex=3600)  # TTL of 1 hour
 
         # Only open capture and process frames if detect_intrusions is True
         if not camera.detect_intrusions:
@@ -114,6 +117,7 @@ def process_feed(camera_id: int):
         grabber.start()
 
         stop_check_counter = 300
+        max_frame_skip_count = 0  # Track frames with no data
 
         # load yolo and move to GPU
         model = YOLO(model="./yolo-detection-models/yolov8n-o.pt")
@@ -126,8 +130,20 @@ def process_feed(camera_id: int):
         while True:
             frame = grabber.get_latest_frame()
             if frame is None:
+                max_frame_skip_count += 1
                 time.sleep(0.01)
+                # If too many frames skipped, gracefully exit
+                if max_frame_skip_count > 500:
+                    logging.error(f"Camera {camera_id}: No frames received. Exiting gracefully.")
+                    break
                 continue
+            
+            # Reset counter on successful frame capture
+            max_frame_skip_count = 0
+            
+            # Keep updating the TTL to indicate this task is still running
+            redis_client.expire(f"feed_worker_{camera_id}_running", 3600)
+            
             annotated_frame = preprocess_frame(frame, camera)
 
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
@@ -324,12 +340,23 @@ redis_client_ws = redis.from_url(settings.REDIS_URL)
 
 def publish_frame(camera_id: int, annotated_frame: np.ndarray):
     """
-    Publish the annotated frame to Redis.
+    Publish the annotated frame to Redis with retry logic and error handling.
     """
-    _, buffer = cv2.imencode(".jpg", annotated_frame)
-    global redis_client_ws
-    redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
-    # logging.info(f"Published frame for camera {camera_id}")
+    try:
+        _, buffer = cv2.imencode(".jpg", annotated_frame)
+        global redis_client_ws
+        
+        # Try to publish with current client
+        try:
+            redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
+        except (redis.ConnectionError, redis.TimeoutError):
+            # Reconnect if connection lost
+            redis_client_ws = redis.from_url(settings.REDIS_URL)
+            redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
+        
+        # logging.info(f"Published frame for camera {camera_id}")
+    except Exception as e:
+        logging.warning(f"Failed to publish frame for camera {camera_id}: {e}")
 
 
 def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
@@ -534,3 +561,45 @@ def stop_all_feed_workers():
     redis_client.set("feed_workers_running", "False")
     redis_client.close()
     return "All feed workers stopping..."
+
+
+@full_feed_worker_app.task
+def monitor_feed_health():
+    """
+    Monitor health of all camera feeds and restart any that have failed.
+    This task should run periodically (e.g., every 30 seconds).
+    """
+    try:
+        redis_client = redis.from_url(settings.REDIS_URL)
+        db = SessionLocal()
+        cameras = db.query(Camera).all()
+        db.close()
+        
+        if not cameras:
+            logging.warning("No cameras found in database for health check.")
+            redis_client.close()
+            return "No cameras to monitor"
+        
+        restarted_cameras = []
+        for camera in cameras:
+            running_flag = redis_client.get(f"feed_worker_{camera.id}_running")
+            global_running = redis_client.get("feed_workers_running")
+            
+            # If global running is True but individual camera is False, restart it
+            if global_running == b"True" and running_flag != b"True":
+                logging.warning(f"Camera {camera.id} feed not running. Restarting...")
+                start_feed_worker.apply_async(queue='feed_tasks', args=[camera.id], priority=9)
+                restarted_cameras.append(camera.id)
+        
+        redis_client.close()
+        
+        if restarted_cameras:
+            logging.info(f"Restarted feeds for cameras: {restarted_cameras}")
+            return {"status": "Some feeds were restarted", "cameras": restarted_cameras}
+        else:
+            logging.debug("All camera feeds are healthy.")
+            return {"status": "All feeds are healthy", "cameras": []}
+    
+    except Exception as e:
+        logging.exception(f"Error in monitor_feed_health: {e}")
+        return {"error": str(e)}
