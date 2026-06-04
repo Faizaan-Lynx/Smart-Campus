@@ -26,8 +26,8 @@
 .form {
   width: 100%;
   max-width: 1000px;
-  background-color: #fff;
-  border-radius: 10px;
+  background-color: #1f2a40;
+  border-radius: 0px;
   box-shadow: 0 0 20px 1px rgba(0, 0, 0, 0.1);
   z-index: 1;
   overflow: hidden;
@@ -41,7 +41,7 @@
 }
 
 .circle {
-  border-radius: 50%;
+  border-radius: 0px;
   background: linear-gradient(
     135deg,
     transparent 20%,
@@ -105,14 +105,14 @@ form {
   font-weight: 500;
   font-size: 0.95rem;
   letter-spacing: 0.5px;
-  border-radius: 25px;
+  border-radius: 0px;
   transition: 0.3s;
 }
 
 textarea.input {
   padding: 0.8rem 1.2rem;
   min-height: 150px;
-  border-radius: 22px;
+  border-radius: 0px;
   resize: none;
   overflow-y: auto;
 }
@@ -143,7 +143,7 @@ textarea.input {
   font-size: 0.95rem;
   color: rgba(94, 55, 255, 0.85);
   line-height: 1;
-  border-radius: 25px;
+  border-radius: 0px;
   outline: none;
   cursor: pointer;
   transition: 0.3s;
@@ -207,17 +207,17 @@ textarea.input {
 }
 
 .contact-info .title {
-  color: rgba(94, 55, 255, 0.85);
+  color: wheat;
 }
 
 .contact__text {
-  color: #333;
+  color: white;
   margin: 1.5rem 0 2rem 0;
 }
 
 .information {
   display: flex;
-  color: #555;
+  color: wheat;
   margin: 0.7rem 0;
   align-items: center;
   font-size: 0.95rem;
@@ -244,7 +244,7 @@ textarea.input {
 .social-icons a {
   width: 35px;
   height: 35px;
-  border-radius: 5px;
+  border-radius: 0px;
   background: linear-gradient(
     45deg,
     rgba(106, 210, 255, 0.85),
@@ -267,7 +267,7 @@ textarea.input {
   width: 110px;
   height: 100px;
   border: 22px solid rgba(106, 210, 255, 0.85);
-  border-radius: 50%;
+  border-radius: 0px;
   bottom: -77px;
   right: 50px;
   opacity: 0.3;
@@ -277,7 +277,7 @@ textarea.input {
   position: absolute;
   width: 500px;
   height: 500px;
-  border-radius: 50%;
+  border-radius: 0px;
   background: linear-gradient(to bottom, #1cd4af, #159b80);
   bottom: 50%;
   right: 50%;
@@ -290,7 +290,7 @@ textarea.input {
   width: 360px;
   height: 360px;
   background-color: #fafafa;
-  border-radius: 50%;
+  border-radius: 0px;
   top: calc(50% - 180px);
   left: calc(50% - 180px);
 }

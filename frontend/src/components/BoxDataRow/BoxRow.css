@@ -11,21 +11,22 @@
   display: flex;
   align-items: center;
   padding: 16px;
-  background-color: #f9f9f9;
-  border-radius: 21px;
+  background-color: #1f2a40 !important;
+  border-radius: 0px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .card-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 55px !important;
+  height: 55px !important;
+  border-radius: 0px;
   margin-right: 16px;
   object-fit: cover;
 }
 
 .card-content p {
   margin: 0;
+  padding: 5px 0 0 0;
 }
 .stat_1 {
   font-size: 14px;
@@ -34,7 +35,7 @@
 
 .stat_2 {
   font-size: 24px;
-  color: #1b2559;
+  color: white !important;
   font-weight: 500;
   padding-bottom: 7px;
 }

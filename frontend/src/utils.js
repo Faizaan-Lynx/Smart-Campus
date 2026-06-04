@@ -1,4 +1,5 @@
 import assets from "./assets";
+import BACKEND_URL from './config.js'
 
 export const color1 = "rgba(94, 55, 255, 0.85)";
 export const color2 = "rgba(106, 210, 255, 0.85)";
@@ -14,7 +15,7 @@ export const token =
 // export const localurl = "http://54.179.81.103/api";
 // export const localurl = "http://app.pulsse.io/api";
 // export const localurl = "http://vs1.gpuhut.com/api";
-export const localurl = "http://172.23.10.26:8000";
+export const localurl = `http://${BACKEND_URL}`;
 
 //export const localurl = "www.gpuhut.com/api";
 

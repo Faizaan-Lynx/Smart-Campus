@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./CCTVCamList.css";
+import BACKEND_URL from '../../config.js';
 
 const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   const [popupActive, setPopupActive] = useState(false);
@@ -11,7 +12,7 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
   useEffect(() => {
     if (!selectedCamera) return;
 
-    const socket = new WebSocket(`ws://172.23.10.26:8000/ws/frames/${selectedCamera}`);
+    const socket = new WebSocket(`ws://${BACKEND_URL}/ws/frames/${selectedCamera}`);
 
     socket.onopen = () => console.log(`Connected to WebSocket for Camera ${selectedCamera}`);
     
@@ -49,7 +50,7 @@ const CameraList = ({ cameras, selectedCamera, setSelectedCamera }) => {
             className={`camera-card ${selectedCamera === camera.id ? "active" : ""}`}
             onClick={() => setSelectedCamera(camera.id)}
           >
-            <p>{camera.location}</p>
+            <p className="camera_name">{camera.location}</p>
           </div>
         ))}
       </div>

@@ -7,14 +7,14 @@
 }
 :root {
   /* ===== Colors ===== */
-  --body-color: #e4e9f7;
-  --sidebar-color: #fff;
+  --body-color: #141b2d;
+  --sidebar-color: #1f2a40;
   /* --primary-color: #367f2b; */
   /* --primary-color: #9f9fed; */
   --primary-color: rgba(94, 55, 255, 0.85);
   --primary-color-light: #f6f5ff;
   --toggle-color: #ddd;
-  --text-color: #707070;
+  --text-color: #ffffff;
   /* ====== Transition ====== */
   --tran-03: all 0.2s ease;
   --tran-03: all 0.3s ease;
@@ -54,11 +54,11 @@ body {
 .sidebar header .image,
 .sidebar .icon {
   min-width: 60px;
-  border-radius: 6px;
+  border-radius: 0px;
 }
 .sidebar .icon {
   min-width: 60px;
-  border-radius: 6px;
+  border-radius: 0px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -108,7 +108,7 @@ header .image-text .profession {
 }
 .sidebar header .image img {
   width: 40px;
-  border-radius: 6px;
+  border-radius: 0px;
 }
 .sidebar header .toggle {
   position: absolute;
@@ -118,8 +118,8 @@ header .image-text .profession {
   height: 25px;
   width: 25px;
   background-color: var(--primary-color);
-  color: var(--sidebar-color);
-  border-radius: 50%;
+  color: #1f2a40;
+  border-radius: 0px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,7 +135,7 @@ header .image-text .profession {
   margin-top: 40px;
 }
 .sidebar li.search-box {
-  border-radius: 6px;
+  border-radius: 0px;
   background-color: var(--primary-color-light);
   cursor: pointer;
   transition: var(--tran-05);
@@ -147,7 +147,7 @@ header .image-text .profession {
   border: none;
   background-color: var(--primary-color-light);
   color: var(--text-color);
-  border-radius: 6px;
+  border-radius: 0px;
   font-size: 17px;
   font-weight: 500;
   transition: var(--tran-05);
@@ -160,16 +160,16 @@ header .image-text .profession {
   align-items: center;
   height: 100%;
   width: 100%;
-  border-radius: 6px;
+  border-radius: 0px;
   text-decoration: none;
   transition: var(--tran-03);
 }
 .sidebar li a:hover {
-  background-color: var(--primary-color);
+  background-color: var(--body-color);
 }
 .sidebar li a:hover .icon,
 .sidebar li a:hover .text {
-  color: var(--sidebar-color);
+  color: white;
 }
 
 .sidebar .menu-bar {
@@ -183,7 +183,7 @@ header .image-text .profession {
   display: none;
 }
 .sidebar .menu-bar .mode {
-  border-radius: 6px;
+  border-radius: 0px;
   background-color: var(--primary-color-light);
   position: relative;
   transition: var(--tran-05);
@@ -197,14 +197,14 @@ header .image-text .profession {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 0px;
   cursor: pointer;
 }
 .toggle-switch .switch {
   position: relative;
   height: 22px;
   width: 40px;
-  border-radius: 25px;
+  border-radius: 0px;
   background-color: var(--toggle-color);
   transition: var(--tran-05);
 }
@@ -213,7 +213,7 @@ header .image-text .profession {
   position: absolute;
   height: 15px;
   width: 15px;
-  border-radius: 50%;
+  border-radius: 0px;
   top: 50%;
   left: 5px;
   transform: translateY(-50%);

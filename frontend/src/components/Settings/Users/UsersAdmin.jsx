@@ -16,25 +16,30 @@ import { toast, Toaster } from "react-hot-toast";
 import axios from "axios";
 import UsersAdminEditModal from "./UsersAdminEditModal";
 import UserAdminAddModal from "./UserAdminAddModal";
+import BACKEND_URL from '../../../config.js';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    fontSize: "20px",
-    backgroundColor: color1,
+    fontSize: "15px",
+    backgroundColor: "#1f2a40",
     color: theme.palette.common.white,
     fontWeight: "bold",
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: 12,
+    color:"white",
+    borderColor: "#141b2d"
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#fff",
+    backgroundColor: "#1f2a40",
+    color:"white"
   },
   "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: "#1f2a40",
+    color:"white"
   },
   "&:last-child td, &:last-child th": {
     border: 0,
@@ -54,7 +59,7 @@ const UserAdmin = ({ columns }) => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://172.23.10.26:8000/users", {
+        const response = await axios.get(`http://${BACKEND_URL}/users`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -83,7 +88,7 @@ const UserAdmin = ({ columns }) => {
       if (result.isConfirmed) {
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`http://172.23.10.26:8000/users/${id}`, {
+          await axios.delete(`http://${BACKEND_URL}/users/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/json",
@@ -144,15 +149,16 @@ const UserAdmin = ({ columns }) => {
             marginBottom: "20px",
             display: "flex",
             alignItems: "center",
+            color:"white"
           }}
         >
           All Users
-          <span
+          <button
             onClick={() => setShowAddModal(!showAddModal)}
-            style={{ fontSize: "18px", cursor: "pointer", marginLeft: "10px", color: "#1976d2", fontWeight: "bold" }}
+            style={{ fontSize: "18px",padding:5,backgroundColor:"transparent",color:"greenyellow", borderColor:"gray",borderWidth:1,cursor: "pointer", marginLeft: "17px", fontWeight: "bold" }}
           >
             Add User
-          </span>
+          </button>
         </p>
       </div>
 
@@ -175,7 +181,7 @@ const UserAdmin = ({ columns }) => {
 
       <TableContainer
         component={Paper}
-        sx={{ borderRadius: "11px" }}
+        sx={{ borderRadius: 0}}
         className="table-container"
       >
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
@@ -221,8 +227,8 @@ const UserAdmin = ({ columns }) => {
                         }}
                         style={{
                           cursor: "pointer",
-                          fontSize: "15px",
-                          color: "#1976d2",
+                          fontSize: "12px",
+                          color: "#5f70c9",
                           fontWeight: "bold",
                           margin: 0
                         }}
@@ -233,8 +239,8 @@ const UserAdmin = ({ columns }) => {
                         onClick={() => deleteUser(row.id)}
                         style={{
                           cursor: "pointer",
-                          fontSize: "15px",
-                          color: "#d32f2f",
+                          fontSize: "12px",
+                          color: "#db1a1a",
                           fontWeight: "bold",
                           margin: 0
                         }}
@@ -250,6 +256,7 @@ const UserAdmin = ({ columns }) => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 15, 20, 25]}
           component="div"
+          style={{ backgroundColor: "#1f2a40", color: "white",borderColor: "#141b2d" }}
           count={tableData.length}
           rowsPerPage={rowsPerPage}
           page={page}

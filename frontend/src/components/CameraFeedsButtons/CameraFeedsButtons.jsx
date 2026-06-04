@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./CameraFeedsButtons.css";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import BACKEND_URL from '../../config.js';
 
 const CameraFeedsButtons = () => {
   const [userInfo, setUserInfo] = useState(() => {
@@ -34,7 +35,7 @@ const CameraFeedsButtons = () => {
   
     // First API call - start feed workers
     axios
-      .get("http://172.23.10.26:8000/intrusions/start_all_feed_workers", { headers })
+      .get(`http://${BACKEND_URL}/intrusions/start_all_feed_workers`, { headers })
       .then((response) => {
         console.log("✅ Feed Workers Response:", response.data);
       })
@@ -44,7 +45,7 @@ const CameraFeedsButtons = () => {
   
     // Second API call - start license plate workers
     // axios
-    //   .get("http://172.23.10.26:8000/license-plates/start_all_workers", { headers })
+    //   .get("http://${BACKEND_URL}/license-plates/start_all_workers", { headers })
     //   .then((response) => {
     //     console.log("✅ License Plate Workers Response:", response.data);
     //     alert("Feeds and license plate workers started successfully.");
@@ -68,7 +69,7 @@ const CameraFeedsButtons = () => {
   
     // First API call - stop feed workers
     axios
-      .get("http://172.23.10.26:8000/intrusions/stop_all_feed_workers", { headers })
+      .get("http://${BACKEND_URL}/intrusions/stop_all_feed_workers", { headers })
       .then((response) => {
         console.log("✅ Feed Workers Stop Response:", response.data);
       })
@@ -78,7 +79,7 @@ const CameraFeedsButtons = () => {
   
     // Second API call - stop license plate workers
     // axios
-    //   .get("http://172.23.10.26:8000/license-plates/stop_all_workers", { headers })
+    //   .get("http://${BACKEND_URL}/license-plates/stop_all_workers", { headers })
     //   .then((response) => {
     //     console.log("✅ License Plate Workers Stop Response:", response.data);
     //     alert("Feeds and license plate workers stopped successfully.");

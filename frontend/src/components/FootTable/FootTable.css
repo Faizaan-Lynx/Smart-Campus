@@ -11,7 +11,7 @@
 
 .table-container::-webkit-scrollbar-thumb {
   background-color: rgb(171, 163, 163); /* Set color of the scrollbar thumb */
-  border-radius: 2px; /* Set border radius of the scrollbar thumb */
+  border-radius: 0px; /* Set border radius of the scrollbar thumb */
 }
 
 
@@ -23,43 +23,44 @@
 }
 
 .feed-button {
-  background-color: #2196F3; /* Blue */
+  background-color: #131d36 !important; /* Blue */
   color: white;
   border: none;
   padding: 6px 12px;
-  border-radius: 5px;
+  border-radius: 0px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: background-color 0.3s ease;
 }
 .acknowledge-button {
-  background-color: #4caf50; /* Green */
+  background-color: #02754d; /* Green */
   color: white;
   border: none;
   padding: 6px 12px;
-  border-radius: 5px;
+  border-radius: 0px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: background-color 0.3s ease;
 }
 
 .acknowledge-button:hover {
   background-color: #45a049;
+  border
 }
 
 .delete-button {
-  background-color: #f44336; /* Red */
+  background-color: #991b16;
   color: white;
   border: none;
   padding: 6px 12px;
-  border-radius: 5px;
+  border-radius: 0px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: background-color 0.3s ease;
 }
 
 .delete-button:hover {
-  background-color: #d32f2f;
+  background-color: #8b2522;
 }
 
 
@@ -80,7 +81,7 @@
 .popup-content {
   background: white;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 0px;
   text-align: center;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
 }
@@ -102,7 +103,7 @@
   padding: 5px 10px;
   border: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 .close-button {
@@ -112,7 +113,7 @@
   border: none;
   cursor: pointer;
   margin-top: 10px;
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 .nowrap-location {

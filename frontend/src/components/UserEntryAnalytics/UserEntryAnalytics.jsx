@@ -14,28 +14,36 @@ import SearchIcon from "@mui/icons-material/Search";
 import { Select, MenuItem, FormControl } from "@mui/material";
 import axios from "axios";
 import "./UserEntryAnalytics.css";
+import BACKEND_URL from '../../config.js';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    fontSize: "20px",
-    backgroundColor: "#5e37ff",
+    fontSize: "15px",
+    backgroundColor: "#172133",
     color: theme.palette.common.white,
     fontWeight: "bold",
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: 12,
+    borderColor:"#141b2d",
+    color: "white",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#fff",
+    backgroundColor: "#1f2a40",
+    color: "white",
+    borderColor:"white"
   },
   "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor:"#1f2a40",
+    color: "white",
+    borderColor:"#141b2d"
   },
   "&:last-child td, &:last-child th": {
     border: 0,
+  color:" white",
   },
 }));
 
@@ -60,7 +68,7 @@ export default function UserEntryAnalytics() {
       if (!token) return;
 
       try {
-        const response = await axios.get("http://172.23.10.26:8000/users/", {
+        const response = await axios.get(`http://${BACKEND_URL}/users/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -163,7 +171,7 @@ export default function UserEntryAnalytics() {
           <p className="dash__text">User Entry Analytics</p>
         </div>
         <div className="foottable__div__main">
-          <Paper elevation={3} sx={{ borderRadius: "11px", marginBottom: "20px", padding: "15px" }}>
+          <Paper elevation={3} sx={{ borderRadius: 0, backgroundColor:'#1f2a40', marginBottom: "20px", padding: "15px" }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -183,7 +191,7 @@ export default function UserEntryAnalytics() {
                         value={searchField}
                         onChange={(e) => setSearchField(e.target.value)}
                         disableUnderline
-                        sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
+                        sx={{ fontSize: "14px", color: "white", fontWeight: "bold", background: "transparent" }}
                       >
                         <MenuItem value="username">Username</MenuItem>
                         <MenuItem value="license_plate">License Plate</MenuItem>
@@ -194,15 +202,16 @@ export default function UserEntryAnalytics() {
                   </InputAdornment>
                 ),
                 sx: {
-                  borderRadius: "8px",
+                  borderRadius: 0,
+                  color:'white',
                   "& fieldset": {
-                    borderColor: "#5e37ff",
+                    borderColor: "#141b2d !important",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#5e37ff !important",
+                    borderColor: "#141b2d !important",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#5e37ff !important",
+                    borderColor: "#141b2d !important",
                   },
                 },
               }}
@@ -214,7 +223,7 @@ export default function UserEntryAnalytics() {
             />
           </Paper>
 
-          <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
+          <TableContainer component={Paper} sx={{ borderRadius: 0}}>
             <Table sx={{ minWidth: 700 }} aria-label="user entry table">
               <TableHead>
                 <TableRow>
@@ -248,6 +257,7 @@ export default function UserEntryAnalytics() {
               </TableBody>
             </Table>
             <TablePagination
+            style={{ color: "white", backgroundColor: "#172133" }}
               rowsPerPageOptions={[5, 10, 15, 20]}
               component="div"
               count={filteredData.length}

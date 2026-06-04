@@ -20,6 +20,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
 import { localurl } from "../../../utils";
+import BACKEND_URL from '../../../config.js';
 
 const style = {
   position: "absolute",
@@ -29,8 +30,8 @@ const style = {
   width: "90%",
   maxWidth: 500,
   maxHeight: "90vh",
-  bgcolor: "background.paper",
-  borderRadius: 4,
+  bgcolor: "#1f2a40",
+  borderRadius: 0,
   boxShadow: 24,
   p: 4,
   overflowY: "auto",
@@ -59,7 +60,7 @@ export default function UsersAdminEditModal({
     const fetchCameras = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://172.23.10.26:8000/camera/", {
+        const response = await axios.get(`http://${BACKEND_URL}/camera/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const sortedCameras = response.data.sort((a, b) => a.id - b.id);
@@ -74,7 +75,7 @@ export default function UsersAdminEditModal({
   const handleUpdateUser = async () => {
     try {
       const token = localStorage.getItem("token");
-  
+
       // Create a request body excluding empty password
       const requestBody = {
         username: fieldValues.username,
@@ -82,12 +83,12 @@ export default function UsersAdminEditModal({
         ip_address: fieldValues.ip_address,
         is_admin: fieldValues.is_admin === "Yes",
       };
-  
+
       // Only include password if it's not empty
       if (fieldValues.password.trim()) {
         requestBody.hashed_password = fieldValues.password;
       }
-  
+
       await axios.put(
         `${localurl}/users/${rowData.id}`,
         requestBody,
@@ -95,9 +96,9 @@ export default function UsersAdminEditModal({
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         }
       );
-  
+
       toast.success("User details updated successfully!");
-  
+
       // Update the user in the table immediately
       const updatedUser = { ...rowData, ...requestBody };
       onUpdateUser(updatedUser);
@@ -107,35 +108,35 @@ export default function UsersAdminEditModal({
       console.error("Update user error:", error);
     }
   };
-  
-  
+
+
 
   const handleUpdateCameras = async () => {
     try {
       const token = localStorage.getItem("token");
-  
+
       await axios.put(
-        `http://172.23.10.26:8000/user-cameras/${rowData.id}`,
+        `http://${BACKEND_URL}/user-cameras/${rowData.id}`,
         { camera_ids: selectedCameras },
         {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         }
       );
-  
+
       toast.success("Cameras updated successfully!");
-  
+
       // Update the user in the table immediately
       const updatedUser = { ...rowData, cameras: [...selectedCameras] };
-      onUpdateCameras(updatedUser);  
+      onUpdateCameras(updatedUser);
       setShowEditSettingsModal(false);
     } catch (error) {
       toast.error("Error updating cameras");
       console.error(error);
     }
   };
-  
-  
-  
+
+
+
   const handleCameraSelect = (cameraId) => {
     setSelectedCameras((prevSelected) =>
       prevSelected.includes(cameraId)
@@ -147,12 +148,12 @@ export default function UsersAdminEditModal({
   return (
     <Modal open={showEditSettingsModal} onClose={() => setShowEditSettingsModal(false)}>
       <Box sx={style}>
-        <IconButton onClick={() => setShowEditSettingsModal(false)} sx={{ position: "absolute", top: 0, right: 0 }}>
+        <IconButton onClick={() => setShowEditSettingsModal(false)} sx={{ color: "white", position: "absolute", top: 0, right: 0 }}>
           <CloseIcon />
         </IconButton>
-        <Typography variant="h6">Edit User</Typography>
-  
-        <div style={{ display: "flex", marginBottom: "10px" }}>
+        <Typography style={{ color: "white" }} variant="h6">Edit User</Typography>
+
+        <div style={{ display: "flex", marginBottom: "10px", columnGap: 6 }}>
           <Button onClick={() => setActiveTab("details")} variant={activeTab === "details" ? "contained" : "outlined"}>
             Details
           </Button>
@@ -160,57 +161,176 @@ export default function UsersAdminEditModal({
             Assigned Cameras
           </Button>
         </div>
-  
+
         {activeTab === "details" && (
           <>
-            <TextField label="Username" fullWidth margin="normal" value={fieldValues.username} 
+            <TextField sx={{
+              "& input": {
+                color: "white",
+
+              },
+              "& .MuiInputLabel-root": {
+                color: "white",
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root fieldset": {
+                borderColor: "white",
+              },
+              "& .MuiOutlinedInput-root:hover fieldset": {
+                borderColor: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                borderColor: "#1565c0;",
+              },
+            }} label="Username" fullWidth margin="normal" value={fieldValues.username}
               onChange={(e) => setFieldValues({ ...fieldValues, username: e.target.value })} />
-            <TextField label="Email" fullWidth margin="normal" value={fieldValues.email} 
+            <TextField sx={{
+              "& input": {
+                color: "white",
+
+              },
+              "& .MuiInputLabel-root": {
+                color: "white",
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root fieldset": {
+                borderColor: "white",
+              },
+              "& .MuiOutlinedInput-root:hover fieldset": {
+                borderColor: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                borderColor: "#1565c0;",
+              },
+            }} label="Email" fullWidth margin="normal" value={fieldValues.email}
               onChange={(e) => setFieldValues({ ...fieldValues, email: e.target.value })} />
-            <TextField label="Password" fullWidth margin="normal" type="password" placeholder="Leave empty to keep unchanged" 
+            <TextField sx={{
+              "& input": {
+                color: "white",
+
+              },
+              "& .MuiInputLabel-root": {
+                color: "white",
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root fieldset": {
+                borderColor: "white",
+              },
+              "& .MuiOutlinedInput-root:hover fieldset": {
+                borderColor: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                borderColor: "#1565c0;",
+              },
+            }} label="Password" fullWidth margin="normal" type="password" placeholder="Leave empty to keep unchanged"
               onChange={(e) => setFieldValues({ ...fieldValues, password: e.target.value })} />
-            <TextField label="IP Address" fullWidth margin="normal" value={fieldValues.ip_address} 
+            <TextField sx={{
+              "& input": {
+                color: "white",
+
+              },
+              "& .MuiInputLabel-root": {
+                color: "white",
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root fieldset": {
+                borderColor: "white",
+              },
+              "& .MuiOutlinedInput-root:hover fieldset": {
+                borderColor: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                borderColor: "#1565c0;",
+              },
+            }} label="IP Address" fullWidth margin="normal" value={fieldValues.ip_address}
               onChange={(e) => setFieldValues({ ...fieldValues, ip_address: e.target.value })} />
-            <FormControl fullWidth margin="normal">
+            <FormControl sx={{
+              "& input": {
+                color: "white",
+
+              },
+              "& .MuiInputLabel-root": {
+                color: "white",
+              },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root fieldset": {
+                borderColor: "white",
+              },
+              "& .MuiOutlinedInput-root:hover fieldset": {
+                borderColor: "#1565c0",
+              },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                borderColor: "#1565c0;",
+              },
+            }} fullWidth margin="normal">
               <InputLabel>Superuser</InputLabel>
-              <Select value={fieldValues.is_admin} onChange={(e) => setFieldValues({ ...fieldValues, is_admin: e.target.value })}>
+              <Select sx={{
+                "& .MuiSelect-select": {
+                  color: "white",
+                },
+                "& .MuiInputLabel-root": {
+                  color: "white",
+                },
+                "& .MuiInputLabel-root.Mui-focused": {
+                  color: "#1565c0",
+                },
+                "& .MuiOutlinedInput-root fieldset": {
+                  borderColor: "white",
+                },
+                "& .MuiOutlinedInput-root:hover fieldset": {
+                  borderColor: "#1565c0",
+                },
+                "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                  borderColor: "#1565c0;",
+                },
+              }} value={fieldValues.is_admin} onChange={(e) => setFieldValues({ ...fieldValues, is_admin: e.target.value })}>
                 <MenuItem value="Yes">Yes</MenuItem>
                 <MenuItem value="No">No</MenuItem>
               </Select>
             </FormControl>
           </>
         )}
-  
+
         {activeTab === "cameras" && (
           <List>
             {cameras.map((camera) => (
-              <ListItem key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
+              <ListItem sx={{color:"white"}} key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
                 <ListItemIcon>
-                  <Checkbox checked={selectedCameras.includes(camera.id)} />
+                  <Checkbox sx={{color:"white"}} checked={selectedCameras.includes(camera.id)} />
                 </ListItemIcon>
-                <ListItemText primary={`Camera ${camera.id}`} />
+                <ListItemText primary={`${camera.location}`} />
               </ListItem>
             ))}
           </List>
         )}
-  
+
         {/* Show Update User button only in Details tab */}
         {activeTab === "details" && (
           <Button variant="contained" color="primary" fullWidth onClick={handleUpdateUser} sx={{ mt: 2 }}>
             Update User
           </Button>
         )}
-  
+
         {/* Show Update Cameras button only in Cameras tab */}
         {activeTab === "cameras" && (
           <Button variant="contained" color="primary" fullWidth onClick={handleUpdateCameras} sx={{ mt: 2 }}>
             Update Cameras
           </Button>
         )}
-  
+
         <Toaster />
       </Box>
     </Modal>
   );
-  
+
 }

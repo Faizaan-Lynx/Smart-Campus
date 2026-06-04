@@ -117,10 +117,10 @@ function App() {
                 element={user ? <CCTVPage /> : <Navigate to="/login" replace />}
               />
 
-              <Route
+              {/* <Route
                 path="/gate"
                 element={user ? <Gate /> : <Navigate to="/login" replace />}
-              />
+              /> */}
 
               <Route
                 path="/user-analytics"

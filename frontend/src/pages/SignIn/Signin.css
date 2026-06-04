@@ -68,7 +68,7 @@ a {
 }
 
 .button_auth {
-  border-radius: 20px;
+  border-radius: 0px;
   border: 1px solid rgba(94, 55, 255, 0.85);
   background-color: rgba(94, 55, 255, 0.85);
   color: #ffffff;
@@ -115,7 +115,7 @@ input {
 
 .container__signin {
   background-color: #fff;
-  border-radius: 10px;
+  border-radius: 0px;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
   position: relative;
   overflow: hidden;
@@ -244,7 +244,7 @@ input {
 
 .social-container a {
   border: 1px solid #dddddd;
-  border-radius: 50%;
+  border-radius: 0px;
   display: inline-flex;
   justify-content: center;
   align-items: center;

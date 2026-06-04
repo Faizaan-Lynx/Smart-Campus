@@ -18,6 +18,7 @@ import { Select, MenuItem, FormControl } from "@mui/material"; // Add these impo
 import RefreshIcon from "@mui/icons-material/Refresh"; // Add this import
 import IconButton from "@mui/material/IconButton"; // Add this import
 import CircularProgress from "@mui/material/CircularProgress"; // Add this import
+import BACKEND_URL from '../../config.js';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -65,34 +66,34 @@ export default function VehicleTable() {
       setLoading(false);
       return;
     }
-    try {
-      const response = await axios.get("http://172.23.10.26:8000/license-plates/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const sortedFormattedData = response.data
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-        .map(item => {
-          const utcDate = new Date(item.timestamp + "Z");
-          return {
-            ...item,
-            timestamp: utcDate.toLocaleString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
-          };
-        });
-      setData(sortedFormattedData);
-    } catch (error) {
-      console.error("Error fetching license plates:", error);
-    } finally {
-      setLoading(false);
-    }
+    // try {
+    //   const response = await axios.get(`http://${BACKEND_URL}/license-plates/`, {
+    //     headers: {
+    //       Authorization: `Bearer ${token}`,
+    //     },
+    //   });
+    //   const sortedFormattedData = response.data
+    //     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    //     .map(item => {
+    //       const utcDate = new Date(item.timestamp + "Z");
+    //       return {
+    //         ...item,
+    //         timestamp: utcDate.toLocaleString("en-GB", {
+    //           day: "2-digit",
+    //           month: "short",
+    //           year: "numeric",
+    //           hour: "2-digit",
+    //           minute: "2-digit",
+    //           hour12: true,
+    //         }),
+    //       };
+    //     });
+    //   setData(sortedFormattedData);
+    // } catch (error) {
+    //   console.error("Error fetching license plates:", error);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   useEffect(() => {
@@ -109,28 +110,28 @@ export default function VehicleTable() {
   };
 
   const handleFeedClick = async (licenseId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `http://172.23.10.26:8000/license-plates/${licenseId}/image`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          responseType: "blob",
-        }
-      );
+    // try {
+    //   const token = localStorage.getItem("token");
+    //   const response = await axios.get(
+    //     `http://${BACKEND_URL}/license-plates/${licenseId}/image`,
+    //     {
+    //       headers: {
+    //         Authorization: `Bearer ${token}`,
+    //       },
+    //       responseType: "blob",
+    //     }
+    //   );
 
-      if (response.headers["content-type"]?.startsWith("image/")) {
-        console.log("License image blob received", response.data);
-        setSelectedFeed(response.data);
-      } else {
-        const errorText = await response.data.text();
-        console.error("Expected image, got:", errorText);
-      }
-    } catch (error) {
-      console.error("Error fetching license image:", error);
-    }
+    //   if (response.headers["content-type"]?.startsWith("image/")) {
+    //     console.log("License image blob received", response.data);
+    //     setSelectedFeed(response.data);
+    //   } else {
+    //     const errorText = await response.data.text();
+    //     console.error("Expected image, got:", errorText);
+    //   }
+    // } catch (error) {
+    //   console.error("Error fetching license image:", error);
+    // }
   };
 
   // Filtered data based on searchTerm and searchField
@@ -165,7 +166,7 @@ export default function VehicleTable() {
   return (
     <div className="foottable__div__main">
       <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-        <Paper elevation={3} sx={{ borderRadius: "11px", marginBottom: "20px", padding: "15px", flex: 1 }}>
+        <Paper elevation={3} sx={{ backgroundColor: "#1f2a40", color: 'white', borderRadius: 0, marginBottom: "20px", padding: "15px", flex: 1 }}>
           <TextField
             fullWidth
             variant="outlined"
@@ -195,7 +196,7 @@ export default function VehicleTable() {
                 </InputAdornment>
               ),
               sx: {
-                borderRadius: "8px",
+                borderRadius: 0,
                 "& fieldset": {
                   borderColor: "#5e37ff",
                 },
@@ -222,7 +223,7 @@ export default function VehicleTable() {
             marginLeft: 2,
             backgroundColor: '#5e37ff',
             color: '#fff',
-            borderRadius: '8px',
+            borderRadius: 0,
             boxShadow: '0 2px 8px rgba(94, 55, 255, 0.15)',
             transition: 'background 0.2s',
             '&:hover': {
@@ -239,7 +240,7 @@ export default function VehicleTable() {
         </IconButton>
       </div>
 
-      <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 0 }}>
         <Table sx={{ minWidth: 700 }} aria-label="vehicle table">
           <TableHead>
             <TableRow>

@@ -40,7 +40,7 @@
   /* CCTV Feed Card */
   .cctv-feed {
     background: white;
-    border-radius: 10px;
+    border-radius: 0px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     padding: 15px;
     text-align: center;
@@ -66,7 +66,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 50%;
+    border-radius: 0px;
   }
   
   .feed-icon {
@@ -104,7 +104,7 @@
     border: none;
     cursor: pointer;
     padding: 10px;
-    border-radius: 50%;
+    border-radius: 0px;
     font-size: 18px;
     display: flex;
     align-items: center;
@@ -140,7 +140,7 @@
   .feed-popup-content {
     background: white;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 0px;
     text-align: center;
     position: relative;
     width: 50%;
@@ -168,7 +168,7 @@
   .feed-image {
     width: 100%;
     height: auto;
-    border-radius: 8px;
+    border-radius: 0px;
     margin-top: 10px;
   }
   

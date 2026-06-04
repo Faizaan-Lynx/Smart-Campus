@@ -86,10 +86,10 @@ const Sidebar = () => {
             <span className="profession">Info-sec</span>
           </div>
         </div>
-        <i
+        {/* <i
           className="bx bx-chevron-right toggle"
           onClick={handleToggleClick}
-        ></i>
+        ></i> */}
       </header>
       <div className="menu-bar">
         <div className="menu">
@@ -148,12 +148,12 @@ const Sidebar = () => {
               </a>
             </li> */}
 
-            <li className="nav-link">
+            {/* <li className="nav-link">
               <a onClick={() => navigate("/gate")}>
                 <i className="bx bx-camera icon"></i>
                 <span className="text nav-text">Gates</span>
               </a>
-            </li>
+            </li> */}
 
 
             {userInfo?.role === "admin" && (<li className="nav-link">

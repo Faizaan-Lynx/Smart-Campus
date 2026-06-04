@@ -10,5 +10,5 @@
 
 .table-container::-webkit-scrollbar-thumb {
   background-color: rgb(171, 163, 163); /* Set color of the scrollbar thumb */
-  border-radius: 2px; /* Set border radius of the scrollbar thumb */
+  border-radius: 0px; /* Set border radius of the scrollbar thumb */
 }

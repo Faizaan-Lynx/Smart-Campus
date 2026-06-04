@@ -16,6 +16,7 @@ import FootFall from "../FootFall/FootFall";
 import FeedPopup from "../FootTable/FeedPopUp";
 import { jwtDecode } from "jwt-decode";
 import { useAlert } from "../../context/AlertContext";
+import BACKEND_URL from '../../config.js';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -50,7 +51,7 @@ const Dashboard = () => {
       }
 
       // axios
-      //   .get("http://172.23.10.26:8000/intrusions/start_all_feed_workers", {
+      //   .get("http://${BACKEND_URL}/intrusions/start_all_feed_workers", {
       //     headers: {
       //       accept: "application/json",
       //       Authorization: `Bearer ${token}`,
@@ -73,7 +74,7 @@ const Dashboard = () => {
     const cameraPromises = cameraIds.map(async (cameraId) => {
       try {
         const response = await axios.get(
-          `http://172.23.10.26:8000/camera/${cameraId}`,
+          `http://${BACKEND_URL}/camera/${cameraId}`,
           {
             headers: {
               accept: "application/json",
@@ -112,7 +113,7 @@ const Dashboard = () => {
 
         let response;
         if (isAdmin) {
-          response = await axios.get("http://172.23.10.26:8000/camera/", {
+          response = await axios.get(`http://${BACKEND_URL}/camera/`, {
             headers: {
               accept: "application/json",
               Authorization: `Bearer ${token}`,
@@ -121,7 +122,7 @@ const Dashboard = () => {
         } else {
           const userId = decodedToken.id;
           const userResponse = await axios.get(
-            `http://172.23.10.26:8000/users/${userId}`,
+            `http://${BACKEND_URL}/users/${userId}`,
             {
               headers: {
                 accept: "application/json",
@@ -184,11 +185,11 @@ const Dashboard = () => {
         let alertUrls = [];
 
         if (isAdmin) {
-          alertUrls = ["ws://172.23.10.26:8000/ws/alerts"];
+          alertUrls = [`ws://${BACKEND_URL}/ws/alerts`];
         } else {
           if (cameras.length === 0) return; // Guard: don't open sockets if no cameras
           alertUrls = cameras.map(
-            (camera) => `ws://172.23.10.26:8000/ws/alerts/${camera.id}`
+            (camera) => `ws://${BACKEND_URL}/ws/alerts/${camera.id}`
           );
         }
 
@@ -196,8 +197,8 @@ const Dashboard = () => {
 
         // Fetch initial alerts (Filtered for users)
         const alertEndpoint = isAdmin
-          ? "http://172.23.10.26:8000/alerts/"
-          : `http://172.23.10.26:8000/alerts?camera_id=${cameras
+          ? `http://${BACKEND_URL}/alerts/`
+          : `http://${BACKEND_URL}/alerts?camera_id=${cameras
               .map((c) => c.id)
               .join(",")}`;
 
@@ -328,7 +329,7 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
+      const response = await axios.get(`http://${BACKEND_URL}/alerts/${alertId}/image`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -363,7 +364,7 @@ const Dashboard = () => {
             <p className="dash__text">Main Dashboard</p>
             {/* </div>
           <div className="top_heading_right select-dropdown">
-            <select value={selectedOptionRedux} onChange={handleOptionChange}> */}
+            <select value={selectedOptionRedux} onChange={handleOptionChange}> }
             {/* <option value="last12Hours">Last 12 Hours</option> */}
             {/* <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>

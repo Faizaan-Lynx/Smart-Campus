@@ -19,7 +19,7 @@ const FeedPopup = ({ filePath, onClose, location }) => {
 
   return (
     <div className="popup-overlay">
-      <div className="popup-content">
+      <div className="popup-content" style={{backgroundColor:"#1f2a40",color:"white"}}>
         <h3>Camera Feed</h3>
         {location && (
           <div style={{ fontWeight: 'bold', marginBottom: 8, whiteSpace: 'nowrap' }}>
@@ -32,7 +32,7 @@ const FeedPopup = ({ filePath, onClose, location }) => {
             alt="Live Camera Feed"
             width="100%"
             height="400px"
-            style={{ objectFit: "contain", borderRadius: "8px" }}
+            style={{ objectFit: "contain", borderRadius: 0}}
           />
         ) : (
           <p>Loading feed...</p>

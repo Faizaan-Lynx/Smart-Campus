@@ -3,14 +3,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 0px;
   }
   
   .Start_Button,
   .Stop_Button {
     color: white;
     padding: 10px 20px;
-    border-radius: 5px;
+    border-radius: 0px;
     border: none;
     cursor: pointer;
     font-size: 16px;

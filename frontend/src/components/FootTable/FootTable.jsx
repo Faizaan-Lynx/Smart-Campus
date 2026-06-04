@@ -12,28 +12,35 @@ import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
 import { color1 } from "../../utils";
 import FeedPopup from "./FeedPopUp";
+import BACKEND_URL from '../../config.js';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    fontSize: "20px",
-    backgroundColor: color1,
+    fontSize: "16px",
+    backgroundColor: "#1a2538",
     color: theme.palette.common.white,
     fontWeight: "bold",
+    borderColor: "white"
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: 12,
+    borderColor: "#141b2d",
+    color:'white'
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#fff",
+    backgroundColor: "#1f2a40",
+    
   },
   "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: "#1f2a40",
+    
   },
   "&:last-child td, &:last-child th": {
     border: 0,
+    backgroundColor:'#1f2a40'
   },
 }));
 
@@ -64,7 +71,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
     try {
       const token = localStorage.getItem("token");
   
-      const response = await axios.get(`http://172.23.10.26:8000/alerts/${alertId}/image`, {
+      const response = await axios.get(`http://${BACKEND_URL}/alerts/${alertId}/image`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -88,7 +95,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const handleAcknowledge = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.patch(`http://172.23.10.26:8000/alerts/${alertId}/acknowledge`, {
+      await axios.patch(`http://${BACKEND_URL}/alerts/${alertId}/acknowledge`, {
         is_acknowledged: true,
       }, {
         headers: {
@@ -112,7 +119,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const handleDelete = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://172.23.10.26:8000/alerts/${alertId}`,
+      await axios.delete(`http://${BACKEND_URL}/alerts/${alertId}`,
       {
         headers: {
           accept: "application/json",
@@ -132,7 +139,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
 
   return (
     <div className="foottable__div__main">
-      <TableContainer component={Paper} sx={{ borderRadius: "11px" }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 0}}>
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
             <TableRow>
@@ -200,6 +207,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 15, 20]}
           component="div"
+          style={{backgroundColor:'#1f2a40',color:'whitesmoke',fontSize:14}}
           count={alerts.length}
           rowsPerPage={rowsPerPage}
           page={page}

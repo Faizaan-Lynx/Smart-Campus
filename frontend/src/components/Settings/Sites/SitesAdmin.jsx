@@ -179,7 +179,7 @@ const SitesAdmin = ({ columns, data }) => {
       </div>
       <TableContainer
         component={Paper}
-        sx={{ borderRadius: "11px" }}
+        sx={{ borderRadius: 0}}
         className="table-container"
       >
         <Table sx={{ minWidth: 700 }} aria-label="customized table">

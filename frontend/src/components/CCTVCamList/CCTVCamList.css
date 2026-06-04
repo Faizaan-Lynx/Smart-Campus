@@ -4,7 +4,7 @@
   gap: 20px;
   /* background-color: #f9f7fc; Light purple background */
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 0px;
   margin-top: 25px;
   margin-right: 20.5px;
 }
@@ -14,7 +14,7 @@
   /* Adjust this value as needed */
   max-height: 100%;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 0px;
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -24,13 +24,13 @@
   overflow-y: auto;
   min-height: 500px;
   max-height: 500px;
-  background-color: #ffffff;
+  background-color: #1f2a40;
   /* White background */
   padding: 10px;
-  border-radius: 10px;
+  border-radius: 0px;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
   scrollbar-width: thick;
-  scrollbar-color: #7272fa #ffffff;
+  scrollbar-color: #1c263d #646262;
   /* Purple thumb with white track */
 }
 
@@ -41,15 +41,20 @@
   cursor: pointer;
   padding: 10px;
   margin-bottom: 10px;
-  border-radius: 5px;
-  background-color: #e0e0ff;
+  border-radius: 0px;
+  color: white;
+  background-color: transparent;
   /* Light purple */
   transition: background 0.3s;
 }
 
+.camera_name{
+  font-weight: 400;
+
+}
 .camera-card.active,
 .camera-card:hover {
-  background-color: rgba(94, 55, 255, 0.85);
+  background-color: #141b2d;
   /* Darker purple */
 }
 
@@ -57,7 +62,7 @@
   width: 100px;
   height: 75px;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: 0px;
 }
 
 .video-feed {
@@ -65,10 +70,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #ffffff;
+  background-color: #1f2a40;
   /* White */
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 0px;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -77,9 +82,9 @@
   height: 50px;
   border: 5px solid rgba(94, 55, 255, 0.85);
   /* Purple */
-  border-top: 5px solid #ffffff;
+  border-top: 0px;
   /* White */
-  border-radius: 50%;
+  border-radius: 0px;
   animation: spin 1s linear infinite;
 }
 
@@ -119,7 +124,7 @@
   position: relative;
   background-color: white;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 0px;
   max-width: 90%;
   max-height: 90%;
   min-width: 400px;
@@ -143,7 +148,7 @@
   color: white;
   border: none;
   padding: 10px;
-  border-radius: 50%;
+  border-radius: 0px;
   cursor: pointer;
   font-weight: bold;
 }
@@ -157,8 +162,8 @@
   width: 50px;
   height: 50px;
   border: 5px solid rgba(255, 255, 255, 0.3);
-  border-top: 5px solid rgba(94, 55, 255, 0.85);
-  border-radius: 50%;
+  border-top: 0px;
+  border-radius: 0px;
   animation: spin 1s linear infinite;
   position: absolute;
   top: 43%;
@@ -169,7 +174,7 @@
 .camera__feed_iframe {
   width: 100%;
   height: 100%;
-  border-radius: 10px;
+  border-radius: 0px;
   object-fit: contain;
 }
 
@@ -194,7 +199,7 @@
   height: 100%;
   max-width: 100%;
   max-height: 100%;
-  border-radius: 10px;
+  border-radius: 0px;
 }
 
 /* Keep the hidden class for preloading */
