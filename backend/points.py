@@ -7,8 +7,10 @@ load_dotenv(override=True)
 
 # Initialize video capture
 # cap = cv2.VideoCapture("rtsp://ncsael:Rawalians1234@172.23.10.82")
-# cap = cv2.VideoCapture("rtsp://ncsael:Rawal@1234@172.23.10.155")
-cap = cv2.VideoCapture("rtsp://ncsael:123@Rawal@192.168.1.102")  #MCS VIEW-1 #NEW IP ROOM CAM1 = 192.168.1.109, CAM2 = 192.168.1.113
+# cap = cv2.VideoCapture("rtsp://ncsael:Rawal@1234@172.23.10.113")
+# cap = cv2.VideoCapture("rtsp://admin:lynxinfosec1@192.168.10.130:554")
+cap = cv2.VideoCapture("rtsp://admin:lynxinfosec1@@192.168.10.129:554")
+# cap = cv2.VideoCapture("rtsp://ncsael:123@Rawal@192.168.1.113")  #MCS VIEW-1 #NEW IP ROOM CAM1 = 192.168.1.109, CAM2 = 192.168.1.113
 # cap = cv2.VideoCapture("rtsp://ncsael:Rawal09876@172.23.10.155") #MCS VIEW-2
 if not cap.isOpened():
     print("Error: Could not open video.")
