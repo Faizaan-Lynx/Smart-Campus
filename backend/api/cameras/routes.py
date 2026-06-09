@@ -8,9 +8,13 @@ from api.auth.schemas import UserResponseSchema
 from models.cameras import Camera as CameraModel
 from api.auth.security import is_admin, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
 from core.celery.model_worker import update_cameras_for_model_workers
-
+import cv2
+import io
+from PIL import Image
+from fastapi.responses import Response
 router = APIRouter(prefix="/camera", tags=["Cameras"])
 
 
@@ -49,6 +53,53 @@ def create_camera(camera: CameraCreate, db: Session = Depends(get_db), current_u
 def get_cameras(db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
     cameras = db.query(CameraModel).all()
     return cameras
+
+
+@router.get("/{camera_id}/frame")
+def get_camera_frame(camera_id: int, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(get_current_user)):
+    """Capture a single frame from the camera stream"""
+    db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
+    if not db_camera:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
+
+    try:
+        cap = cv2.VideoCapture(db_camera.url)
+        if not cap.isOpened():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Unable to connect to camera stream"
+            )
+
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Unable to capture frame from camera"
+            )
+
+        if db_camera.resize_dims:
+            try:
+                dims = eval(db_camera.resize_dims)
+                frame = cv2.resize(frame, dims)
+            except:
+                pass
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame)
+        img_io = io.BytesIO()
+        img.save(img_io, 'JPEG', quality=85)
+        img_io.seek(0)
+
+        return Response(content=img_io.getvalue(), media_type="image/jpeg")
+
+    except Exception as e:
+        print(f"Error capturing frame from camera {camera_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Error capturing frame: {str(e)}"
+        )
 
 
 @router.get("/{camera_id}", response_model=Camera)

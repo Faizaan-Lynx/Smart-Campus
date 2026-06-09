@@ -1,0 +1,120 @@
+.point-drawing-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.canvas-instructions {
+  background: #e3f2fd;
+  padding: 12px;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+}
+
+.canvas-instructions p {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: #1565c0;
+}
+
+.canvas-instructions ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.canvas-instructions li {
+  margin: 4px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+.drawing-canvas {
+  max-width: 100%;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: crosshair;
+  display: block;
+  margin: 0 auto;
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-start {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-start:hover {
+  background: #45a049;
+}
+
+.btn-stop {
+  background: #ff9800;
+  color: white;
+}
+
+.btn-stop:hover {
+  background: #e68900;
+}
+
+.btn-secondary {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #0b7dda;
+}
+
+.btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #da190b;
+}
+
+.polygon-info {
+  background: #fff;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.polygon-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.polygon-info .points-text {
+  max-height: 60px;
+  overflow-y: auto;
+  background: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+}

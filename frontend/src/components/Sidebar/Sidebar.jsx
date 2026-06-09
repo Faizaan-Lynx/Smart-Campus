@@ -172,6 +172,15 @@ const Sidebar = () => {
               </li>
             )}
 
+            {userInfo?.role === "admin" && (
+              <li className="nav-link">
+                <a onClick={() => navigate("/cameras")}>
+                  <i className="bx bx-camera-home icon"></i>
+                  <span className="text nav-text">Cam Control</span>
+                </a>
+              </li>
+            )}
+
             <li className="nav-link">
               <a onClick={() => navigate("/contact")}>
                 <i className="bx bx-phone icon"></i>

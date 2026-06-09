@@ -120,7 +120,7 @@ def process_feed(camera_id: int):
         max_frame_skip_count = 0  # Track frames with no data
 
         # load yolo and move to GPU
-        model = YOLO(model="./yolo-models/yolov8n.pt")
+        model = YOLO(model="./yolo-models/yolo26n.pt")
         if torch.cuda.is_available():
             model.to("cuda:0")
         else:

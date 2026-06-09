@@ -1,0 +1,145 @@
+.camera-management-container {
+  padding: 80px;
+  padding-left: 100px;
+  background: #131d36;
+  min-height: 100vh;
+}
+
+.camera-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  background: #1f2a40;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.camera-header h1 {
+  margin: 0;
+  color: white;
+  font-size: 24px;
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+}
+
+.no-cameras {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  text-align: center;
+  color: #999;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cameras-table {
+  background: #1f2a40;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.url-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Modal Styles */
+.MuiModal-root {
+  z-index: 1300;
+}
+
+.MuiBox-root h2 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+/* Table Styles */
+.MuiTableHead-root {
+  background-color: #1f2a40;
+}
+
+.MuiTableCell-root {
+  padding: 12px 16px;
+}
+
+.MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: #f5f5f5;
+}
+
+/* Button Styles in Modal */
+.MuiButton-root {
+  text-transform: none;
+}
+
+.MuiButton-contained {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.MuiButton-contained:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* TextField Styles */
+.MuiTextField-root {
+  margin-bottom: 8px;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 4px;
+}
+
+/* Checkbox Label */
+label {
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+label input[type="checkbox"] {
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .camera-management-container {
+    padding: 12px;
+  }
+
+  .camera-header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .camera-header h1 {
+    font-size: 20px;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .url-cell {
+    max-width: 150px;
+  }
+}

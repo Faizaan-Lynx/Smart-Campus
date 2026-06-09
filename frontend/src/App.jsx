@@ -27,6 +27,7 @@ import { logout } from "./redux/actions/authActions";
 import Gate from "./pages/Gates/Gate";
 import UserEntryAnalytics from "./components/UserEntryAnalytics/UserEntryAnalytics";
 import { AlertProvider } from "./context/AlertContext";
+import CameraManagement from "./pages/CameraManagement/CameraManagement";
 
 function App() {
   const user = useSelector((state) => state.auth.isAuthenticated);
@@ -115,6 +116,11 @@ function App() {
               <Route
                 path="/CCTV"
                 element={user ? <CCTVPage /> : <Navigate to="/login" replace />}
+              />
+
+              <Route
+                path="/cameras"
+                element={user ? <CameraManagement /> : <Navigate to="/login" replace />}
               />
 
               {/* <Route
