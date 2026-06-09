@@ -47,7 +47,7 @@ const BoxRow = ({ alerts }) => {
 
   return (
     <div className="box__main__div">
-      {statsArray.map((stat, index) => (
+      {/* {statsArray.map((stat, index) => (
         <div className="card" key={index}>
           <img src={assets.logo} alt={`Card ${index}`} className="card-image" />
           <div className="card-content">
@@ -55,7 +55,7 @@ const BoxRow = ({ alerts }) => {
             <p className="stat_2">{stat.value}</p>
           </div>
         </div>
-      ))}
+      ))} */}
     </div>
   );
 };

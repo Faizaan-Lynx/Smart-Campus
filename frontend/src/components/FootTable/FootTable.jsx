@@ -47,8 +47,9 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 const columns = [
   { Header: "Timestamp", accessor: "timestamp" },
   { Header: "Location", accessor: "camera_id" },
+  { Header: "Alert Type", accessor: "alert_type" },
   { Header: "Status", accessor: "is_acknowledged" },
-  { Header: "View Image", accessor: "file_path" },
+  { Header: "View Alert", accessor: "file_path" },
 ];
 
 const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
@@ -119,15 +120,13 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const handleDelete = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://${BACKEND_URL}/alerts/${alertId}`,
-      {
+      await axios.delete(`http://${BACKEND_URL}/alerts/${alertId}`, {
         headers: {
           accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token})}`,
+          Authorization: `Bearer ${token}`,
         },
-      }
-      );
+      });
   
       // Update the alert list locally
       setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== alertId));
@@ -163,7 +162,7 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
                           className="feed-button"
                           onClick={() => handleFeedClick(row.id)}
                         >
-                          View Feed
+                          View Alert
                         </button>
                       ) : column.accessor === "camera_id" ? (
                         <span className="nowrap-location">
@@ -172,6 +171,8 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
                             return cam && cam.location ? cam.location : `Camera ${row.camera_id}`;
                           })()}
                         </span>
+                      ) : column.accessor === "alert_type" ? (
+                        row.alert_type || row.type || "Intrusion"
                       ) : column.accessor === "is_acknowledged" ? (
                         row[column.accessor] ? (
                           "✅ Acknowledged"

@@ -1,22 +1,59 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Dashboard.css";
 import BoxRow from "../BoxDataRow/BoxRow";
 import FootFallRow from "../FootFallRow/FootFallRow";
-import GenderRatioRow from "../GenderRatioRow/GenderRatioRow";
-import EngagementRow from "../EngagementRow/EngagementRow";
 import FootTable from "../FootTable/FootTable";
 import { updateSelectedOption } from "../../redux/actions/authActions";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import axios from "axios";
-import { filterVisits, localurl } from "../../utils";
+import { color1, color2, color3 } from "../../utils";
 import { useParams } from "react-router-dom";
-// import toast, { Toaster } from "react-hot-toast";
-import { toast, ToastContainer } from "react-toastify";
-import FootFall from "../FootFall/FootFall";
+import { toast } from "react-toastify";
+import { LineChart, PieChart, BarChart } from "@mui/x-charts";
 import FeedPopup from "../FootTable/FeedPopUp";
 import { jwtDecode } from "jwt-decode";
 import { useAlert } from "../../context/AlertContext";
 import BACKEND_URL from '../../config.js';
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const CHART_COLORS = [
+  "#e8534a",
+  "#f5a623",
+  "#4ecdc4",
+  "#a8e063",
+  "#c471ed",
+  "#f64f59",
+];
+
+const AXIS_LABEL_COLOR = "#e2e8f0";
+const AXIS_TICK_COLOR = "#cbd5e1";
+const LEGEND_LABEL_COLOR = "#e2e8f0";
+
+const parseAlertTimestamp = (timestamp) => {
+  if (!timestamp) return null;
+  const normalized = timestamp
+    .replace(/,/g, "")
+    .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1")
+    .replace(/(\d{2})-(\d{2})-(\d{4})/, "$3-$2-$1");
+  const date = new Date(normalized);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+const getAlertType = (alert) => alert?.alert_type || alert?.type || "Intrusion";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -29,6 +66,9 @@ const Dashboard = () => {
   const [cameras, setCameras] = useState([]);
 
   const [selectedCamera, setSelectedCamera] = useState(null);
+  const [usersWithCameraCount, setUsersWithCameraCount] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState(null);
   // Alert Related Variables
   const { alerts, setAlerts, addToast, dismissAllToasts } = useAlert();
   const [alertUrl, setAlertUrl] = useState(null);
@@ -164,6 +204,56 @@ const Dashboard = () => {
     };
 
     fetchCameras();
+
+    const fetchUsersOverview = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setUsersError("Missing authentication token.");
+        setUsersLoading(false);
+        return;
+      }
+
+      try {
+        const decodedToken = jwtDecode(token);
+        const isAdmin = decodedToken.role === "admin";
+        let response;
+
+        if (isAdmin) {
+          response = await axios.get(`http://${BACKEND_URL}/users/`, {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const allUsers = response.data.map((user) => ({
+            label: user.username || `User ${user.id}`,
+            count: Array.isArray(user.cameras) ? user.cameras.length : 0,
+          }));
+          console.log("Users with camera counts:", allUsers);
+          setUsersWithCameraCount(allUsers);
+        } else {
+          response = await axios.get(`http://${BACKEND_URL}/users/${decodedToken.id}`, {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          setUsersWithCameraCount([
+            {
+              label: response.data.username || "My Cameras",
+              count: response.data.cameras?.length || 0,
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error fetching user camera counts:", error);
+        setUsersError("Unable to load user camera assignments.");
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchUsersOverview();
   }, []);
 
   //Fetch Alerts
@@ -353,6 +443,96 @@ const Dashboard = () => {
     }
   };
 
+  const monthlyAlertsChart = useMemo(() => {
+    const monthCounts = Array(12).fill(0);
+    const typeBuckets = {};
+
+    alerts.forEach((alert) => {
+      const date = parseAlertTimestamp(alert.timestamp);
+      if (!date) return;
+      const monthIndex = date.getMonth();
+      const type = getAlertType(alert);
+      monthCounts[monthIndex] += 1;
+
+      if (!typeBuckets[type]) {
+        typeBuckets[type] = Array(12).fill(0);
+      }
+      typeBuckets[type][monthIndex] += 1;
+    });
+
+    const series = Object.entries(typeBuckets).length > 1
+      ? Object.entries(typeBuckets).map(([type, data]) => ({
+          label: type,
+          data,
+          curve: "natural",
+          showMark: true,
+        }))
+      : [
+          {
+            label: "Alerts",
+            data: monthCounts,
+            curve: "natural",
+            showMark: true,
+          },
+        ];
+
+    return {
+      categories: MONTH_LABELS,
+      series,
+    };
+  }, [alerts]);
+
+  const cameraAlertAnalytics = useMemo(() => {
+    const counts = {};
+    alerts.forEach((alert) => {
+      const cameraId = Number(alert.camera_id);
+      counts[cameraId] = (counts[cameraId] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([cameraId, total]) => {
+        const camera = cameras.find((item) => item.id === Number(cameraId));
+        return {
+          cameraId: Number(cameraId),
+          label: camera?.location || `Camera ${cameraId}`,
+          total,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [alerts, cameras]);
+
+  const cameraRows = useMemo(
+    () => cameraAlertAnalytics.map((item) => item.label),
+    [cameraAlertAnalytics]
+  );
+
+  const cameraCounts = useMemo(
+    () => cameraAlertAnalytics.map((item) => item.total),
+    [cameraAlertAnalytics]
+  );
+
+  const usersPieSeries = useMemo(() => {
+    return [
+      {
+        data: usersWithCameraCount.map((user, index) => ({
+          id: index,
+          value: user.count,
+          label: user.label,
+        })),
+      },
+    ];
+  }, [usersWithCameraCount]);
+
+  const totalAssignedCameras = useMemo(
+    () => usersWithCameraCount.reduce((sum, user) => sum + user.count, 0),
+    [usersWithCameraCount]
+  );
+
+  const recentAlerts = useMemo(
+    () => alerts.slice(0, 8),
+    [alerts]
+  );
+
   return (
     <div className="dashboard__main">
       {/* <ToastContainer ... /> removed, now global */}
@@ -360,18 +540,7 @@ const Dashboard = () => {
       <div className="dashboard__content">
         <div className="dashboard__text__main">
           <div className="dashboard__text">
-            {/* <p className="overview__text">{visitData1?.name}'s Overview</p> */}
             <p className="dash__text">Main Dashboard</p>
-            {/* </div>
-          <div className="top_heading_right select-dropdown">
-            <select value={selectedOptionRedux} onChange={handleOptionChange}> }
-            {/* <option value="last12Hours">Last 12 Hours</option> */}
-            {/* <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="last7Days">Last 7 Days</option>
-              <option value="lastMonth">Last Month</option>
-              <option value="allTime">All Time</option>
-            </select> */}
           </div>
         </div>
         <BoxRow alerts={alerts} />
@@ -381,11 +550,202 @@ const Dashboard = () => {
           setSelectedCamera={setSelectedCamera} // Pass setter function
           loading={loading}
         />
-        {/* Line Graph Added Below the Video Row */}
-        {/* <FootFall visitData={visitData} /> */}
-        {/* <GenderRatioRow visitData={visitData} /> */}
-        {/* <EngagementRow visitData={visitData} /> */}
-        <FootTable alerts={alerts} setAlerts={setAlerts} cameras={cameras} />
+        <div className="dashboard__analytics-grid">
+          <section className="dashboard-card">
+            <div className="dashboard-card__header">
+              <div>
+                <h3>Monthly Alerts</h3>
+                <p className="dashboard-card__subtitle">Alerts generated by month</p>
+              </div>
+            </div>
+            <div className="dashboard-card__body">
+              {alerts.length === 0 ? (
+                <div className="dashboard-empty-state">No alerts available yet.</div>
+              ) : (
+                <LineChart
+                  xAxis={[{ data: monthlyAlertsChart.categories, scaleType: "band" }]}
+                  series={monthlyAlertsChart.series}
+                  colors={CHART_COLORS}
+                  height={320}
+                  grid={{ horizontal: true }}
+                  sx={{
+                    "& .MuiChartsAxis-tickLabel": { fill: "#cbd5e1 !important" },
+                    "& .MuiChartsAxis-label": { fill: "#e2e8f0 !important" },
+                    "& .MuiChartsAxis-line": { stroke: "#334155" },
+                    "& .MuiChartsAxis-tick": { stroke: "#334155" },
+                    "& .MuiChartsGrid-line": {
+                      stroke: "rgba(255,255,255,0.12)",
+                      strokeDasharray: "4 4",
+                    },
+                  }}
+                  slotProps={{
+                    legend: {
+                      position: { vertical: "bottom", horizontal: "center" },
+                      direction: "row",
+                      itemMarkHeight: 10,
+                      itemMarkWidth: 10,
+                      itemSpacing: 10,
+                      padding: -5,
+                    
+                      labelStyle: { fontSize: 13, fill: LEGEND_LABEL_COLOR, },
+                    },
+                    xAxis: {
+                  
+                      labelStyle: { fill: AXIS_LABEL_COLOR, fontSize: 12 },
+                      tickLabelStyle: { fill: AXIS_TICK_COLOR, fontSize: 11 },
+                    },
+                    yAxis: {
+                      labelStyle: { fill: AXIS_LABEL_COLOR, fontSize: 12 },
+                      tickLabelStyle: { fill: AXIS_TICK_COLOR, fontSize: 11 },
+                    },
+                    tooltip: {
+                      formatter: ({ x, y, seriesName }) => ({
+                        title: `${seriesName} • ${x}`,
+                        label: `${y} alert${y === 1 ? "" : "s"}`,
+                      }),
+                    },
+                  }}
+                />
+              )}
+            </div>
+          </section>
+
+          <section className="dashboard-card">
+            <div className="dashboard-card__header">
+              <div>
+                <h3>Users by Cameras</h3>
+                <p className="dashboard-card__subtitle">Cameras assigned per user</p>
+              </div>
+            </div>
+            <div className="dashboard-card__body dashboard-card__body--pie">
+              {usersLoading ? (
+                <div className="dashboard-empty-state">Loading users...</div>
+              ) : usersError ? (
+                <div className="dashboard-empty-state">{usersError}</div>
+              ) : usersWithCameraCount.length === 0 ? (
+                <div className="dashboard-empty-state">No user assignments found.</div>
+              ) : (
+                <>
+                  <PieChart
+                    width={340}
+                    height={300}
+                    colors={CHART_COLORS}
+                    series={[
+                      {
+                        data: usersWithCameraCount
+                          .map((user, index) => ({
+                            id: index,
+                            value: user.count,
+                            label: user.label,
+                            color: CHART_COLORS[index % CHART_COLORS.length],
+                          })),
+                        arcLabel: (item) => `${item.value}`,
+                        arcLabelMinAngle: 35,
+                        innerRadius: 55,
+                        outerRadius: 110,
+                        paddingAngle: 3,
+                        cornerRadius: 5,
+                        cx: 155,
+                        cy: 140,
+                      },
+                    ]}
+                    sx={{
+                      "& .MuiChartsArcLabel-root": {
+                        fill: "#ffffff",
+                        fontWeight: 700,
+                        fontSize: "0.72rem",
+                        textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                      },
+                    }}
+                    slotProps={{
+                      legend: { hidden: true },
+                    }}
+                  />
+                  <div className="dashboard-pie-center">
+                    <strong style={{ color: "#ffffff", fontSize: "1.6rem" }}>{totalAssignedCameras}</strong>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          <section className="dashboard-card">
+            <div className="dashboard-card__header">
+              <div>
+                <h3>Alerts by Camera</h3>
+                <p className="dashboard-card__subtitle">Volume per camera location</p>
+              </div>
+            </div>
+            <div className="dashboard-card__body dashboard-card__body--scroll">
+              {cameraAlertAnalytics.length === 0 ? (
+                <div className="dashboard-empty-state">No camera alerts to display.</div>
+              ) : (
+                <div className="dashboard-chart-scroll-inner">
+                  <BarChart
+                    height={320}
+                    series={[{
+                      data: cameraCounts,
+                      label: "Alerts",
+                      color: "#e8534a",
+                    }]}
+                    xAxis={[{ data: cameraRows, scaleType: "band" }]}
+                    grid={{ horizontal: true }}
+                    sx={{
+                      "& .MuiChartsAxis-tickLabel": { fill: "#cbd5e1 !important" },
+                      "& .MuiChartsAxis-label": { fill: "#e2e8f0 !important" },
+                      "& .MuiChartsAxis-line": { stroke: "#334155" },
+                      "& .MuiChartsAxis-tick": { stroke: "#334155" },
+                      "& .MuiChartsGrid-line": {
+                        stroke: "rgba(255,255,255,0.12)",
+                        strokeDasharray: "4 4",
+                      },
+                    }}
+                    slotProps={{
+                      legend: {
+                        position: { vertical: "bottom", horizontal: "center" },
+                        direction: "row",
+                        itemMarkHeight: 10,
+                        itemMarkWidth: 10,
+                        padding: -5,
+                        labelStyle: { fontSize: 13, fill: LEGEND_LABEL_COLOR },
+                      },
+                      xAxis: {
+                        labelStyle: { fill: AXIS_LABEL_COLOR, fontSize: 12 },
+                        tickLabelStyle: { fill: AXIS_TICK_COLOR, fontSize: 11 },
+                      },
+                      yAxis: {
+                        labelStyle: { fill: AXIS_LABEL_COLOR, fontSize: 12 },
+                        tickLabelStyle: { fill: AXIS_TICK_COLOR, fontSize: 11 },
+                      },
+                      tooltip: {
+                        formatter: ({ x, y }) => ({
+                          title: `${x}`,
+                          label: `${y} alert${y === 1 ? "" : "s"}`,
+                        }),
+                      },
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="dashboard-card dashboard-card--table">
+            <div className="dashboard-card__header">
+              <div>
+                <h3>Recent Alerts</h3>
+                <p className="dashboard-card__subtitle">Latest camera alerts and actions</p>
+              </div>
+            </div>
+            <div className="dashboard-card__body dashboard-card__body--table">
+              <FootTable
+                alerts={recentAlerts}
+                setAlerts={setAlerts}
+                cameras={cameras}
+              />
+            </div>
+          </section>
+        </div>
       </div>
       {popupActive && (
         <FeedPopup 
