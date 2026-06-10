@@ -81,10 +81,6 @@
   padding: 12px 16px;
 }
 
-.MuiTableBody-root .MuiTableRow-root:hover {
-  background-color: #f5f5f5;
-}
-
 /* Button Styles in Modal */
 .MuiButton-root {
   text-transform: none;

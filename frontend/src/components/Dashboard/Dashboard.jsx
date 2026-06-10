@@ -732,16 +732,18 @@ const Dashboard = () => {
 
           <section className="dashboard-card dashboard-card--table">
             <div className="dashboard-card__header">
-              <div>
+              <div className="dashboard-card__header-left">
                 <h3>Recent Alerts</h3>
                 <p className="dashboard-card__subtitle">Latest camera alerts and actions</p>
               </div>
+              <div className="dashboard-card__header-right" id="alerts-search-placeholder" />
             </div>
             <div className="dashboard-card__body dashboard-card__body--table">
               <FootTable
                 alerts={recentAlerts}
                 setAlerts={setAlerts}
                 cameras={cameras}
+                searchPlaceholderId="alerts-search-placeholder"
               />
             </div>
           </section>

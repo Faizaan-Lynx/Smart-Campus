@@ -1,126 +1,159 @@
 .foottable__div__main {
-  padding-right: 16px;
-  margin-top: 35px;
-  margin-bottom: 10px;
-}
-/* CustomTable.css */
-.table-container::-webkit-scrollbar {
-  width: 4px; /* Set width of the scrollbar */
-  height: 4px; /* Set height of the scrollbar */
+  padding-right: 6px;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
-.table-container::-webkit-scrollbar-thumb {
-  background-color: rgb(171, 163, 163); /* Set color of the scrollbar thumb */
-  border-radius: 0px; /* Set border radius of the scrollbar thumb */
-}
-
-
-/* Sample CSS for Acknowledge  & Delete Buttons */
-
-.action-buttons {
+.alert-card-search {
   display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.alert-card-search input {
+  width: 160px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #0f1720;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+}
+
+.alert-card-search input::placeholder {
+  color: #64748b;
+}
+
+.alert-card-search__button {
+  border: none;
+  background: #1f2937;
+  color: #cbd5e1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-card-search__button:hover {
+  background: #111827;
+}
+
+.alert-card-list-container {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.alert-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-card {
+  display: grid;
+  grid-template-columns: 1.6fr 1.4fr 0.8fr;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: #111924;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+  min-height: 54px;
+}
+
+.alert-card__left,
+.alert-card__center,
+.alert-card__right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.alert-card__camera-name {
+  color: #3dd0c0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.alert-card__center {
+  gap: 4px;
+}
+
+.alert-card__date,
+.alert-card__type-text {
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.alert-card__type-text {
+  color: #94a3b8;
+}
+
+.alert-card__right {
+  display: flex;
+  flex-direction: row; /* Forces the buttons into a horizontal row */
+  justify-content: flex-end;
   gap: 8px;
 }
 
-.feed-button {
-  background-color: #131d36 !important; /* Blue */
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 0px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s ease;
-}
-.acknowledge-button {
-  background-color: #02754d; /* Green */
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 0px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s ease;
-}
-
-.acknowledge-button:hover {
-  background-color: #45a049;
-}
-
-.delete-button {
-  background-color: #991b16;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 0px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s ease;
-}
-
-.delete-button:hover {
-  background-color: #8b2522;
-}
-
-
-/* Feed Pop Up */
-
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
+.alert-card__button {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #ffffff;
+  width: 36px;
+  height: 36px;
+  transition: background-color 0.25s ease;
 }
 
-.popup-content {
-  background: white;
-  padding: 20px;
-  border-radius: 0px;
+.alert-card__button:hover {
+  background: #273449;
+}
+
+.alert-card__button--view {
+  background: #0891b2;
+}
+
+.alert-card__button--view:hover {
+  background: #06b6d4;
+}
+
+.alert-card__button--delete {
+  background: #991b16;
+}
+
+.alert-card__button--delete:hover {
+  background: #b93327;
+}
+
+.alert-card__button svg {
+  font-size: 0.95rem;
+}
+
+.alert-card-empty {
+  padding: 14px;
   text-align: center;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+  color: #cbd5e1;
+  background-color: #0f1720;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.loader {
-  margin: 10px;
-  font-size: 16px;
-  color: blue;
-}
+@media (max-width: 980px) {
+  .alert-card {
+    grid-template-columns: 1fr;
+  }
 
-.error-message {
-  color: red;
-  font-weight: bold;
-}
-
-.feed-button {
-  background-color: #008CBA;
-  color: white;
-  padding: 5px 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 0px;
-}
-
-.close-button {
-  background-color: red;
-  color: white;
-  padding: 5px 10px;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
-  border-radius: 0px;
-}
-
-.nowrap-location {
-  white-space: nowrap;
-  display: inline-block;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
+  .alert-card__right {
+    justify-content: flex-start;
+  }
 }
 

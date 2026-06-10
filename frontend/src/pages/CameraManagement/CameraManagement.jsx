@@ -297,7 +297,8 @@ const CameraManagement = () => {
   }
 
   return (
-    <div className="camera-management-container">
+    <div className="dashboard__main">
+      <div className="camera-management-container">
       <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="camera-header">
@@ -316,25 +317,25 @@ const CameraManagement = () => {
           <Table>
             <TableHead>
               <TableRow style={{ backgroundColor: "#1f2a40" ,color:"white"}}>
-                <TableCell style={{color:"white",fontSize:'13px'}}><strong>ID</strong></TableCell>
-                <TableCell style={{color:"white"}}><strong>URL</strong></TableCell>
-                <TableCell style={{color:"white"}}><strong>Location</strong></TableCell>
-                <TableCell style={{color:"white"}}><strong>Threshold</strong></TableCell>
-                <TableCell style={{color:"white"}}><strong>Intrusion Detection</strong></TableCell>
-                <TableCell style={{color:"white"}} align="center"><strong>Actions</strong></TableCell>
+                <TableCell style={{color:"white",fontSize:'13px', borderColor:"#141b2d"}}><strong>ID</strong></TableCell>
+                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>URL</strong></TableCell>
+                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Location</strong></TableCell>
+                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Threshold</strong></TableCell>
+                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Intrusion Detection</strong></TableCell>
+                <TableCell style={{color:"white", borderColor:"#141b2d"}} align="center"><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {cameras.map((camera) => (
-                <TableRow key={camera.id} hover style={{backgroundColor:"#1f2a40"}}>
-                  <TableCell style={{color:"whitesmoke"}}>{camera.id}</TableCell>
-                  <TableCell style={{color:"whitesmoke"}} className="url-cell">{camera.url}</TableCell>
-                  <TableCell style={{color:"whitesmoke"}}>{camera.location || "-"}</TableCell>
-                  <TableCell style={{color:"whitesmoke"}}>{camera.detection_threshold}</TableCell>
-                  <TableCell style={{color:"whitesmoke"}}>
+                <TableRow key={camera.id} style={{backgroundColor:"#1f2a40"}}>
+                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.id}</TableCell>
+                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}} className="url-cell">{camera.url}</TableCell>
+                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.location || "-"}</TableCell>
+                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.detection_threshold}</TableCell>
+                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>
                     {camera.detect_intrusions ? "✓ Yes" : "✗ No"}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" style={{borderColor:"#141b2d"}}>
                     <IconButton
                       size="small"
                       color="primary"
@@ -693,6 +694,7 @@ const CameraManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      </div>
     </div>
   );
 };

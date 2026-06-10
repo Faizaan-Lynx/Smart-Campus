@@ -1,70 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
+import ReactDOM from "react-dom";
 import axios from "axios";
 import "./FootTable.css";
-import { styled } from "@mui/material/styles";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell, { tableCellClasses } from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import TablePagination from "@mui/material/TablePagination";
-import { color1 } from "../../utils";
+import { FaEye, FaTrash, FaSearch } from "react-icons/fa";
 import FeedPopup from "./FeedPopUp";
 import BACKEND_URL from '../../config.js';
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    fontSize: "16px",
-    backgroundColor: "#1a2538",
-    color: theme.palette.common.white,
-    fontWeight: "bold",
-    borderColor: "white"
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: 12,
-    borderColor: "#141b2d",
-    color:'white'
-  },
-}));
 
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(even)": {
-    backgroundColor: "#1f2a40",
-    
-  },
-  "&:nth-of-type(odd)": {
-    backgroundColor: "#1f2a40",
-    
-  },
-  "&:last-child td, &:last-child th": {
-    border: 0,
-    backgroundColor:'#1f2a40'
-  },
-}));
-
-const columns = [
-  { Header: "Timestamp", accessor: "timestamp" },
-  { Header: "Location", accessor: "camera_id" },
-  { Header: "Alert Type", accessor: "alert_type" },
-  { Header: "Status", accessor: "is_acknowledged" },
-  { Header: "View Alert", accessor: "file_path" },
-];
-
-const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+const FootTable = ({ alerts, setAlerts, cameras = [], searchPlaceholderId }) => {
   const [selectedFeed, setSelectedFeed] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  React.useEffect(() => {
+    if (searchPlaceholderId) {
+      const placeholder = document.getElementById(searchPlaceholderId);
+      if (placeholder) {
+        const searchBox = (
+          <div className="alert-card-search">
+            <input
+              type="text"
+              placeholder="Search camera or date"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button type="button" className="alert-card-search__button" aria-label="Search alerts">
+              <FaSearch />
+            </button>
+          </div>
+        );
+        const root = ReactDOM.createRoot(placeholder);
+        root.render(searchBox);
+      }
+    }
+  }, [searchTerm, searchPlaceholderId]);
 
   const handleFeedClick = async (alertId) => {
     console.log("Feed Clicked", alertId);
@@ -93,30 +61,6 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   
   
 
-  const handleAcknowledge = async (alertId) => {
-    const token = localStorage.getItem("token");
-    try {
-      await axios.patch(`http://${BACKEND_URL}/alerts/${alertId}/acknowledge`, {
-        is_acknowledged: true,
-      }, {
-        headers: {
-          accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Update the alert list locally
-      setAlerts((prevAlerts) =>
-        prevAlerts.map((alert) =>
-          alert.id === alertId ? { ...alert, is_acknowledged: true } : alert
-        )
-      );
-    } catch (error) {
-      console.error("Failed to acknowledge alert:", error);
-    }
-  };
-
   const handleDelete = async (alertId) => {
     const token = localStorage.getItem("token");
     try {
@@ -136,92 +80,78 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   };
   
 
+  const getCameraName = (camera_id) => {
+    const cam = cameras.find((c) => c.id === camera_id);
+    return cam?.location || `Camera ${camera_id}`;
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    if (!Number.isNaN(date.valueOf())) {
+      return date.toISOString().slice(0, 10);
+    }
+    return timestamp.slice(0, 10);
+  };
+
+  const filteredAlerts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return alerts;
+
+    return alerts.filter((row) => {
+      const cameraName = getCameraName(row.camera_id).toLowerCase();
+      const timestamp = formatDate(row.timestamp).toLowerCase();
+      return cameraName.includes(term) || timestamp.includes(term);
+    });
+  }, [alerts, searchTerm]);
+
   return (
     <div className="foottable__div__main">
-      <TableContainer component={Paper} sx={{ borderRadius: 0}}>
-        <Table sx={{ minWidth: 700 }} aria-label="customized table">
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <StyledTableCell key={column.Header} align="left">
-                  {column.Header}
-                </StyledTableCell>
-              ))}
-              <StyledTableCell align="left">Actions</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {alerts
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
-                <StyledTableRow key={row.id}>
-                  {columns.map((column) => (
-                    <StyledTableCell key={column.accessor} align="left">
-                      {column.accessor === "file_path" ? (
-                        <button
-                          className="feed-button"
-                          onClick={() => handleFeedClick(row.id)}
-                        >
-                          View Alert
-                        </button>
-                      ) : column.accessor === "camera_id" ? (
-                        <span className="nowrap-location">
-                          {(() => {
-                            const cam = cameras.find(c => c.id === row.camera_id);
-                            return cam && cam.location ? cam.location : `Camera ${row.camera_id}`;
-                          })()}
-                        </span>
-                      ) : column.accessor === "alert_type" ? (
-                        row.alert_type || row.type || "Intrusion"
-                      ) : column.accessor === "is_acknowledged" ? (
-                        row[column.accessor] ? (
-                          "✅ Acknowledged"
-                        ) : (
-                          "❌ Pending"
-                        )
-                      ) : (
-                        row[column.accessor]
-                      )}
-                    </StyledTableCell>
-                  ))}
-                  <StyledTableCell align="center">
-                    <div className="action-buttons">
-                      <button
-                        className="acknowledge-button"
-                        onClick={() => handleAcknowledge(row.id)}
-                        disabled={row.is_acknowledged}
-                      >
-                        Acknowledge
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDelete(row.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </StyledTableCell>
-                </StyledTableRow>
-              ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 15, 20]}
-          component="div"
-          style={{backgroundColor:'#1f2a40',color:'whitesmoke',fontSize:14}}
-          count={alerts.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
+      <div className="alert-card-list-container">
+        {filteredAlerts.length === 0 ? (
+          <div className="alert-card-empty">No alerts match your search.</div>
+        ) : (
+          <div className="alert-card-list">
+            {filteredAlerts.map((row) => {
+              const name = getCameraName(row.camera_id);
+              const alertType = row.alert_type || row.type || "Intrusion";
+
+              return (
+                <div className="alert-card" key={row.id}>
+                  <div className="alert-card__left">
+                    <div className="alert-card__camera-name">{name}</div>
+                  </div>
+
+                  <div className="alert-card__center">
+                    <span className="alert-card__date">{formatDate(row.timestamp)}</span>
+                    <span className="alert-card__type-text">{alertType}</span>
+                  </div>
+
+                  <div className="alert-card__right">
+                    <button
+                      className="alert-card__button alert-card__button--icon alert-card__button--view"
+                      onClick={() => handleFeedClick(row.id)}
+                      aria-label="View Alert"
+                    >
+                      <FaEye />
+                    </button>
+                    <button
+                      className="alert-card__button alert-card__button--icon alert-card__button--delete"
+                      onClick={() => handleDelete(row.id)}
+                      aria-label="Delete Alert"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {selectedFeed && (
-        <FeedPopup
-          filePath={selectedFeed}
-          onClose={() => setSelectedFeed(null)}
-        />
+        <FeedPopup filePath={selectedFeed} onClose={() => setSelectedFeed(null)} />
       )}
     </div>
   );

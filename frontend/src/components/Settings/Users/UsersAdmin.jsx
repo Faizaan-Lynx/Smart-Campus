@@ -44,6 +44,10 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:last-child td, &:last-child th": {
     border: 0,
   },
+  "&:hover": {
+    backgroundColor: "#1f2a40",
+    color: "white",
+  },
 }));
 
 const UserAdmin = ({ columns }) => {
@@ -149,7 +153,7 @@ const UserAdmin = ({ columns }) => {
             marginBottom: "20px",
             display: "flex",
             alignItems: "center",
-            color:"white"
+            color:"white",
           }}
         >
           All Users
@@ -186,7 +190,9 @@ const UserAdmin = ({ columns }) => {
       >
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
-            <TableRow>
+            <TableRow
+            
+            >
               {columns.map((column) => (
                 <StyledTableCell key={column.Header} align="left">
                   {column.Header}

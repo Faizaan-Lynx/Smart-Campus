@@ -1,0 +1,110 @@
+.camera-horizontal-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.camera-horizontal__scroll-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+}
+
+.camera-horizontal__scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.camera-horizontal__scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.camera-horizontal__scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(94, 55, 255, 0.6);
+  border-radius: 3px;
+}
+
+.camera-horizontal__scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(94, 55, 255, 0.85);
+}
+
+.camera-horizontal__card-wrapper {
+  flex: 0 0 auto;
+  width: 400px;
+  min-width: 400px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .camera-horizontal__card-wrapper {
+    width: 350px;
+    min-width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .camera-horizontal__card-wrapper {
+    width: 300px;
+    min-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .camera-horizontal__card-wrapper {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  .camera-horizontal__scroll-container {
+    gap: 12px;
+  }
+}
+
+/* Empty state */
+.camera-horizontal__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  min-height: 300px;
+  text-align: center;
+  gap: 20px;
+}
+
+.camera-horizontal__empty-state p {
+  color: #8f9bb3;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.camera-horizontal__empty-state-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(94, 55, 255, 0.85), rgba(106, 210, 255, 0.85));
+  color: #ffffff;
+  border: 1px solid rgba(94, 55, 255, 0.6);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(94, 55, 255, 0.3);
+}
+
+.camera-horizontal__empty-state-btn:hover {
+  background: linear-gradient(135deg, rgba(94, 55, 255, 1), rgba(106, 210, 255, 1));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(94, 55, 255, 0.4);
+}
+
+.camera-horizontal__empty-state-btn:active {
+  transform: translateY(0);
+}
