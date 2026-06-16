@@ -8,39 +8,54 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import TablePagination from "@mui/material/TablePagination";
-import TextField from "@mui/material/TextField"; // Import TextField for the search input
-import InputAdornment from "@mui/material/InputAdornment"; // For search icon
-import SearchIcon from "@mui/icons-material/Search"; // For search icon
-import { color1 } from "../../utils"; // Assuming color1 is defined here
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import SearchIcon from "@mui/icons-material/Search";
+import { color1 } from "../../utils";
 import FeedPopup from "../FootTable/FeedPopUp";
 import axios from "axios";
-import { Select, MenuItem, FormControl } from "@mui/material"; // Add these imports
-import RefreshIcon from "@mui/icons-material/Refresh"; // Add this import
-import IconButton from "@mui/material/IconButton"; // Add this import
-import CircularProgress from "@mui/material/CircularProgress"; // Add this import
+import { Select, MenuItem, FormControl } from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import IconButton from "@mui/material/IconButton";
+import CircularProgress from "@mui/material/CircularProgress";
 import BACKEND_URL from '../../config.js';
+import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    fontSize: "20px",
-    backgroundColor: "#5e37ff", // Replace with `color1` if you use a theme variable
+    fontSize: "14px",
+    backgroundColor: "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)",
+    backgroundImage: "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)",
     color: theme.palette.common.white,
-    fontWeight: "bold",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 14,
+    fontSize: 13,
+    color: "#e0e0e0",
+    borderColor: "#2a2f42",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#fff",
+    backgroundColor: "#1f2a40",
+    transition: "all 0.3s ease",
   },
   "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
+    backgroundColor: "#242d42",
+    transition: "all 0.3s ease",
   },
   "&:last-child td, &:last-child th": {
     border: 0,
+  },
+  "&:hover": {
+    backgroundColor: "#2c3652 !important",
+    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.1)",
+    transform: "translateY(-2px)",
   },
 }));
 
@@ -56,8 +71,8 @@ export default function VehicleTable() {
   const [selectedFeed, setSelectedFeed] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(""); // State for search term
-  const [searchField, setSearchField] = useState("license_number"); // New state for search field
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("license_number");
 
   const fetchLicensePlates = async () => {
     setLoading(true);
@@ -66,34 +81,6 @@ export default function VehicleTable() {
       setLoading(false);
       return;
     }
-    // try {
-    //   const response = await axios.get(`http://${BACKEND_URL}/license-plates/`, {
-    //     headers: {
-    //       Authorization: `Bearer ${token}`,
-    //     },
-    //   });
-    //   const sortedFormattedData = response.data
-    //     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-    //     .map(item => {
-    //       const utcDate = new Date(item.timestamp + "Z");
-    //       return {
-    //         ...item,
-    //         timestamp: utcDate.toLocaleString("en-GB", {
-    //           day: "2-digit",
-    //           month: "short",
-    //           year: "numeric",
-    //           hour: "2-digit",
-    //           minute: "2-digit",
-    //           hour12: true,
-    //         }),
-    //       };
-    //     });
-    //   setData(sortedFormattedData);
-    // } catch (error) {
-    //   console.error("Error fetching license plates:", error);
-    // } finally {
-    //   setLoading(false);
-    // }
   };
 
   useEffect(() => {
@@ -110,31 +97,8 @@ export default function VehicleTable() {
   };
 
   const handleFeedClick = async (licenseId) => {
-    // try {
-    //   const token = localStorage.getItem("token");
-    //   const response = await axios.get(
-    //     `http://${BACKEND_URL}/license-plates/${licenseId}/image`,
-    //     {
-    //       headers: {
-    //         Authorization: `Bearer ${token}`,
-    //       },
-    //       responseType: "blob",
-    //     }
-    //   );
-
-    //   if (response.headers["content-type"]?.startsWith("image/")) {
-    //     console.log("License image blob received", response.data);
-    //     setSelectedFeed(response.data);
-    //   } else {
-    //     const errorText = await response.data.text();
-    //     console.error("Expected image, got:", errorText);
-    //   }
-    // } catch (error) {
-    //   console.error("Error fetching license image:", error);
-    // }
   };
 
-  // Filtered data based on searchTerm and searchField
   const filteredData = data.filter((row) => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     if (!searchTerm) return true;
@@ -143,19 +107,17 @@ export default function VehicleTable() {
     } else if (searchField === "timestamp") {
       return row.timestamp.toLowerCase().includes(lowerCaseSearchTerm);
     } else if (searchField === "camera_id") {
-      // Convert camera_id to string before searching to avoid errors
       return String(row.camera_id).toLowerCase().includes(lowerCaseSearchTerm);
     }
     return false;
   });
 
-  // Helper function to get placeholder text with format
   const getPlaceholderText = () => {
     switch (searchField) {
       case "license_number":
-        return "Search by License Plate (e.g., XXX-1234, XXX1234, XX-123, XX123)...";
+        return "Search by License Plate (e.g., XXX-1234)...";
       case "timestamp":
-        return "Search by Timestamp (e.g., 02 jun 2025, 01:29 pm)...";
+        return "Search by Timestamp (e.g., 02 jun 2025)...";
       case "camera_id":
         return "Search by Camera ID (e.g., 11, 13, 14)...";
       default:
@@ -164,9 +126,27 @@ export default function VehicleTable() {
   };
 
   return (
-    <div className="foottable__div__main">
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-        <Paper elevation={3} sx={{ backgroundColor: "#1f2a40", color: 'white', borderRadius: 0, marginBottom: "20px", padding: "15px", flex: 1 }}>
+    <div className="foottable__div__main"  >
+      <div style={{ marginBottom: "25px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+          <h3 style={{ margin: 0, marginLeft:2, color: "#fff", fontSize: "20px", fontWeight: "600" }}>
+             Vehicle Records
+          </h3>
+          <span style={{ color: "#a1a5b7", fontSize: "12px" }}>
+            Total: {filteredData.length} vehicles
+          </span>
+        </div>
+        
+        <Paper elevation={3} sx={{ 
+          backgroundColor: "#1f2a40", 
+          color: 'white', 
+          borderRadius: "12px", 
+          padding: "16px",
+          border: "1px solid #2a2f42",
+          display: "flex", 
+          alignItems: "center", 
+          gap: "12px"
+        }}>
           <TextField
             fullWidth
             variant="outlined"
@@ -176,115 +156,181 @@ export default function VehicleTable() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon />
+                  <SearchIcon sx={{ color: "#6366f1" }} />
                 </InputAdornment>
               ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <FormControl variant="standard" sx={{ minWidth: 120 }}>
-                    <Select
-                      value={searchField}
-                      onChange={(e) => setSearchField(e.target.value)}
-                      disableUnderline
-                      sx={{ fontSize: "14px", color: "#5e37ff", fontWeight: "bold", background: "transparent" }}
-                    >
-                      <MenuItem value="license_number">License Plate</MenuItem>
-                      <MenuItem value="timestamp">Timestamp</MenuItem>
-                      <MenuItem value="camera_id">Camera ID</MenuItem>
-                    </Select>
-                  </FormControl>
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: 0,
-                "& fieldset": {
-                  borderColor: "#5e37ff",
-                },
-                "&:hover fieldset": {
-                  borderColor: "#5e37ff !important",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: "#5e37ff !important",
-                },
-              },
             }}
             sx={{
-              "& .MuiInputBase-input": {
-                padding: "12px 14px",
+              "& .MuiOutlinedInput-root": {
+                color: "#fff",
+                borderRadius: "8px",
+                "& fieldset": {
+                  borderColor: "#6366f1",
+                  transition: "all 0.3s ease",
+                },
+                "&:hover fieldset": {
+                  borderColor: "#8b5cf6",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#a78bfa",
+                  boxShadow: "0 0 0 3px rgba(99, 102, 241, 0.1)",
+                },
+              },
+              "& .MuiInputBase-input::placeholder": {
+                color: "#7a7e99",
+                opacity: 0.8,
               },
             }}
           />
+          <FormControl variant="standard" sx={{ minWidth: 150 }}>
+            <Select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              disableUnderline
+              sx={{ 
+                fontSize: "13px", 
+                color: "#a78bfa", 
+                fontWeight: "600",
+                background: "transparent",
+              }}
+            >
+              <MenuItem value="license_number">License Plate</MenuItem>
+              <MenuItem value="timestamp">Timestamp</MenuItem>
+              <MenuItem value="camera_id">Camera ID</MenuItem>
+            </Select>
+          </FormControl>
+          <IconButton
+            aria-label="refresh"
+            onClick={fetchLicensePlates}
+            disabled={loading}
+            sx={{
+              backgroundColor: 'linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)',
+              color: '#fff',
+              borderRadius: "8px",
+              padding: "10px 16px",
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: '#a78bfa',
+                boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)',
+                transform: 'scale(1.05)',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: '#4b5563',
+              },
+            }}
+          >
+            {loading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : <RefreshIcon fontSize="small" />}
+          </IconButton>
         </Paper>
-        <IconButton
-          aria-label="refresh"
-          onClick={fetchLicensePlates}
-          disabled={loading}
-          sx={{
-            marginLeft: 2,
-            backgroundColor: '#5e37ff',
-            color: '#fff',
-            borderRadius: 0,
-            boxShadow: '0 2px 8px rgba(94, 55, 255, 0.15)',
-            transition: 'background 0.2s',
-            '&:hover': {
-              backgroundColor: '#4527a0',
-              color: '#fff',
-            },
-            '&.Mui-disabled': {
-              backgroundColor: '#bdbdbd',
-              color: '#fff',
-            },
-          }}
-        >
-          {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : <RefreshIcon />}
-        </IconButton>
       </div>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 0 }}>
+      <TableContainer component={Paper} sx={{ 
+        borderRadius: "12px", 
+        backgroundColor: "transparent",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+        border: "1px solid #2a2f42",
+        overflow: "hidden"
+      }}>
         <Table sx={{ minWidth: 700 }} aria-label="vehicle table">
           <TableHead>
             <TableRow>
               {columns.map((column) => (
                 <StyledTableCell key={column.Header} align="left">
-                  {column.Header}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {column.Header === "License Plate" && <DirectionsCarIcon fontSize="small" />}
+                    {column.Header === "Timestamp" && <AccessTimeIcon fontSize="small" />}
+                    {column.Header === "Camera ID" && <CameraAltIcon fontSize="small" />}
+                    {column.Header}
+                  </div>
                 </StyledTableCell>
               ))}
-              <StyledTableCell align="left">Actions</StyledTableCell>
+              <StyledTableCell align="left">
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  ⚙️ Actions
+                </div>
+              </StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
-                <StyledTableRow key={row.id}>
-                  {columns.map((column) => (
-                    <StyledTableCell key={column.accessor} align="left">
-                      {row[column.accessor]}
-                    </StyledTableCell>
-                  ))}
-                  <StyledTableCell align="center">
-                    <div className="action-buttons">
+            {filteredData.length === 0 ? (
+              <StyledTableRow>
+                <StyledTableCell colSpan={4} align="center" sx={{ padding: "40px !important" }}>
+                  <div style={{ color: "#7a7e99", textAlign: "center" }}>
+                    <p style={{ fontSize: "16px", fontWeight: "500" }}>No vehicle records found</p>
+                    <p style={{ fontSize: "12px", margin: 0 }}>Try adjusting your search filters</p>
+                  </div>
+                </StyledTableCell>
+              </StyledTableRow>
+            ) : (
+              filteredData
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row, index) => (
+                  <StyledTableRow key={row.id || index}>
+                    {columns.map((column) => (
+                      <StyledTableCell key={column.accessor} align="left">
+                        <span style={{ 
+                          fontWeight: column.accessor === "license_number" ? "600" : "400",
+                          color: column.accessor === "license_number" ? "#a78bfa" : "#e0e0e0"
+                        }}>
+                          {row[column.accessor]}
+                        </span>
+                      </StyledTableCell>
+                    ))}
+                    <StyledTableCell align="left">
                       <button
                         className="feed-button"
                         onClick={() => handleFeedClick(row.id)}
+                        style={{
+                          padding: "8px 16px",
+                          backgroundColor: "#6366f1",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          fontWeight: "600",
+                          transition: "all 0.3s ease",
+                          boxShadow: "0 2px 8px rgba(99, 102, 241, 0.2)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = "#a78bfa";
+                          e.target.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.4)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = "#6366f1";
+                          e.target.style.boxShadow = "0 2px 8px rgba(99, 102, 241, 0.2)";
+                        }}
                       >
                         View Feed
                       </button>
-                    </div>
-                  </StyledTableCell>
-                </StyledTableRow>
-              ))}
+                    </StyledTableCell>
+                  </StyledTableRow>
+                ))
+            )}
           </TableBody>
         </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 15, 20]}
-          component="div"
-          count={filteredData.length} // Use filteredData length for pagination
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
+        {filteredData.length > 0 && (
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 15, 20]}
+            component="div"
+            count={filteredData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{
+              backgroundColor: "#1f2a40",
+              borderTop: "1px solid #2a2f42",
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+                color: "#e0e0e0",
+              },
+              "& .MuiIconButton-root": {
+                color: "#a78bfa",
+              },
+            }}
+          />
+        )}
       </TableContainer>
       {selectedFeed && (
         <FeedPopup

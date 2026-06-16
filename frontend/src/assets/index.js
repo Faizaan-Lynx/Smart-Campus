@@ -1,4 +1,4 @@
-import Home from "./Home.png";
+import Home from './Home.png';
 import logo from "./logo3.png";
 import profile from "./profile-img.jpg";
 import lynx from "./lynx-logo.png";

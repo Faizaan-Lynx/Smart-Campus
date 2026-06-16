@@ -16,7 +16,6 @@ const Settings = () => {
     { Header: "Name", accessor: "username" },
     { Header: "Email", accessor: "email" },
     { Header: "Assigned Cameras", accessor: "cameras" },
-    // Removed Action column from here
   ];
 
   const handleDelete = async (userId) => {
@@ -31,7 +30,6 @@ const Settings = () => {
         },
       });
 
-      // Filter out the deleted user from the state
       setUserInfo((prevUsers) =>
         prevUsers.filter((user) => user.id !== userId)
       );
@@ -44,9 +42,34 @@ const Settings = () => {
 
   return (
     <div className="settings_div">
+      <div style={{ 
+        padding: "24px",
+        background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(167, 139, 250, 0.05) 100%)",
+        borderRadius: "12px",
+        border: "1px solid #2a2f42",
+        marginBottom: "10px"
+      }}>
+        <h1 style={{ 
+          margin: "0 0 8px 0", 
+          fontSize: "32px", 
+          fontWeight: "700",
+          background: "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>
+          ⚙️ Admin Control Panel
+        </h1>
+        <p style={{ margin: "0", color: "#a1a5b7", fontSize: "14px" }}>
+          Manage users, cameras, and system settings
+        </p>
+      </div>
+      
       <div className="users__table__div">
         <UserAdmin columns={userColumns} />
       </div>
+
+
       <CameraFeedsButtons/>
     </div>
   );

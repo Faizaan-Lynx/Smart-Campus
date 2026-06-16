@@ -20,7 +20,11 @@ const CameraCard = ({
     >
       <div className="camera-card__header">
         <h3 className="camera-card__name">{camera.location || `Camera ${camera.id}`}</h3>
-        <span className="camera-card__live">● Live</span>
+        {isLoading ? (
+          <span className="camera-card__offline">● Offline</span>
+        ) : (
+          <span className="camera-card__live">● Live</span>
+        )}
       </div>
 
       <div className={`camera-card__media ${isLoading ? "camera-card__media--loading" : ""}`}>

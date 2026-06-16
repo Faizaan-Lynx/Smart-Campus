@@ -22,7 +22,7 @@ def mouse_click(event, x, y, flags, params):
     # add a point to the polygon and draw it
     if event == cv2.EVENT_LBUTTONDOWN:
         points.append((x, y))
-        frame = cv2.circle(frame, (x, y), 3, (0, 0, 255), -1)
+        frame = cv2.circle(frame, (x, y), 3, (255, 0, 0), -1)
         if len(points) > 1:
             frame = cv2.line(frame, points[-1], points[-2], (0, 255, 0), 2)
 

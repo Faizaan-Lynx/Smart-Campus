@@ -7,10 +7,46 @@
   flex-direction: column;
   gap: 30px;
   transition: var(--tran-05);
-  margin-left: 280px; /* Default for open sidebar */
+  margin-left: 280px;
+  padding: 30px 40px;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  min-height: 100vh;
 }
 
 /* When sidebar is closed */
 .sidebar.close ~ .settings_div {
-  margin-left: 110px; /* Adjust for closed sidebar */
+  margin-left: 110px;
+}
+
+.users__table__div {
+  animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section Title Styling */
+.settings_div > h2 {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 10px 0;
+  background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.settings_div > p {
+  color: #a1a5b7;
+  font-size: 14px;
+  margin: 0;
 }

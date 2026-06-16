@@ -117,7 +117,10 @@ const Gate = () => {
       <div className="gate__content">
         <div className="gate__text__main">
           <div className="dashboard__text">
-            <p className="dash__text">Gate Feeds</p>
+            <h1 className="gate__heading">Gate Vehicle Tracking</h1>
+            <p style={{ color: "#a1a5b7", fontSize: "14px", marginTop: "-10px", marginLeft: "31px" }}>
+              Monitor and track vehicle entries with license plate recognition
+            </p>
           </div>
         </div>
 
@@ -129,7 +132,9 @@ const Gate = () => {
             loading={loading}
           />
         </div>
-        <VehicleTable />
+        <div style={{ marginTop: "30px", animation: "slideInUp 0.5s ease-out 0.2s both" }}>
+          <VehicleTable />
+        </div>
       </div>
     </div>
   );

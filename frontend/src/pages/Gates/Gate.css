@@ -4,6 +4,8 @@
   margin-left: 200px;
   font-family: "Poppins", sans-serif;
   transition: var(--tran-05);
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  min-height: 100vh;
 }
 
 /* When the sidebar is collapsed */
@@ -13,26 +15,49 @@
 }
 
 .gate__content {
-  margin-top: 70px;
-  margin-left: 103px;
-  padding: 10px;
+  margin-top: 80px;
+  margin-left: 0;
+  padding: 30px 40px;
+  width: 100%;
+  max-width: none;
 }
 
 .gate__text {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
 .gate__heading {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-color);
+  margin-left: 30px;
+  margin-bottom: 5px;
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
 }
 
 .footfall__container {
-  margin-top: 20px;
+  margin-top: 25px;
+  margin-left: 10px;
   width: 100%;
-  max-width: 18000px; /* or whatever max you want */
+  max-width: none;
   justify-content: center;
   align-items: center;
+  animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -147,30 +147,67 @@ const UserAdmin = ({ columns }) => {
 
   return (
     <div className="foottable__div__main">
-      <div className="footfall__content__div">
-        <p
-          style={{
-            marginBottom: "20px",
-            display: "flex",
-            alignItems: "center",
-            color:"white",
-          }}
-        >
-          All Users
+      <div className="footfall__content__div" style={{ marginBottom: "20px" }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "rgba(99, 102, 241, 0.05)",
+          padding: "16px 20px",
+          borderRadius: "8px",
+          border: "1px solid #2a2f42",
+        }}>
+          <div>
+            <p style={{
+              margin: 0,
+              fontSize: "16px",
+              fontWeight: "600",
+              color: "white",
+            }}>
+              All Users ({tableData.length})
+            </p>
+            <p style={{
+              margin: "4px 0 0 0",
+              fontSize: "12px",
+              color: "#a1a5b7",
+            }}>
+              Manage user accounts and permissions
+            </p>
+          </div>
           <button
             onClick={() => setShowAddModal(!showAddModal)}
-            style={{ fontSize: "18px",padding:5,backgroundColor:"transparent",color:"greenyellow", borderColor:"gray",borderWidth:1,cursor: "pointer", marginLeft: "17px", fontWeight: "bold" }}
+            style={{
+              padding: "10px 20px",
+              background: "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "13px",
+              transition: "all 0.3s ease",
+              boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
+              textTransform: "none",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "translateY(-2px)";
+              e.target.style.boxShadow = "0 6px 16px rgba(99, 102, 241, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.3)";
+            }}
           >
-            Add User
+            + Add User
           </button>
-        </p>
+        </div>
       </div>
 
       {showEditSettingsModal && (
         <UsersAdminEditModal
           showEditSettingsModal={showEditSettingsModal}
           setShowEditSettingsModal={setShowEditSettingsModal}
-          rowData={modalData} // Ensure modal gets the latest data
+          rowData={modalData}
           onUpdateUser={handleUserUpdate}
           onUpdateCameras={handleCameraUpdate}
         />
@@ -185,92 +222,167 @@ const UserAdmin = ({ columns }) => {
 
       <TableContainer
         component={Paper}
-        sx={{ borderRadius: 0}}
+        sx={{ 
+          borderRadius: "12px",
+          backgroundColor: "transparent",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+          border: "1px solid #2a2f42",
+          overflow: "hidden"
+        }}
         className="table-container"
       >
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
-            <TableRow
-            
-            >
+            <TableRow>
               {columns.map((column) => (
                 <StyledTableCell key={column.Header} align="left">
-                  {column.Header}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {column.Header === "Ser No" && <span></span>}
+                    {column.Header === "Name" && <span></span>}
+                    {column.Header === "Email" && <span></span>}
+                    {column.Header === "Assigned Cameras" && <span></span>}
+                    {column.Header}
+                  </div>
                 </StyledTableCell>
               ))}
-              <StyledTableCell align="left">Action</StyledTableCell>
+              <StyledTableCell align="left">
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                   Action
+                </div>
+              </StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {tableData
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => {
-                const isAdmin = row.is_admin;
-                return (
-                <StyledTableRow key={row.id}>
-                  {columns.map((column) => (
-                    <StyledTableCell key={column.accessor} align="left">
-                      {column.accessor === "cameras"
-                          ? isAdmin
-                            ? "All cameras assigned"
-                            : row[column.accessor]?.join(", ") || "No Cameras Assigned"
-                          : row[column.accessor]}
-                    </StyledTableCell>
-                  ))}
-                  <StyledTableCell align="center">
-                    <div
-                      className="action-icons"
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        gap: "15px",
-                      }}
-                    >
-                      <p
-                        onClick={() => {
-                          setModalData(row);
-                          setShowEditSettingsModal(true);
-                        }}
-                        style={{
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          color: "#5f70c9",
-                          fontWeight: "bold",
-                          margin: 0
-                        }}
-                      >
-                        Edit
-                      </p>
-                      <p
-                        onClick={() => deleteUser(row.id)}
-                        style={{
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          color: "#db1a1a",
-                          fontWeight: "bold",
-                          margin: 0
-                        }}
-                      >
-                        Delete
-                      </p>
-                    </div>
-                  </StyledTableCell>
-                </StyledTableRow>
-              )})}
+            {tableData.length === 0 ? (
+              <StyledTableRow>
+                <StyledTableCell colSpan={5} align="center" sx={{ padding: "40px !important" }}>
+                  <div style={{ color: "#7a7e99", textAlign: "center" }}>
+                    <p style={{ fontSize: "16px", fontWeight: "500" }}> No users found</p>
+                    <p style={{ fontSize: "12px", margin: 0 }}>Click "Add User" to create a new user</p>
+                  </div>
+                </StyledTableCell>
+              </StyledTableRow>
+            ) : (
+              tableData
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row) => {
+                  const isAdmin = row.is_admin;
+                  return (
+                    <StyledTableRow key={row.id}>
+                      {columns.map((column) => (
+                        <StyledTableCell key={column.accessor} align="left">
+                          <span style={{
+                            fontWeight: column.accessor === "username" ? "600" : "400",
+                            color: column.accessor === "username" ? "#a78bfa" : "#e0e0e0"
+                          }}>
+                            {column.accessor === "cameras"
+                              ? isAdmin
+                                ? "🟢 All cameras assigned"
+                                : row[column.accessor]?.length > 0
+                                ? `${row[column.accessor].length} camera(s)`
+                                : "❌ No cameras"
+                              : row[column.accessor]}
+                          </span>
+                        </StyledTableCell>
+                      ))}
+                      <StyledTableCell align="left">
+                        <div
+                          className="action-icons"
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <button
+                            onClick={() => {
+                              setModalData(row);
+                              setShowEditSettingsModal(true);
+                            }}
+                            style={{
+                              padding: "6px 12px",
+                              background: "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              transition: "all 0.3s ease",
+                              boxShadow: "0 2px 6px rgba(99, 102, 241, 0.2)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%)";
+                              e.target.style.boxShadow = "0 4px 10px rgba(99, 102, 241, 0.3)";
+                              e.target.style.transform = "translateY(-1px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)";
+                              e.target.style.boxShadow = "0 2px 6px rgba(99, 102, 241, 0.2)";
+                              e.target.style.transform = "translateY(0)";
+                            }}
+                          >
+                           Edit
+                          </button>
+                          <button
+                            onClick={() => deleteUser(row.id)}
+                            style={{
+                              padding: "6px 12px",
+                              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              transition: "all 0.3s ease",
+                              boxShadow: "0 2px 6px rgba(239, 68, 68, 0.2)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)";
+                              e.target.style.boxShadow = "0 4px 10px rgba(239, 68, 68, 0.3)";
+                              e.target.style.transform = "translateY(-1px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+                              e.target.style.boxShadow = "0 2px 6px rgba(239, 68, 68, 0.2)";
+                              e.target.style.transform = "translateY(0)";
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  );
+                })
+            )}
           </TableBody>
         </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 15, 20, 25]}
-          component="div"
-          style={{ backgroundColor: "#1f2a40", color: "white",borderColor: "#141b2d" }}
-          count={tableData.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(event, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(event) =>
-            setRowsPerPage(parseInt(event.target.value, 10))
-          }
-        />
+        {tableData.length > 0 && (
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 15, 20, 25]}
+            component="div"
+            sx={{
+              backgroundColor: "#1f2a40",
+              borderTop: "1px solid #2a2f42",
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+                color: "#e0e0e0",
+              },
+              "& .MuiIconButton-root": {
+                color: "#a78bfa",
+              },
+            }}
+            count={tableData.length}
+            style={{color:'white'}}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(event, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(event) =>
+              setRowsPerPage(parseInt(event.target.value, 10))
+            }
+          />
+        )}
       </TableContainer>
       <Toaster />
     </div>

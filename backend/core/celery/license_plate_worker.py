@@ -29,7 +29,7 @@ ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 # Initialize face detection model globally
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-face_model = YOLO("./yolo-models/yolov8l_100e.pt")
+face_model = YOLO("./yolo-models/yolo26n.pt")
 face_model.to(device)
 logging.info(f"Face detection model loaded on device: {device}")
 

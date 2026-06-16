@@ -100,12 +100,65 @@ const CameraFeedsButtons = () => {
     <>
       {userInfo?.role === "admin" ? (
         <div className="camera-feeds__buttons">
-          <button className="Start_Button" onClick={startFeeds}>
+                    <button
+            className="Start_Button"
+            onClick={startFeeds}
+            style={{
+              padding: "12px 18px",
+              background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "16px",
+              fontWeight: "600",
+              transition: "all 0.3s ease",
+              boxShadow: "0 2px 6px rgba(34, 197, 94, 0.2)",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background =
+                "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
+              e.target.style.boxShadow =
+                "0 4px 10px rgba(34, 197, 94, 0.3)";
+              e.target.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background =
+                "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)";
+              e.target.style.boxShadow =
+                "0 2px 6px rgba(34, 197, 94, 0.2)";
+              e.target.style.transform = "translateY(0)";
+            }}
+          >
             Start Feeds
           </button>
-          <button className="Stop_Button" onClick={stopFeeds}>
-            Stop Feeds
-          </button>
+          <button           className="Stop_Button"
+                            onClick={stopFeeds}
+                            style={{
+                              padding: "12px 18px",
+                              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "16px",
+                              fontWeight: "600",
+                              transition: "all 0.3s ease",
+                              boxShadow: "0 2px 6px rgba(239, 68, 68, 0.2)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)";
+                              e.target.style.boxShadow = "0 4px 10px rgba(239, 68, 68, 0.3)";
+                              e.target.style.transform = "translateY(-1px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+                              e.target.style.boxShadow = "0 2px 6px rgba(239, 68, 68, 0.2)";
+                              e.target.style.transform = "translateY(0)";
+                            }}
+                          >
+                            Stop Feeds
+                          </button>
         </div>
       ) : (
         <p>You do not have permission to view these controls.</p>

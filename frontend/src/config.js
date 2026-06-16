@@ -1,3 +1,3 @@
-const BACKEND_URL = "172.19.0.4:8000";
+const BACKEND_URL = "192.168.10.100:8000";
 
 export default BACKEND_URL;

@@ -438,16 +438,24 @@ const CameraManagement = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input
-                  type="checkbox"
-                  ref={detectIntrusionsRef}
-                  defaultChecked={true}
-                />
-                <span>Enable Intrusion Detection</span>
-              </label>
-            </Grid>
-
+  <label
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "4px",
+      cursor: "pointer",
+    }}
+  >
+    <input
+      type="checkbox"
+      ref={detectIntrusionsRef}
+      defaultChecked={true}
+    />
+    <span style={{ whiteSpace: "nowrap" }}>
+      Enable Intrusion Detection
+    </span>
+  </label>
+</Grid>
             <Grid item xs={12}>
               <Button
                 variant="outlined"
@@ -555,15 +563,25 @@ const CameraManagement = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input
-                  type="checkbox"
-                  ref={detectIntrusionsRef}
-                />
-                <span>Enable Intrusion Detection</span>
-              </label>
-            </Grid>
+<Grid item xs={12}>
+  <label
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "4px",
+      cursor: "pointer",
+    }}
+  >
+    <input
+      type="checkbox"
+      ref={detectIntrusionsRef}
+      defaultChecked={true}
+    />
+    <span style={{ whiteSpace: "nowrap" }}>
+      Enable Intrusion Detection
+    </span>
+  </label>
+</Grid>
 
             <Grid item xs={12}>
               <Button
