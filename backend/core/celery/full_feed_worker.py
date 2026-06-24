@@ -335,24 +335,41 @@ def preprocess_frame(frame, camera: Camera):
 
     return frame
 
-# redis client for publishing frames
+# redis client for storing frames
 redis_client_ws = redis.from_url(settings.REDIS_URL)
 
 def publish_frame(camera_id: int, annotated_frame: np.ndarray):
     """
-    Publish the annotated frame to Redis with retry logic and error handling.
+    Store the latest annotated frame in Redis as a simple key-value (not pub/sub).
+    This prevents buffer overflow by only keeping the latest frame, not queuing all frames.
+    Clients will poll for the latest frame instead of subscribing to a stream.
     """
+    global redis_client_ws
+    
     try:
-        _, buffer = cv2.imencode(".jpg", annotated_frame)
-        global redis_client_ws
+        # Check if WebSocket is active before publishing
+        if redis_client_ws.get(f"camera_{camera_id}_websocket_active") != b"True":
+            return
         
-        # Try to publish with current client
+        _, buffer = cv2.imencode(".jpg", annotated_frame)
+        
+        # Try to store with current client
         try:
-            redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
+            # Store frame with 2-second expiry to clean up automatically
+            # Use a key-value store instead of pub/sub to keep only the latest frame
+            redis_client_ws.setex(
+                f"camera_{camera_id}_frame_latest",
+                2,  # expiry in seconds
+                buffer.tobytes()
+            )
         except (redis.ConnectionError, redis.TimeoutError):
             # Reconnect if connection lost
             redis_client_ws = redis.from_url(settings.REDIS_URL)
-            redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
+            redis_client_ws.setex(
+                f"camera_{camera_id}_frame_latest",
+                2,
+                buffer.tobytes()
+            )
         
         # logging.info(f"Published frame for camera {camera_id}")
     except Exception as e:

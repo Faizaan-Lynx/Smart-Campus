@@ -15,7 +15,7 @@ redis
 shapely
 sqlmodel
 sqlalchemy
-ultralytics
+ultralytics==8.4.51
 uvicorn[standard]
 pandas==2.2.0
 PyGObject

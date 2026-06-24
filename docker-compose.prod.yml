@@ -9,31 +9,33 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      backend:
     ports:
       - "5432:5432"
+    networks:
+      - backend
 
   # Redis
   redis:
     image: redis:latest
     container_name: redis
-    networks:
-      backend:
     ports:
       - "6379:6379"
+    networks:
+      - backend
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # FastAPI
+  # FastAPI Backend
   app:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      network: host
     container_name: fastapi_app
+    runtime: nvidia
     environment:
       REDIS_URL: ${REDIS_URL}
       WATCHFILES_FORCE_POLLING: "true"
@@ -41,71 +43,76 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
-      - pip-cache:/root/.cache/pip
       - ./alert_images:/app/alert_images
+      - pip-cache:/root/.cache/pip
     depends_on:
       - postgres-db
       - redis
     networks:
-      backend:
-    runtime: nvidia
+      - backend
 
-  # Celery Workers with gpu support
+  # Celery Workers
   celery:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      network: host
+    runtime: nvidia
     hostname: worker1
     command: /app/start_workers.sh ${CELERY_WORKERS} ${FEED_WORKERS} ${LICENSE_WORKERS}
     environment:
-      - CELERY_MODULE=${CELERY_MODULE}
+      CELERY_MODULE: ${CELERY_MODULE}
     volumes:
       - .:/app
-      - pip-cache:/root/.cache/pip
       - ./alert_images:/app/alert_images
+      - pip-cache:/root/.cache/pip
     depends_on:
-      - redis
       - postgres-db
+      - redis
     networks:
       backend:
       stream-net:
-        mac_address: D0:37:45:38:F8:3D
         ipv4_address: 192.168.18.30
-    runtime: nvidia
+        mac_address: D0:37:45:38:F8:3D
 
-  # Flower - for monitoring Celery workers
+  # Flower Dashboard
   flower:
-    container_name: flower
     build:
       context: .
       dockerfile: Dockerfile.prod
-    command: celery -A ${CELERY_MODULE}.worker.celery_app -A ${CELERY_MODULE}.feed_worker.feed_worker_app -A ${CELERY_MODULE}.model_worker.model_worker_app -A ${CELERY_MODULE}.license_plate_worker.license_plate_worker_app flower --port=5555
+      network: host
+    container_name: flower
+    runtime: nvidia
+    command: >
+      celery
+      -A ${CELERY_MODULE}.worker.celery_app
+      -A ${CELERY_MODULE}.feed_worker.feed_worker_app
+      -A ${CELERY_MODULE}.model_worker.model_worker_app
+      -A ${CELERY_MODULE}.license_plate_worker.license_plate_worker_app
+      flower --port=5555
+    ports:
+      - "5555:5555"
     volumes:
       - .:/app
       - pip-cache:/root/.cache/pip
-    ports:
-      - "5555:5555"
     depends_on:
-      - redis
-      - postgres-db
-      - celery
       - app
+      - celery
+      - postgres-db
+      - redis
     networks:
-      backend:
-    runtime: nvidia
+      - backend
 
 networks:
   backend:
     driver: bridge
-    external: false
+
   stream-net:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.18.0/24 
-    external: false
+        - subnet: 192.168.18.0/24
 
 volumes:
   postgres_data:
   pip-cache:
-  alert_images:

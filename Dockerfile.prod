@@ -34,12 +34,32 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # requirements for backend
+# requirements for backend
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
-# pytorch with gpu support
-RUN --mount=type=cache,target=/root/.cache/pip pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+RUN pip install --upgrade pip
+
+# 1. Install PyTorch FIRST (locked CUDA build)
+RUN pip install \
+    torch==2.11.0+cu126 \
+    torchvision==0.26.0+cu126 \
+    torchaudio==2.11.0+cu126 \
+    --index-url https://download.pytorch.org/whl/cu126
+
+# 2. Install everything else WITHOUT touching torch
+RUN pip install \
+    --default-timeout=50 \
+    --retries 2 \
+    --no-cache-dir \
+    --upgrade-strategy only-if-needed \
+    --no-deps ultralytics
+
+# 3. Install remaining dependencies
+RUN pip install \
+    --default-timeout=50 \
+    --retries 2 \
+    --no-cache-dir \
+    -r requirements.txt
 # paddlepaddle with gpu support
 # RUN --mount=type=cache,target=/root/.cache/pip pip install paddlepaddle-gpu==3.0.0 --index-url https://www.paddlepaddle.org.cn/packages/stable/cu126/
 RUN --mount=type=cache,target=/root/.cache/pip pip install dill

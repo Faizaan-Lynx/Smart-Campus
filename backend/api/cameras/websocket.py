@@ -14,37 +14,45 @@ router = APIRouter()
 # Dictionary to manage WebSocket connections per camera (for frames)
 frame_connections = defaultdict(set)
 
-# Redis Listener for Frames 
-async def redis_frame_listener():
-    """Persistent Redis pubsub listener that reconnects only when the server closes the connection."""
-    while True:
+# Dictionary to store per-camera polling tasks
+camera_polling_tasks = {}
+
+# Redis Listener for Frames - polling-based instead of pub/sub
+async def poll_camera_frame(camera_id: str):
+    """
+    Poll Redis for the latest frame for a specific camera.
+    This replaces pub/sub to prevent buffer overflow.
+    Only runs if there are active WebSocket connections for this camera.
+    """
+    last_frame = None
+    
+    while camera_id in frame_connections and len(frame_connections[camera_id]) > 0:
         try:
-            pubsub = redis_client.pubsub()
-            pubsub.psubscribe("camera_*")
-            logging.info("Subscribed to Redis channels for frames.")
-
-            while True:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1)
-                if message:
-                    channel = message["channel"]
-                    if isinstance(channel, bytes):
-                        channel = channel.decode("utf-8")
-                    frame_data = message["data"]
-                    camera_id = channel.split("_")[-1]
-                    await broadcast_frame(camera_id, frame_data)
-
-                await asyncio.sleep(0.025)  # Light async sleep to keep loop responsive
-
+            # Poll the latest frame from Redis (not pub/sub)
+            frame_data = redis_client.get(f"camera_{camera_id}_frame_latest")
+            
+            if frame_data and frame_data != last_frame:
+                # Only broadcast if frame is new (different from last one)
+                last_frame = frame_data
+                await broadcast_frame(camera_id, frame_data)
+            
+            # Poll every 25ms (40 FPS) to match UI refresh rate
+            await asyncio.sleep(0.025)
+            
         except redis.exceptions.ConnectionError as e:
-            logging.warning(f"Redis connection lost: {e}. Attempting reconnect in 3 seconds...")
-            await asyncio.sleep(3)
+            logging.warning(f"Redis connection lost for camera {camera_id}: {e}")
+            await asyncio.sleep(1)
         except Exception as e:
-            logging.exception(f"Unexpected error in redis_frame_listener: {e}")
-            await asyncio.sleep(3)
+            logging.exception(f"Error polling frame for camera {camera_id}: {e}")
+            await asyncio.sleep(0.5)
+    
+    # Clean up task from dict when done
+    if camera_id in camera_polling_tasks:
+        del camera_polling_tasks[camera_id]
 
 
 async def broadcast_frame(camera_id: str, frame_data: bytes):
-    """Sends frames to WebSocket clients subscribed to a specific camera and all frames."""
+    """Sends frames to WebSocket clients subscribed to a specific camera."""
     to_remove = set()
     global frame_connections
 
@@ -73,11 +81,15 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
     """Handles WebSocket connections for video frames from a specific camera."""
     await websocket.accept()
 
-    global frame_connections
+    global frame_connections, camera_polling_tasks
     frame_connections[camera_id].add(websocket)
     
     logging.info(f"Client connected to video frames for camera {camera_id}")
     redis_client.set(f"camera_{camera_id}_websocket_active", "True")
+
+    # Start polling task for this camera if not already running
+    if camera_id not in camera_polling_tasks:
+        camera_polling_tasks[camera_id] = asyncio.create_task(poll_camera_frame(camera_id))
 
     try:
         while True:
@@ -98,8 +110,17 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
         if not frame_connections[camera_id]:
             del frame_connections[camera_id]
             redis_client.set(f"camera_{camera_id}_websocket_active", "False")
+            
+            # Cancel polling task when no more connections
+            if camera_id in camera_polling_tasks:
+                camera_polling_tasks[camera_id].cancel()
+                del camera_polling_tasks[camera_id]
 
 
-# Function to start Redis frame listener on startup
+# Function to start frame delivery (now just a placeholder since polling is per-connection)
 async def start_redis_frame_listener():
-    asyncio.create_task(redis_frame_listener())
+    """
+    Polling-based frame delivery is now handled per WebSocket connection.
+    This function is kept for backward compatibility with startup code.
+    """
+    logging.info("Frame delivery system ready (polling-based per connection)")
