@@ -19,31 +19,31 @@ import BACKEND_URL from '../../config.js';
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     fontSize: "15px",
-    backgroundColor: "#172133",
-    color: theme.palette.common.white,
+    backgroundColor: "var(--card-bg)",
+    color: "var(--text)",
     fontWeight: "bold",
   },
   [`&.${tableCellClasses.body}`]: {
     fontSize: 12,
-    borderColor:"#141b2d",
-    color: "white",
+    borderColor: "var(--border)",
+    color: "var(--text)",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#1f2a40",
-    color: "white",
-    borderColor:"white"
+    backgroundColor: "var(--card-bg)",
+    color: "var(--text)",
+    borderColor: "var(--border)",
   },
   "&:nth-of-type(odd)": {
-    backgroundColor:"#1f2a40",
-    color: "white",
-    borderColor:"#141b2d"
+    backgroundColor: "var(--bg)",
+    color: "var(--text)",
+    borderColor: "var(--border)",
   },
   "&:last-child td, &:last-child th": {
     border: 0,
-  color:" white",
+    color: "var(--text)",
   },
 }));
 
@@ -171,7 +171,7 @@ export default function UserEntryAnalytics() {
           <p className="dash__text">User Entry Analytics</p>
         </div>
         <div className="foottable__div__main">
-          <Paper elevation={3} sx={{ borderRadius: 0, backgroundColor:'#1f2a40', marginBottom: "20px", padding: "15px" }}>
+          <Paper elevation={3} sx={{ borderRadius: 0, backgroundColor: 'var(--card-bg)', marginBottom: "20px", padding: "15px" }}>
             <TextField
               fullWidth
               variant="outlined"
@@ -191,7 +191,7 @@ export default function UserEntryAnalytics() {
                         value={searchField}
                         onChange={(e) => setSearchField(e.target.value)}
                         disableUnderline
-                        sx={{ fontSize: "14px", color: "white", fontWeight: "bold", background: "transparent" }}
+                        sx={{ fontSize: "14px", color: "var(--text)", fontWeight: "bold", background: "transparent" }}
                       >
                         <MenuItem value="username">Username</MenuItem>
                         <MenuItem value="license_plate">License Plate</MenuItem>
@@ -203,15 +203,15 @@ export default function UserEntryAnalytics() {
                 ),
                 sx: {
                   borderRadius: 0,
-                  color:'white',
+                  color: 'var(--text)',
                   "& fieldset": {
-                    borderColor: "#141b2d !important",
+                    borderColor: "var(--border) !important",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#141b2d !important",
+                    borderColor: "var(--border) !important",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#141b2d !important",
+                    borderColor: "var(--border) !important",
                   },
                 },
               }}
@@ -257,7 +257,7 @@ export default function UserEntryAnalytics() {
               </TableBody>
             </Table>
             <TablePagination
-            style={{ color: "white", backgroundColor: "#172133" }}
+            style={{ color: "var(--text)", backgroundColor: "var(--card-bg)" }}
               rowsPerPageOptions={[5, 10, 15, 20]}
               component="div"
               count={filteredData.length}

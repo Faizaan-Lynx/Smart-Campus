@@ -53,7 +53,7 @@ const CameraFeedsButtons = () => {
     //   .catch((error) => {
     //     console.error("❌ Failed to start license plate workers:", error);
     //     alert("Failed to start license plate workers. Check console for details.");
-    //   });
+      // });
   };
   
 

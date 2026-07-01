@@ -6,31 +6,19 @@ import BACKEND_URL from "../../config.js";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
-  Box,
-  Modal,
-  TextField,
-  Button,
-  Grid,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Box, Modal, TextField, Button, Grid, IconButton,
+  Table, TableBody, TableCell, TableContainer, TableHead,
+  TableRow, Paper, Dialog, DialogTitle, DialogContent,
+  DialogActions, Chip, Tooltip, CircularProgress,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import StopIcon from "@mui/icons-material/Stop";
 import PointDrawingCanvas from "../../components/PointDrawingCanvas/PointDrawingCanvas";
 
 const CameraManagement = () => {
-  // State Management
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -40,8 +28,8 @@ const CameraManagement = () => {
   const [cameraToDelete, setCameraToDelete] = useState(null);
   const [currentCamera, setCurrentCamera] = useState(null);
   const [drawnPoints, setDrawnPoints] = useState([]);
+  const [workerLoadingId, setWorkerLoadingId] = useState(null); // per-camera LP worker toggle
 
-  // Form References
   const urlRef = useRef(null);
   const locationRef = useRef(null);
   const thresholdRef = useRef(null);
@@ -55,22 +43,16 @@ const CameraManagement = () => {
   const [frameLoading, setFrameLoading] = useState(false);
   const [frameError, setFrameError] = useState(null);
 
-  // Fetch frame when Drawing modal opens — works for both Add and Edit flows.
-  // For Add modal, urlRef holds the user-typed URL; we POST a quick /frame
-  // preview request. For Edit modal, we use the existing camera id.
+  // ── Frame fetch for drawing modal ──────────────────────────────────────────
   const fetchFrameForDrawing = async () => {
     setVideoFrame(null);
     setFrameError(null);
     setFrameLoading(true);
-
     try {
       let url;
       if (currentCamera?.id) {
-        // Edit flow — camera already saved, use its id
         url = `${localurl}/camera/${currentCamera.id}/frame`;
       } else {
-        // Add flow — camera not saved yet; try a dedicated preview endpoint
-        // that accepts the raw URL in the query string
         const rawUrl = urlRef.current?.value;
         if (!rawUrl) {
           setFrameError("Enter a Camera URL above first, then open the drawing tool.");
@@ -79,55 +61,92 @@ const CameraManagement = () => {
         }
         url = `${localurl}/camera/preview-frame?url=${encodeURIComponent(rawUrl)}`;
       }
-
       const response = await axios.get(url, {
         responseType: "blob",
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // Revoke any previous blob to avoid memory leaks
       setVideoFrame((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return URL.createObjectURL(response.data);
       });
     } catch (err) {
-      console.error("Failed to fetch camera frame:", err);
-      setFrameError("Could not load camera frame. Check the camera URL and make sure the stream is reachable.");
+      setFrameError("Could not load camera frame. Check the URL and stream availability.");
     } finally {
       setFrameLoading(false);
     }
   };
 
-  // Fetch all cameras
+  // ── Cameras fetch ───────────────────────────────────────────────────────────
   const fetchCameras = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${localurl}/camera/`, {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
       });
       setCameras(response.data);
     } catch (error) {
       toast.error("Failed to fetch cameras");
-      console.error("Error fetching cameras:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCameras();
-  }, []);
+  useEffect(() => { fetchCameras(); }, []);
 
-  // Handle Add Camera
-  const handleAddCamera = async () => {
-    if (!urlRef.current?.value) {
-      toast.error("Camera URL is required");
-      return;
+  // ── LP Worker controls ──────────────────────────────────────────────────────
+  const startLPWorker = async (cameraId) => {
+    setWorkerLoadingId(cameraId);
+    try {
+      await axios.get(`http://${BACKEND_URL}/license-plates/start_worker/${cameraId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success(`License plate detection started for Camera ${cameraId}`);
+    } catch (err) {
+      toast.error(`Failed to start LP worker for Camera ${cameraId}`);
+    } finally {
+      setWorkerLoadingId(null);
     }
+  };
 
+  const stopLPWorker = async (cameraId) => {
+    setWorkerLoadingId(cameraId);
+    try {
+      await axios.get(`http://${BACKEND_URL}/license-plates/stop_worker/${cameraId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.info(`License plate detection stopped for Camera ${cameraId}`);
+    } catch (err) {
+      toast.error(`Failed to stop LP worker for Camera ${cameraId}`);
+    } finally {
+      setWorkerLoadingId(null);
+    }
+  };
+
+  const startAllLPWorkers = async () => {
+    try {
+      await axios.get(`http://${BACKEND_URL}/license-plates/start_all_workers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("All license plate workers started");
+    } catch (err) {
+      toast.error("Failed to start all LP workers");
+    }
+  };
+
+  const stopAllLPWorkers = async () => {
+    try {
+      await axios.get(`http://${BACKEND_URL}/license-plates/stop_all_workers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.info("All license plate workers stopped");
+    } catch (err) {
+      toast.error("Failed to stop all LP workers");
+    }
+  };
+
+  // ── Add / Update / Delete ───────────────────────────────────────────────────
+  const handleAddCamera = async () => {
+    if (!urlRef.current?.value) { toast.error("Camera URL is required"); return; }
     try {
       const cameraData = {
         url: urlRef.current.value,
@@ -138,14 +157,9 @@ const CameraManagement = () => {
         lines: formatPointsToString(drawnPoints),
         detect_intrusions: detectIntrusionsRef.current?.checked ?? true,
       };
-
       await axios.post(`${localurl}/camera/`, cameraData, {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
       });
-
       toast.success("Camera added successfully");
       setShowAddModal(false);
       setDrawnPoints([]);
@@ -153,14 +167,11 @@ const CameraManagement = () => {
       fetchCameras();
     } catch (error) {
       toast.error("Failed to add camera");
-      console.error("Error adding camera:", error);
     }
   };
 
-  // Handle Update Camera
   const handleUpdateCamera = async () => {
     if (!currentCamera) return;
-
     try {
       const cameraData = {
         url: urlRef.current.value,
@@ -171,47 +182,33 @@ const CameraManagement = () => {
         lines: formatPointsToString(drawnPoints),
         detect_intrusions: detectIntrusionsRef.current?.checked ?? true,
       };
-
       await axios.put(`${localurl}/camera/${currentCamera.id}`, cameraData, {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
       });
-
       toast.success("Camera updated successfully");
       setShowEditModal(false);
       setDrawnPoints([]);
       fetchCameras();
     } catch (error) {
       toast.error("Failed to update camera");
-      console.error("Error updating camera:", error);
     }
   };
 
-  // Handle Delete Camera
   const handleDeleteCamera = async () => {
     if (!cameraToDelete) return;
-
     try {
       await axios.delete(`${localurl}/camera/${cameraToDelete.id}`, {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "application/json", Authorization: `Bearer ${token}` },
       });
-
       toast.success("Camera deleted successfully");
       setShowDeleteDialog(false);
       setCameraToDelete(null);
       fetchCameras();
     } catch (error) {
       toast.error("Failed to delete camera");
-      console.error("Error deleting camera:", error);
     }
   };
 
-  // Open Edit Modal
   const openEditModal = (camera) => {
     setCurrentCamera(camera);
     setDrawnPoints([]);
@@ -226,7 +223,6 @@ const CameraManagement = () => {
     setShowEditModal(true);
   };
 
-  // Open Add Modal
   const openAddModal = () => {
     setCurrentCamera(null);
     setDrawnPoints([]);
@@ -234,7 +230,6 @@ const CameraManagement = () => {
     setShowAddModal(true);
   };
 
-  // Clear form
   const clearForm = () => {
     if (urlRef.current) urlRef.current.value = "";
     if (locationRef.current) locationRef.current.value = "";
@@ -244,48 +239,27 @@ const CameraManagement = () => {
     if (detectIntrusionsRef.current) detectIntrusionsRef.current.checked = true;
   };
 
-  // Format points to string
   const formatPointsToString = (polygons) => {
-    // Backend expects: [[(x1,y1),(x2,y2),...],[(x1,y1),...]]
-    // Outer array = [[ ]], each polygon is a flat list of (x,y) tuples
     if (!polygons || polygons.length === 0) return "";
-    const inner = polygons.map(
-      (polygon) => polygon.map((p) => `(${p[0]},${p[1]})`).join(",")
-    );
+    const inner = polygons.map((polygon) => polygon.map((p) => `(${p[0]},${p[1]})`).join(","));
     return `[${inner.map((p) => `[${p}]`).join(",")}]`;
   };
 
-  // Parse points from string
   const parsePointsFromString = (pointsStr) => {
     if (!pointsStr) return "";
     try {
       const cleaned = pointsStr.replace(/\(/g, "[").replace(/\)/g, "]");
-      const parsed = JSON.parse(cleaned);
+      JSON.parse(cleaned);
       return pointsStr;
-    } catch {
-      return pointsStr;
-    }
-  };
-
-  // Get video frame URL (attempt to fetch first frame from stream)
-  const getVideoFrameUrl = (camera) => {
-    if (!camera || !camera.id) return "";
-    return `${localurl}/camera/${camera.id}/frame`;
+    } catch { return pointsStr; }
   };
 
   const modalStyle = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
+    position: "absolute", top: "50%", left: "50%",
     transform: "translate(-50%, -50%)",
-    width: "90%",
-    maxWidth: 800,
-    maxHeight: "90vh",
-    bgcolor: "background.paper",
-    borderRadius: 1,
-    boxShadow: 24,
-    p: 4,
-    overflowY: "auto",
+    width: "90%", maxWidth: 800, maxHeight: "90vh",
+    bgcolor: "background.paper", borderRadius: 1, boxShadow: 24,
+    p: 4, overflowY: "auto",
   };
 
   if (loading) {
@@ -299,419 +273,298 @@ const CameraManagement = () => {
   return (
     <div className="dashboard__main">
       <div className="camera-management-container">
-      <ToastContainer position="top-right" autoClose={3000} />
+        <ToastContainer position="top-right" autoClose={3000} />
 
-      <div className="camera-header">
-        <h1>Cam Control</h1>
-        <button className="btn-primary" onClick={openAddModal}>
-          + Add Camera
-        </button>
-      </div>
-
-      {cameras.length === 0 ? (
-        <div className="no-cameras">
-          <p>No cameras configured yet. Click "Add Camera" to get started.</p>
+        <div className="camera-header">
+          <h1>Cam Control</h1>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {/* ── Global LP worker controls ── */}
+            <Tooltip title="Start license plate detection on ALL cameras">
+                <Button
+                variant="contained"
+                size="small"
+                startIcon={<PlayArrowIcon />}
+                onClick={startAllLPWorkers}
+                sx={{
+                  backgroundColor: "var(--accent)", fontSize: 12, fontWeight: 600,
+                  "&:hover": { backgroundColor: "#16a34a" },
+                }}
+              >
+                Start All LP
+              </Button>
+            </Tooltip>
+            <Tooltip title="Stop license plate detection on ALL cameras">
+                <Button
+                variant="outlined"
+                size="small"
+                startIcon={<StopIcon />}
+                onClick={stopAllLPWorkers}
+                sx={{
+                  borderColor: "var(--danger, #ef4444)", color: "var(--danger, #ef4444)", fontSize: 12, fontWeight: 600,
+                  "&:hover": { borderColor: "#dc2626", color: "#dc2626", backgroundColor: "#fef2f2" },
+                }}
+              >
+                Stop All LP
+              </Button>
+            </Tooltip>
+            <button className="btn-primary" onClick={openAddModal}>
+              + Add Camera
+            </button>
+          </div>
         </div>
-      ) : (
-        <TableContainer component={Paper} className="cameras-table">
-          <Table>
-            <TableHead>
-              <TableRow style={{ backgroundColor: "#1f2a40" ,color:"white"}}>
-                <TableCell style={{color:"white",fontSize:'13px', borderColor:"#141b2d"}}><strong>ID</strong></TableCell>
-                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>URL</strong></TableCell>
-                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Location</strong></TableCell>
-                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Threshold</strong></TableCell>
-                <TableCell style={{color:"white", borderColor:"#141b2d"}}><strong>Intrusion Detection</strong></TableCell>
-                <TableCell style={{color:"white", borderColor:"#141b2d"}} align="center"><strong>Actions</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {cameras.map((camera) => (
-                <TableRow key={camera.id} style={{backgroundColor:"#1f2a40"}}>
-                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.id}</TableCell>
-                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}} className="url-cell">{camera.url}</TableCell>
-                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.location || "-"}</TableCell>
-                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>{camera.detection_threshold}</TableCell>
-                  <TableCell style={{color:"whitesmoke", borderColor:"#141b2d"}}>
-                    {camera.detect_intrusions ? "✓ Yes" : "✗ No"}
-                  </TableCell>
-                  <TableCell align="center" style={{borderColor:"#141b2d"}}>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => openEditModal(camera)}
-                      title="Edit Camera"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setCameraToDelete(camera);
-                        setShowDeleteDialog(true);
-                      }}
-                      title="Delete Camera"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
 
-      {/* Add Camera Modal */}
-      <Modal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        aria-labelledby="add-camera-modal"
-      >
-        <Box sx={modalStyle}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <h2>Add New Camera</h2>
-            <IconButton
-              onClick={() => {
-                setShowAddModal(false);
-                setDrawnPoints([]);
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+        {cameras.length === 0 ? (
+          <div className="no-cameras">
+            <p>No cameras configured yet. Click "Add Camera" to get started.</p>
+          </div>
+        ) : (
+          <TableContainer component={Paper} className="cameras-table">
+            <Table>
+              <TableHead>
+                <TableRow style={{ backgroundColor: "var(--card-bg)" }}>
+                    <TableCell style={{ color: "var(--text)", fontSize: "13px", borderColor: "var(--border)" }}><strong>ID</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}><strong>URL</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}><strong>Location</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}><strong>Threshold</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}><strong>Mode</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }} align="center"><strong>LP Detection</strong></TableCell>
+                    <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }} align="center"><strong>Actions</strong></TableCell>
+                  </TableRow>
+              </TableHead>
+              <TableBody>
+                {cameras.map((camera) => {
+                  const isGateCamera = !camera.detect_intrusions;
+                  const isWorkerLoading = workerLoadingId === camera.id;
 
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Camera URL (RTSP/HTTP)"
-                inputRef={urlRef}
-                placeholder="rtsp://user:pass@192.168.1.1:554"
-              />
-            </Grid>
+                  return (
+                    <TableRow key={camera.id} style={{ backgroundColor: "var(--card-bg)" }}>
+                      <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}>{camera.id}</TableCell>
+                      <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }} className="url-cell">{camera.url}</TableCell>
+                      <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}>{camera.location || "-"}</TableCell>
+                      <TableCell style={{ color: "var(--text)", borderColor: "var(--border)" }}>{camera.detection_threshold}</TableCell>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Location"
-                inputRef={locationRef}
-                placeholder="e.g., Main Gate"
-              />
-            </Grid>
+                      {/* Mode badge */}
+                      <TableCell style={{ borderColor: "var(--border)" }}>
+                        {camera.detect_intrusions ? (
+                          <Chip label="Intrusion" size="small" sx={{ backgroundColor: "#7c3aed22", color: "#a78bfa", border: "1px solid #7c3aed", fontWeight: 600, fontSize: 11 }} />
+                        ) : (
+                          <Chip label="Gate / LP" size="small" sx={{ backgroundColor: "#0284c722", color: "#38bdf8", border: "1px solid #0284c7", fontWeight: 600, fontSize: 11 }} />
+                        )}
+                      </TableCell>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Detection Threshold (0-100)"
-                type="number"
-                inputRef={thresholdRef}
-                defaultValue={50}
-                inputProps={{ min: 0, max: 100 }}
-              />
-            </Grid>
+                      {/* LP Worker start/stop — only visible for Gate cameras */}
+                      <TableCell align="center" style={{ borderColor: "var(--border)" }}>
+                        {isGateCamera ? (
+                          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                            <Tooltip title="Start license plate detection">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => startLPWorker(camera.id)}
+                                  disabled={isWorkerLoading}
+                                  sx={{ color: "var(--accent)", "&:hover": { backgroundColor: "#22c55e22" } }}
+                                >
+                                  {isWorkerLoading ? <CircularProgress size={16} sx={{ color: "#22c55e" }} /> : <PlayArrowIcon fontSize="small" />}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title="Stop license plate detection">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => stopLPWorker(camera.id)}
+                                  disabled={isWorkerLoading}
+                                  sx={{ color: "var(--danger, #ef4444)", "&:hover": { backgroundColor: "#ef444422" } }}
+                                >
+                                  <StopIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </div>
+                        ) : (
+                          <span style={{ color: "var(--muted)", fontSize: 11 }}>N/A</span>
+                        )}
+                      </TableCell>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Resize Dimensions"
-                inputRef={resizeDimsRef}
-                placeholder="e.g., (640,480)"
-              />
-            </Grid>
+                      {/* Edit / Delete */}
+                      <TableCell align="center" style={{ borderColor: "var(--border)" }}>
+                        <IconButton size="small" color="primary" onClick={() => openEditModal(camera)} title="Edit Camera">
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton size="small" color="error" onClick={() => { setCameraToDelete(camera); setShowDeleteDialog(true); }} title="Delete Camera">
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Crop Region"
-                inputRef={cropRegionRef}
-                placeholder="e.g., (0,0,640,480)"
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-  <label
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "4px",
-      cursor: "pointer",
-    }}
-  >
-    <input
-      type="checkbox"
-      ref={detectIntrusionsRef}
-      defaultChecked={true}
-    />
-    <span style={{ whiteSpace: "nowrap" }}>
-      Enable Intrusion Detection
-    </span>
-  </label>
-</Grid>
-            <Grid item xs={12}>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => {
-                  fetchFrameForDrawing();
-                  setShowDrawingModal(true);
-                }}
-                sx={{ mb: 2 }}
-              >
-                📍 Draw Intrusion Points (Optional)
-              </Button>
-            </Grid>
-          </Grid>
-
-          <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleAddCamera}
-              sx={{ backgroundColor: "#4caf50" }}
-            >
-              Add Camera
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => {
-                setShowAddModal(false);
-                setDrawnPoints([]);
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
-
-      {/* Edit Camera Modal */}
-      <Modal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        aria-labelledby="edit-camera-modal"
-      >
-        <Box sx={modalStyle}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <h2>Edit Camera {currentCamera?.id}</h2>
-            <IconButton
-              onClick={() => {
-                setShowEditModal(false);
-                setDrawnPoints([]);
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Camera URL (RTSP/HTTP)"
-                inputRef={urlRef}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Location"
-                inputRef={locationRef}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Detection Threshold (0-100)"
-                type="number"
-                inputRef={thresholdRef}
-                inputProps={{ min: 0, max: 100 }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Resize Dimensions"
-                inputRef={resizeDimsRef}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Crop Region"
-                inputRef={cropRegionRef}
-              />
-            </Grid>
-
-<Grid item xs={12}>
-  <label
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "4px",
-      cursor: "pointer",
-    }}
-  >
-    <input
-      type="checkbox"
-      ref={detectIntrusionsRef}
-      defaultChecked={true}
-    />
-    <span style={{ whiteSpace: "nowrap" }}>
-      Enable Intrusion Detection
-    </span>
-  </label>
-</Grid>
-
-            <Grid item xs={12}>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => {
-                  fetchFrameForDrawing();
-                  setShowDrawingModal(true);
-                }}
-                sx={{ mb: 2 }}
-              >
-                📍 Edit Intrusion Points
-              </Button>
-            </Grid>
-          </Grid>
-
-          <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleUpdateCamera}
-              sx={{ backgroundColor: "#2196f3" }}
-            >
-              Update Camera
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => {
-                setShowEditModal(false);
-                setDrawnPoints([]);
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
-
-      {/* Drawing Modal */}
-      <Modal
-        open={showDrawingModal}
-        onClose={() => setShowDrawingModal(false)}
-        aria-labelledby="drawing-modal"
-      >
-        <Box sx={{ ...modalStyle, maxWidth: 1000 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <h2>Draw Intrusion Detection Points</h2>
-            <IconButton onClick={() => setShowDrawingModal(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-
-          {frameLoading && (
-            <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>
-              ⏳ Loading camera frame...
+        {/* ── Add Camera Modal ──────────────────────────────────────────────── */}
+        <Modal open={showAddModal} onClose={() => setShowAddModal(false)}>
+          <Box sx={modalStyle}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <h2>Add New Camera</h2>
+              <IconButton onClick={() => { setShowAddModal(false); setDrawnPoints([]); }}>
+                <CloseIcon />
+              </IconButton>
             </Box>
-          )}
 
-          {frameError && !frameLoading && (
-            <Box
-              sx={{
-                textAlign: "center",
-                py: 3,
-                px: 2,
-                backgroundColor: "#fff3f3",
-                border: "1px solid #f5c6cb",
-                borderRadius: 1,
-                color: "#721c24",
-                mb: 2,
-              }}
-            >
-              ⚠️ {frameError}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Camera URL (RTSP/HTTP)" inputRef={urlRef} placeholder="rtsp://user:pass@192.168.1.1:554" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Location" inputRef={locationRef} placeholder="e.g., Main Gate" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Detection Threshold (0-100)" type="number" inputRef={thresholdRef} defaultValue={50} inputProps={{ min: 0, max: 100 }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Resize Dimensions" inputRef={resizeDimsRef} placeholder="e.g., (640,480)" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Crop Region" inputRef={cropRegionRef} placeholder="e.g., (0,0,640,480)" />
+              </Grid>
+
+              {/* ── Intrusion / LP toggle ── */}
+              <Grid item xs={12}>
+                <Box sx={{
+                  border: "1px solid var(--border)", borderRadius: 2, p: 2,
+                  backgroundColor: "var(--card-bg)",
+                }}>
+                  <p style={{ color: "var(--muted)", fontSize: 12, margin: "0 0 10px 0" }}>
+                    Camera Mode — choose ONE:
+                  </p>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input type="checkbox" ref={detectIntrusionsRef} defaultChecked={true} />
+                    <span style={{ color: "var(--text)", fontSize: 14 }}>
+                      Enable Intrusion Detection
+                    </span>
+                  </label>
+                  <p style={{ color: "var(--muted)", fontSize: 11, margin: "6px 0 0 24px" }}>
+                    ☑ checked = Intrusion mode &nbsp;|&nbsp; ☐ unchecked = Gate / License Plate mode
+                  </p>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Button variant="outlined" fullWidth onClick={() => { fetchFrameForDrawing(); setShowDrawingModal(true); }} sx={{ mb: 2 }}>
+                  📍 Draw Intrusion Points (Optional)
+                </Button>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+              <Button variant="contained" fullWidth onClick={handleAddCamera} sx={{ backgroundColor: "var(--accent)" }}>Add Camera</Button>
+              <Button variant="outlined" fullWidth onClick={() => { setShowAddModal(false); setDrawnPoints([]); }}>Cancel</Button>
             </Box>
-          )}
-
-          {!frameLoading && videoFrame && (
-            <PointDrawingCanvas
-              videoUrl={videoFrame}
-              onPointsChange={setDrawnPoints}
-              initialPoints={
-                currentCamera?.lines ? parsePointsFromString(currentCamera.lines) : ""
-              }
-            />
-          )}
-
-          <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => setShowDrawingModal(false)}
-              sx={{ backgroundColor: "#4caf50" }}
-            >
-              Save Points
-            </Button>
-            <Button variant="outlined" fullWidth onClick={() => setShowDrawingModal(false)}>
-              Close
-            </Button>
           </Box>
-        </Box>
-      </Modal>
+        </Modal>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete camera{" "}
-          <strong>{cameraToDelete?.id}</strong>? This action cannot be undone.
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleDeleteCamera}
-            color="error"
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* ── Edit Camera Modal ─────────────────────────────────────────────── */}
+        <Modal open={showEditModal} onClose={() => setShowEditModal(false)}>
+          <Box sx={modalStyle}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <h2>Edit Camera {currentCamera?.id}</h2>
+              <IconButton onClick={() => { setShowEditModal(false); setDrawnPoints([]); }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Camera URL (RTSP/HTTP)" inputRef={urlRef} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Location" inputRef={locationRef} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Detection Threshold (0-100)" type="number" inputRef={thresholdRef} inputProps={{ min: 0, max: 100 }} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Resize Dimensions" inputRef={resizeDimsRef} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Crop Region" inputRef={cropRegionRef} />
+              </Grid>
+
+              {/* ── Intrusion / LP toggle ── */}
+              <Grid item xs={12}>
+                <Box sx={{
+                  border: "1px solid var(--border)", borderRadius: 2, p: 2,
+                  backgroundColor: "var(--card-bg)",
+                }}>
+                  <p style={{ color: "var(--muted)", fontSize: 12, margin: "0 0 10px 0" }}>
+                    Camera Mode — choose ONE:
+                  </p>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input type="checkbox" ref={detectIntrusionsRef} defaultChecked={true} />
+                    <span style={{ color: "var(--text)", fontSize: 14 }}>
+                      Enable Intrusion Detection
+                    </span>
+                  </label>
+                  <p style={{ color: "var(--muted)", fontSize: 11, margin: "6px 0 0 24px" }}>
+                    ☑ checked = Intrusion mode &nbsp;|&nbsp; ☐ unchecked = Gate / License Plate mode
+                  </p>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Button variant="outlined" fullWidth onClick={() => { fetchFrameForDrawing(); setShowDrawingModal(true); }} sx={{ mb: 2 }}>
+                  📍 Edit Intrusion Points
+                </Button>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+              <Button variant="contained" fullWidth onClick={handleUpdateCamera} sx={{ backgroundColor: "var(--accent)" }}>Update Camera</Button>
+              <Button variant="outlined" fullWidth onClick={() => { setShowEditModal(false); setDrawnPoints([]); }}>Cancel</Button>
+            </Box>
+          </Box>
+        </Modal>
+
+        {/* ── Drawing Modal ─────────────────────────────────────────────────── */}
+        <Modal open={showDrawingModal} onClose={() => setShowDrawingModal(false)}>
+          <Box sx={{ ...modalStyle, maxWidth: 1000 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <h2>Draw Intrusion Detection Points</h2>
+              <IconButton onClick={() => setShowDrawingModal(false)}><CloseIcon /></IconButton>
+            </Box>
+            {frameLoading && <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>⏳ Loading camera frame...</Box>}
+            {frameError && !frameLoading && (
+              <Box sx={{ textAlign: "center", py: 3, px: 2, backgroundColor: "#fff3f3", border: "1px solid #f5c6cb", borderRadius: 1, color: "#721c24", mb: 2 }}>
+                ⚠️ {frameError}
+              </Box>
+            )}
+            {!frameLoading && videoFrame && (
+              <PointDrawingCanvas
+                videoUrl={videoFrame}
+                onPointsChange={setDrawnPoints}
+                initialPoints={currentCamera?.lines ? parsePointsFromString(currentCamera.lines) : ""}
+              />
+            )}
+            <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+              <Button variant="contained" fullWidth onClick={() => setShowDrawingModal(false)} sx={{ backgroundColor: "var(--accent)" }}>Save Points</Button>
+              <Button variant="outlined" fullWidth onClick={() => setShowDrawingModal(false)}>Close</Button>
+            </Box>
+          </Box>
+        </Modal>
+
+        {/* ── Delete Dialog ──────────────────────────────────────────────────── */}
+        <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            Are you sure you want to delete camera <strong>{cameraToDelete?.id}</strong>? This action cannot be undone.
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button onClick={handleDeleteCamera} color="error" variant="contained">Delete</Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </div>
   );

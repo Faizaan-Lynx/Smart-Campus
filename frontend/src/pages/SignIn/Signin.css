@@ -42,10 +42,12 @@
 h1 {
   font-weight: bold;
   margin: 0;
+  color: var(--text);
 }
 
 h2 {
   text-align: center;
+  color: var(--text);
 }
 
 p {
@@ -54,14 +56,16 @@ p {
   line-height: 20px;
   letter-spacing: 0.5px;
   margin: 20px 0 30px;
+  color: var(--text);
 }
 
 span {
   font-size: 12px;
+  color: var(--text);
 }
 
 a {
-  color: #333;
+  color: var(--link);
   font-size: 14px;
   text-decoration: none;
   margin: 15px 0;
@@ -95,7 +99,7 @@ a {
 }
 
 .form__auth {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,21 +110,25 @@ a {
 }
 
 input {
-  background-color: #eee;
-  border: none;
+  background-color: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 12px 15px;
   margin: 8px 0;
   width: 100%;
 }
 
+input::placeholder {
+  color: var(--muted);
+}
+
 .container__signin {
-  background-color: #fff;
+  background-color: var(--card-bg);
   border-radius: 0px;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
   position: relative;
   overflow: hidden;
   width: 768px;
-
   max-width: 100%;
   min-height: 480px;
 }

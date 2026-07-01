@@ -70,10 +70,8 @@ services:
       - postgres-db
       - redis
     networks:
-      backend:
-      stream-net:
-        ipv4_address: 192.168.18.30
-        mac_address: D0:37:45:38:F8:3D
+      - backend
+      - stream-net
 
   # Flower Dashboard
   flower:
@@ -109,9 +107,6 @@ networks:
 
   stream-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.18.0/24
 
 volumes:
   postgres_data:

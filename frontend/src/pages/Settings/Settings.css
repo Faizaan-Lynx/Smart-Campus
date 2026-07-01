@@ -9,7 +9,7 @@
   transition: var(--tran-05);
   margin-left: 280px;
   padding: 30px 40px;
-  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.02) 100%);
   min-height: 100vh;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .settings_div > p {
-  color: #a1a5b7;
+  color: var(--muted);
   font-size: 14px;
   margin: 0;
 }

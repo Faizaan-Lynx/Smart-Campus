@@ -46,7 +46,7 @@ const Settings = () => {
         padding: "24px",
         background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(167, 139, 250, 0.05) 100%)",
         borderRadius: "12px",
-        border: "1px solid #2a2f42",
+        border: "1px solid var(--border)",
         marginBottom: "10px"
       }}>
         <h1 style={{ 
@@ -60,7 +60,7 @@ const Settings = () => {
         }}>
           ⚙️ Admin Control Panel
         </h1>
-        <p style={{ margin: "0", color: "#a1a5b7", fontSize: "14px" }}>
+        <p style={{ margin: "0", color: "var(--muted)", fontSize: "14px" }}>
           Manage users, cameras, and system settings
         </p>
       </div>

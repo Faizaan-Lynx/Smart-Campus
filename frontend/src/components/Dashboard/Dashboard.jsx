@@ -39,9 +39,9 @@ const CHART_COLORS = [
   "#f64f59",
 ];
 
-const AXIS_LABEL_COLOR = "#e2e8f0";
-const AXIS_TICK_COLOR = "#cbd5e1";
-const LEGEND_LABEL_COLOR = "#e2e8f0";
+const AXIS_LABEL_COLOR = "var(--text)";
+const AXIS_TICK_COLOR = "var(--muted)";
+const LEGEND_LABEL_COLOR = "var(--text)";
 
 const parseAlertTimestamp = (timestamp) => {
   if (!timestamp) return null;
@@ -569,12 +569,12 @@ const Dashboard = () => {
                   height={320}
                   grid={{ horizontal: true }}
                   sx={{
-                    "& .MuiChartsAxis-tickLabel": { fill: "#cbd5e1 !important" },
-                    "& .MuiChartsAxis-label": { fill: "#e2e8f0 !important" },
-                    "& .MuiChartsAxis-line": { stroke: "#334155" },
-                    "& .MuiChartsAxis-tick": { stroke: "#334155" },
+                    "& .MuiChartsAxis-tickLabel": { fill: "var(--muted) !important" },
+                    "& .MuiChartsAxis-label": { fill: "var(--text) !important" },
+                    "& .MuiChartsAxis-line": { stroke: "var(--border)" },
+                    "& .MuiChartsAxis-tick": { stroke: "var(--border)" },
                     "& .MuiChartsGrid-line": {
-                      stroke: "rgba(255,255,255,0.12)",
+                      stroke: "rgba(148, 163, 184, 0.24)",
                       strokeDasharray: "4 4",
                     },
                   }}
@@ -651,10 +651,9 @@ const Dashboard = () => {
                     ]}
                     sx={{
                       "& .MuiChartsArcLabel-root": {
-                        fill: "#ffffff",
+                        fill: "var(--text)",
                         fontWeight: 700,
                         fontSize: "0.72rem",
-                        textShadow: "0 1px 4px rgba(0,0,0,0.8)",
                       },
                     }}
                     slotProps={{
@@ -662,7 +661,7 @@ const Dashboard = () => {
                     }}
                   />
                   <div className="dashboard-pie-center">
-                    <strong style={{ color: "#ffffff", fontSize: "1.6rem" }}>{totalAssignedCameras}</strong>
+                    <strong style={{ color: "var(--text)", fontSize: "1.6rem" }}>{totalAssignedCameras}</strong>
                   </div>
                 </>
               )}
@@ -691,12 +690,12 @@ const Dashboard = () => {
                     xAxis={[{ data: cameraRows, scaleType: "band" }]}
                     grid={{ horizontal: true }}
                     sx={{
-                      "& .MuiChartsAxis-tickLabel": { fill: "#cbd5e1 !important" },
-                      "& .MuiChartsAxis-label": { fill: "#e2e8f0 !important" },
-                      "& .MuiChartsAxis-line": { stroke: "#334155" },
-                      "& .MuiChartsAxis-tick": { stroke: "#334155" },
+                      "& .MuiChartsAxis-tickLabel": { fill: "var(--muted) !important" },
+                      "& .MuiChartsAxis-label": { fill: "var(--text) !important" },
+                      "& .MuiChartsAxis-line": { stroke: "var(--border)" },
+                      "& .MuiChartsAxis-tick": { stroke: "var(--border)" },
                       "& .MuiChartsGrid-line": {
-                        stroke: "rgba(255,255,255,0.12)",
+                        stroke: "rgba(148, 163, 184, 0.24)",
                         strokeDasharray: "4 4",
                       },
                     }}

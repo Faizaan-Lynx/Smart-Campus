@@ -77,7 +77,7 @@ html {
 }
 
 .header {
-  background-color: #1f2a40;
+  background-color: var(--header-bg);
 }
 .container__nav {
   height: 60px;

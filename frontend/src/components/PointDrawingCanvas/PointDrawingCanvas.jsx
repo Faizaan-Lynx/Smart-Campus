@@ -180,12 +180,12 @@ const PointDrawingCanvas = ({ videoUrl, onPointsChange, initialPoints = "" }) =>
 
       <div style={{ position: "relative", width: "100%", maxWidth: "800px" }}>
         {!videoUrl && (
-          <div style={{ padding: "32px", textAlign: "center", color: "#888", border: "1px dashed #ccc", borderRadius: "4px" }}>
+          <div style={{ padding: "32px", textAlign: "center", color: "var(--muted)", border: "1px dashed var(--border)", borderRadius: "4px", background: "var(--card-bg)" }}>
             No camera frame available.
           </div>
         )}
         {videoUrl && imageError && (
-          <div style={{ padding: "32px", textAlign: "center", color: "#c00", border: "1px dashed #f5c6cb", borderRadius: "4px", background: "#fff3f3" }}>
+          <div style={{ padding: "32px", textAlign: "center", color: "#c00", border: "1px dashed var(--danger, #f5c6cb)", borderRadius: "4px", background: "var(--card-bg)" }}>
             ⚠️ Failed to load camera frame. The stream may be unavailable.
           </div>
         )}
@@ -240,15 +240,15 @@ const PointDrawingCanvas = ({ videoUrl, onPointsChange, initialPoints = "" }) =>
         marginTop: "12px",
         fontFamily: "monospace",
         fontSize: "13px",
-        background: "#0f1117",
-        border: "1px solid #2a2d3a",
+        background: "var(--card-bg)",
+        border: "1px solid var(--border)",
         borderRadius: "6px",
         padding: "10px 14px",
-        color: "#e0e0e0",
+        color: "var(--text)",
         maxHeight: "180px",
         overflowY: "auto",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", color: "#aaa", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", color: "var(--muted)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           <span>Polygons: <strong style={{ color: "#7dd3fc" }}>{polygons.length}</strong></span>
           <span>In progress: <strong style={{ color: "#fbbf24" }}>{points.length} pts</strong></span>
         </div>

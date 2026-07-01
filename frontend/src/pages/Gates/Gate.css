@@ -4,7 +4,7 @@
   margin-left: 200px;
   font-family: "Poppins", sans-serif;
   transition: var(--tran-05);
-  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.02) 100%);
   min-height: 100vh;
 }
 

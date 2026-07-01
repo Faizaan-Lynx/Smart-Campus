@@ -36,8 +36,8 @@ export const AlertProvider = ({ children }) => {
       closeOnClick: false,
       position: "top-right",
       style: {
-        background: "#333",
-        color: "white",
+        background: "var(--card-bg)",
+        color: "var(--text)",
         cursor: "pointer",
         maxHeight: '80vh',
         overflowY: 'auto',

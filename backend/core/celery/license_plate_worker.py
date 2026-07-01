@@ -1,8 +1,18 @@
+"""
+license_plate_worker.py
+-----------------------
+Celery worker for license plate detection using fast-alpr.
+Intrusion detection code is untouched – this worker only runs when
+camera.detect_intrusions is False (enforced in process_feed).
+"""
+
 import os
 import cv2
+import json
 import time
 import redis
 import logging
+import threading
 import numpy as np
 import re
 import torch
@@ -14,188 +24,436 @@ from models.cameras import Camera
 from models.license_detection import License
 from sqlalchemy.orm import Session
 from core.database import SessionLocal
-from api.alerts.schemas import AlertBase
-from api.alerts.routes import create_alert
-# from api.license_plate.ocr_instance import ocr
 from models.users import Users
+from fast_alpr import ALPR
 
-# celery worker for processing video feeds for license plate detection
-license_plate_worker_app = Celery('license_plate_worker', broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+# ──────────────────────────────────────────────────────────────────────────────
+# Celery app
+# ──────────────────────────────────────────────────────────────────────────────
+license_plate_worker_app = Celery(
+    'license_plate_worker',
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL,
+)
+
 os.environ['OPENCV_LOG_LEVEL'] = 'ERROR'
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
 
-# Initialize OCR and CLAHE globally
-ocr_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-
-# Initialize face detection model globally
+# ──────────────────────────────────────────────────────────────────────────────
+# Global model initialisation (loaded once per worker process)
+# ──────────────────────────────────────────────────────────────────────────────
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# fast-alpr  ← replaces the old PaddleOCR + manual YOLO pipeline
+alpr = ALPR(
+    detector_model="yolo-v9-t-384-license-plate-end2end",
+    ocr_model="cct-xs-v2-global-model",
+)
+logging.info("fast-alpr ALPR engine loaded.")
+
+# Face detection model (unchanged – do not touch intrusion code)
 face_model = YOLO("./yolo-models/yolo26n.pt")
 face_model.to(device)
 logging.info(f"Face detection model loaded on device: {device}")
 
-def unsharp_mask(image: np.ndarray, kernel_size=(5, 5), sigma=1.0, amount=0.5) -> np.ndarray:
-    """
-    Sharpens an image using the unsharp mask technique.
-    """
-    blurred = cv2.GaussianBlur(image, kernel_size, sigma)
-    sharpened = cv2.addWeighted(image, 1.0 + amount, blurred, -amount, 0)
-    return sharpened
-
-def lp_image_processing(image: np.ndarray) -> np.ndarray:
-    """
-    Preprocesses the license plate image for better detection results.
-    """
-    # convert to grayscale
-    processed_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # double the size
-    processed_img = cv2.resize(processed_img, (2*processed_img.shape[1], 2*processed_img.shape[0]))
-    # apply CLAHE
-    processed_img = ocr_clahe.apply(processed_img)
-    # adaptive thresholding for better OCR
-    processed_img = cv2.adaptiveThreshold(processed_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    # sharpen
-    processed_img = unsharp_mask(processed_img)
-    return processed_img
+# Storage directory for plate images
+PLATE_IMAGE_DIR = "/app/assets/licence_plates"
+os.makedirs(PLATE_IMAGE_DIR, exist_ok=True)
 
 
-def apply_lp_ocr_rules(license_plate: str, class_name: str) -> tuple[bool, str]:
+# ──────────────────────────────────────────────────────────────────────────────
+# OCR post-processing helpers (keep Pakistan plate rules)
+# ──────────────────────────────────────────────────────────────────────────────
+def apply_lp_ocr_rules(license_plate: str, class_name: str = "car") -> tuple[bool, str]:
     """
-    Applies rules to the extracted license plate number to make it more readable.
-    Trims known regional keywords like 'ICT-ISLAMABAD', 'PUNJAB', 'SINDH', etc.
-    Logs the original and cleaned license plate text.
+    Applies regional cleanup rules to raw OCR text.
+    Returns (is_valid, cleaned_text).
     """
-    
-    # Remove spaces and convert to uppercase
     text = license_plate.replace(' ', '').upper()
-    # List of known region keywords to trim
-    banned_keywords = ['ICTISLAMABAD', 'ICT-', 'PUNJAB', 'SINDH', 'KPK', 'BALOCHISTAN', 'AJK', 'GILGIT', 'ISLAMABAD']
-    
-    # Remove banned keywords if found at the start
+    banned_keywords = [
+        'ICTISLAMABAD', 'ICT-', 'PUNJAB', 'SINDH',
+        'KPK', 'BALOCHISTAN', 'AJK', 'GILGIT', 'ISLAMABAD',
+    ]
     for keyword in banned_keywords:
         if text.startswith(keyword):
             text = text[len(keyword):]
-            break  # Trim only the first matching keyword
-    
-    # Remove any remaining leading hyphens
+            break
     text = text.lstrip('-')
 
-    # Relaxed patterns for different vehicle classes
-    car_bus_pattern = r'^[A-Z0-9\-]{5,10}$'  # Accepts 5-10 alphanumeric/hyphen chars
-    motorcycle_pattern = r'^[A-Z0-9\-]{5,10}$'
-
-    if class_name in ("car", "bus"):
-        if re.match(car_bus_pattern, text):
-            logging.info(f"License plate matched pattern for class '{class_name}'")
-            return True, text
-        
-    if class_name == "motorcycle":
-        if re.match(motorcycle_pattern, text):
-            logging.info(f"License plate matched pattern for class '{class_name}'")
-            return True, text
-
-    logging.info(f"License plate did not match any pattern for class '{class_name}' (text: {text})")
+    pattern = r'^[A-Z0-9\-]{5,10}$'
+    if re.match(pattern, text):
+        logging.info(f"Plate matched pattern for class '{class_name}': {text}")
+        return True, text
+    logging.info(f"Plate did not match pattern for class '{class_name}': {text}")
     return False, text
 
 
-def license_plate_ocr(plate_img: np.ndarray, class_name: str) -> tuple[str, float, bool]:
+def normalize_plate(plate: str) -> str:
     """
-    Extracts the license plate number from a cropped image.
+    Normalizes a Pakistani-format plate down to just its numeric portion.
+
+    Pakistani plates are typically <letters>-<digits>, e.g. 'L-2893',
+    'LEA-2893', 'ABC-1234'. Per requirement, only the numeric part is
+    stored in the database (e.g. 'L-2893' -> '2893').
+
+    Falls back to the cleaned alphanumeric string if no digits are found,
+    so unusual/non-standard plates still get stored rather than dropped.
     """
-    # preprocess the image
-    preprocessed_image = lp_image_processing(plate_img)
+    cleaned = plate.replace(" ", "").upper()
+    digits_only = re.sub(r"[^0-9]", "", cleaned)
+    if digits_only:
+        return digits_only
+    # No digits at all — fall back to stripped alphanumeric (shouldn't
+    # normally happen for a real plate, but avoids silently losing data).
+    return re.sub(r"[^A-Z0-9]", "", cleaned)
 
-    # Ensure the image is 3-channel (BGR) for OCR
-    if len(preprocessed_image.shape) == 2 or (len(preprocessed_image.shape) == 3 and preprocessed_image.shape[2] == 1):
-        preprocessed_image = cv2.cvtColor(preprocessed_image, cv2.COLOR_GRAY2BGR)
-    
-    # perform OCR
-    # lp_results = ocr.ocr(preprocessed_image)
-    # logging.info(f"Raw OCR results: {lp_results}")
 
-    # license_plate_number = ""
-    # confidence_scores = []
-
-    # if len(lp_results) == 0:
-    #     return "", 0.0, False
-
-    # # Handle PaddleOCR dict output (newer versions)
-    # if isinstance(lp_results, list) and len(lp_results) == 1 and isinstance(lp_results[0], dict):
-    #     ocr_dict = lp_results[0]
-    #     rec_texts = ocr_dict.get('rec_texts', [])
-    #     rec_scores = ocr_dict.get('rec_scores', [])
-    #     for text, score in zip(rec_texts, rec_scores):
-    #         license_plate_number += str(text)
-    #         try:
-    #             confidence_scores.append(int(float(score) * 100))
-    #         except Exception:
-    #             continue
-    # else:
-    #     # Fallback to standard output
-    #     for lp_res in lp_results:
-    #         if lp_res is None:
-    #             continue
-    #         for line in lp_res:
-    #             if (
-    #                 isinstance(line, (list, tuple)) and len(line) > 1 and
-    #                 isinstance(line[1], (list, tuple)) and len(line[1]) > 1
-    #             ):
-    #                 license_plate_number += str(line[1][0])
-    #                 try:
-    #                     confidence_scores.append(int(float(line[1][1]) * 100))
-    #                 except Exception:
-    #                     continue
-    #             else:
-    #                 continue
-    # logging.info(f"Intermediate license_plate_number: {license_plate_number}")
-
-    # valid, license_plate_number = apply_lp_ocr_rules(license_plate_number, class_name)
-    # average_confidence = np.mean(confidence_scores) if confidence_scores else 0.0
-
-    # if license_plate_number == "":
-    #     return "", 0.0, False
-    # return license_plate_number, average_confidence, valid
-    return "", 0.0, False  # PaddleOCR removed, always return empty result
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Face detection  (UNTOUCHED – intrusion detection remains separate)
+# ──────────────────────────────────────────────────────────────────────────────
 def detect_faces_in_frame(frame: np.ndarray) -> list:
     """
     Detect faces in the given frame using YOLOv8 face detection model.
-    Returns a list of face bounding boxes with confidence scores.
+    Returns a list of dicts with keys: bbox, confidence.
+    This function is shared with the intrusion system – do NOT modify its logic.
     """
     try:
-        # Run face detection on the frame (matching test file approach)
         results = face_model(frame, device=device, verbose=False)[0]
-        
         faces = []
         for box in results.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             conf = float(box.conf[0])
-            
-            # Only include faces with confidence above threshold
             if conf > 0.5:
-                faces.append({
-                    'bbox': (x1, y1, x2, y2),
-                    'confidence': conf
-                })
-        
+                faces.append({'bbox': (x1, y1, x2, y2), 'confidence': conf})
         logging.info(f"Detected {len(faces)} faces in frame")
         return faces
-        
     except Exception as e:
         logging.error(f"Error in face detection: {e}")
         return []
 
-## ===== General Video Processing ===== ##
 
+# ──────────────────────────────────────────────────────────────────────────────
+# GStreamer-first capture helper (hardware-decoder aware, matches
+# full_feed_worker.py so LP and intrusion feeds behave identically)
+# ──────────────────────────────────────────────────────────────────────────────
+def open_capture(url: str, camera_id: int, max_tries: int = 10, timeout: int = 6):
+    """
+    Opens VideoCapture, preferring GStreamer for RTSP streams with hardware
+    decoding when available (NVIDIA/Intel), falling back to software decode,
+    then to FFMPEG TCP. Mirrors full_feed_worker.open_capture for parity.
+    """
+    hw_decoder = os.environ.get("GST_HW_DECODER", "auto")  # 'intel', 'nvidia', or 'auto'
+
+    for attempt in range(max_tries):
+        cap = None
+        if url.startswith("rtsp://"):
+            gst_decoders = []
+            if hw_decoder == "intel":
+                gst_decoders = ["vaapidecode"]
+            elif hw_decoder == "nvidia":
+                gst_decoders = ["nvv4l2decoder"]
+            elif hw_decoder == "auto":
+                gst_decoders = ["nvv4l2decoder", "vaapidecode"]
+            gst_decoders.append("avdec_h264")  # always fall back to software
+
+            for decoder in gst_decoders:
+                gst_str = (
+                    f"rtspsrc location={url} latency=50 ! "
+                    "rtph264depay ! h264parse ! "
+                    f"{decoder} ! videoconvert ! "
+                    "appsink drop=1 max-buffers=1 sync=false"
+                )
+                cap = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
+                if cap.isOpened():
+                    logging.info(f"[GStreamer:{decoder}] Camera {camera_id}: stream opened.")
+                    return cap
+                cap.release()
+
+            # ── FFMPEG TCP fallback ─────────────────────────────────────────
+            cap = cv2.VideoCapture(f"{url}?rtsp_transport=tcp", cv2.CAP_FFMPEG)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 8000)
+            cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 8000)
+            if cap.isOpened():
+                logging.info(f"[FFMPEG-TCP] Camera {camera_id}: stream opened.")
+                return cap
+            cap.release()
+        else:
+            cap = cv2.VideoCapture(url)
+            if cap.isOpened():
+                logging.info(f"[FILE/HTTP] Camera {camera_id}: capture opened.")
+                return cap
+            cap.release()
+
+        logging.error(f"Capture attempt {attempt + 1}/{max_tries} failed for camera {camera_id}.")
+        time.sleep(timeout)
+
+    raise RuntimeError(f"Failed to open capture for camera {camera_id} after {max_tries} attempts.")
+
+
+class FrameGrabber(threading.Thread):
+    """
+    Continuously reads frames from the camera on a dedicated background
+    thread, decoupled from inference. This is the same pattern used by
+    full_feed_worker.py for the intrusion feed — it's what makes that feed
+    feel smooth: capture rate is never bottlenecked by how long YOLO/OCR
+    takes to process each frame. The main loop just grabs whatever the
+    latest available frame is, instead of blocking on cap.read() + inference
+    in series every iteration.
+    """
+
+    def __init__(self, cap_factory, camera_id: int):
+        super().__init__()
+        self.cap_factory = cap_factory
+        self.camera_id = camera_id
+        self.cap = self.cap_factory()
+        self.latest_frame = None
+        self.running = True
+        self.lock = threading.Lock()
+        self.failed_reads = 0
+        self.max_failed_reads = 30
+        self.daemon = True
+
+    def run(self):
+        while self.running:
+            if self.cap is None or not self.cap.isOpened():
+                self._reconnect()
+            try:
+                ret, frame = self.cap.read()
+            except Exception as e:
+                logging.error(f"[Camera {self.camera_id}] Exception in FrameGrabber.read(): {e}")
+                ret, frame = False, None
+
+            if ret:
+                with self.lock:
+                    self.latest_frame = frame
+                self.failed_reads = 0
+            else:
+                self.failed_reads += 1
+                if self.failed_reads >= self.max_failed_reads:
+                    self._reconnect()
+                time.sleep(0.05)
+
+    def _reconnect(self):
+        if self.cap:
+            self.cap.release()
+        while self.running:
+            try:
+                self.cap = self.cap_factory()
+                if self.cap.isOpened():
+                    self.failed_reads = 0
+                    break
+            except Exception:
+                pass
+            time.sleep(2)
+
+    def get_latest_frame(self):
+        with self.lock:
+            return self.latest_frame.copy() if self.latest_frame is not None else None
+
+    def stop(self):
+        self.running = False
+        if self.cap:
+            self.cap.release()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Frame utilities
+# ──────────────────────────────────────────────────────────────────────────────
+def preprocess_frame(frame: np.ndarray, camera: Camera) -> np.ndarray:
+    if camera.crop_region:
+        crop_region = eval(camera.crop_region)
+        frame = frame[
+            crop_region[0][1]:crop_region[1][1],
+            crop_region[0][0]:crop_region[1][0],
+        ]
+    if camera.resize_dims:
+        resize_dims = eval(camera.resize_dims)
+        frame = cv2.resize(frame, resize_dims)
+    return frame
+
+
+def preprocess_frame_for_lp(frame: np.ndarray, camera: Camera) -> np.ndarray:
+    """
+    LP-specific preprocessing: respects crop_region (useful for narrowing the
+    frame to a single gate lane), but deliberately SKIPS resize_dims.
+
+    resize_dims is typically tuned for the intrusion/face-detection worker,
+    which only needs a small frame. Plate text occupies a tiny fraction of
+    the image, so downscaling to something like 640x480 can shrink a real
+    plate down to a handful of pixels — too small for any OCR model to read,
+    even though the plate detector may still flag a low-confidence box there.
+    """
+    if camera.crop_region:
+        crop_region = eval(camera.crop_region)
+        frame = frame[
+            crop_region[0][1]:crop_region[1][1],
+            crop_region[0][0]:crop_region[1][0],
+        ]
+    return frame
+
+
+redis_client_ws = redis.from_url(settings.REDIS_URL)
+
+
+def publish_frame(camera_id: int, annotated_frame: np.ndarray):
+    """
+    Store the latest annotated frame in Redis as a simple key-value (not pub/sub).
+    This matches the polling-based WebSocket route in api/cameras/websocket.py,
+    which reads `camera_{camera_id}_frame_latest` — NOT a pub/sub channel.
+    Only the latest frame is kept (2s expiry) to avoid buffer overflow.
+    """
+    global redis_client_ws
+
+    try:
+        if redis_client_ws.get(f"camera_{camera_id}_websocket_active") != b"True":
+            return
+
+        _, buffer = cv2.imencode(".jpg", annotated_frame)
+
+        try:
+            redis_client_ws.setex(
+                f"camera_{camera_id}_frame_latest",
+                2,  # expiry in seconds — auto-cleans if worker stops publishing
+                buffer.tobytes(),
+            )
+        except (redis.ConnectionError, redis.TimeoutError):
+            redis_client_ws = redis.from_url(settings.REDIS_URL)
+            redis_client_ws.setex(
+                f"camera_{camera_id}_frame_latest",
+                2,
+                buffer.tobytes(),
+            )
+    except Exception as e:
+        logging.error(f"[Camera {camera_id}] Failed to publish frame: {e}")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Database persistence  (duplicate-guard + image save)
+# ──────────────────────────────────────────────────────────────────────────────
+LP_DEDUP_WINDOW_MINUTES = 5  # same window as the Redis TTL, kept in sync
+
+
+def handle_license_plate_event(
+    camera_id: int,
+    license_number: str,
+    confidence: float,
+    bounding_box: list,          # [x1, y1, x2, y2]
+    frame: np.ndarray = None,
+    faces_detected: int = 0,
+) -> bool:
+    """
+    Persists a license plate detection to the database.
+
+    Duplicate prevention is authoritative here (DB-checked), not just
+    Redis-cached — Redis is a fast-path optimization in process_feed, but
+    this function independently verifies no recent record exists for the
+    same camera+plate before writing anything to disk or the DB. This
+    guarantees no duplicate image files or rows can be created even if the
+    Redis TTL key expires early, is evicted, or races across processes.
+
+    Returns True if a new record was created, False if skipped as a duplicate.
+    """
+    from datetime import timedelta
+
+    current_time = datetime.now()
+    cutoff = current_time - timedelta(minutes=LP_DEDUP_WINDOW_MINUTES)
+
+    db: Session = SessionLocal()
+    try:
+        # ── Authoritative duplicate check (DB is the source of truth) ──────
+        existing = (
+            db.query(License)
+            .filter(
+                License.camera_id == camera_id,
+                License.license_number == license_number,
+                License.timestamp >= cutoff,
+            )
+            .first()
+        )
+        if existing:
+            logging.info(
+                f"[Camera {camera_id}] Duplicate suppressed — plate "
+                f"'{license_number}' already recorded at {existing.timestamp} "
+                f"(within {LP_DEDUP_WINDOW_MINUTES}-minute window). "
+                f"No new image or DB row created."
+            )
+            return False
+
+        logging.info(
+            f"Persisting plate '{license_number}' for camera {camera_id} "
+            f"(conf={confidence:.2f})"
+        )
+
+        # ── Only write the image file once we know this is NOT a duplicate ──
+        file_path = None
+        if frame is not None:
+            frame_to_save = frame.copy()
+
+            # Re-draw face boxes on saved image if faces were present
+            if faces_detected > 0:
+                faces = detect_faces_in_frame(frame_to_save)
+                for face in faces:
+                    x1, y1, x2, y2 = face['bbox']
+                    conf = face['confidence']
+                    cv2.rectangle(frame_to_save, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                    label = f"Face {conf:.2f}"
+                    cv2.putText(frame_to_save, label, (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
+                    cv2.putText(frame_to_save, label, (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+
+            # Save plate image  →  assets/licence_plates/
+            timestamp_str = int(current_time.timestamp())
+            filename = f"plate_{camera_id}_{license_number}_{timestamp_str}.jpg"
+            file_path = os.path.join(PLATE_IMAGE_DIR, filename)
+            cv2.imwrite(file_path, frame_to_save)
+            logging.info(f"Plate image saved: {file_path}")
+
+        new_record = License(
+            camera_id=camera_id,
+            license_number=license_number,
+            confidence=round(confidence, 4),
+            bounding_box=json.dumps(bounding_box),
+            timestamp=current_time,
+            file_path=file_path,
+        )
+        db.add(new_record)
+
+        # Update user entry timestamp if plate matches a registered user
+        user = db.query(Users).filter(Users.license_plate == license_number).first()
+        if user:
+            user.entered_at_timestamp = current_time
+            logging.info(f"Updated entered_at_timestamp for user: {user.username}")
+
+        db.commit()
+        db.refresh(new_record)
+        logging.info(f"DB record created: license_detection id={new_record.id}")
+        return True
+    except Exception as e:
+        logging.error(f"Error saving license plate detection: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Main processing task
+# ──────────────────────────────────────────────────────────────────────────────
 @license_plate_worker_app.task
 def process_feed(camera_id: int):
     """
-    Process a single feed source: capture frames, detect license plates, and publish annotated frames if that websocket is open.
-    This function is run as a Celery task.
-    Args:
-        camera_id (int): The ID of the camera to process.
+    Core Celery task: pulls frames from an RTSP/file source, runs fast-alpr
+    plate detection + OCR, and persists results.
+
+    NOTE: Intrusion detection logic lives in a completely separate worker
+    (model_worker / full_feed_worker). This task is ONLY started when
+    camera.detect_intrusions is False.
     """
+    redis_client = redis.from_url(settings.REDIS_URL)
+
     try:
-        # get all cameras
         db: Session = SessionLocal()
         camera = db.query(Camera).filter(Camera.id == camera_id).first()
         db.close()
@@ -204,317 +462,257 @@ def process_feed(camera_id: int):
             logging.error(f"Camera {camera_id} not found.")
             return {"error": "Camera not found"}
 
-        # Only open capture if detect_intrusions is False
+        # Safety guard: never run licence plate worker alongside intrusion detection
         if camera.detect_intrusions:
-            logging.info(f"Camera {camera_id} has intrusion detection enabled. Skipping license plate processing.")
-            return {"status": "Skipped due to intrusion detection enabled"}
+            logging.info(
+                f"Camera {camera_id} has intrusion detection enabled – "
+                "skipping license plate worker."
+            )
+            return {"status": "Skipped: intrusion detection enabled"}
 
-        # Initialize Redis license plate detection flag
-        redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_license_plate_flag", "False")
 
-        cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        def cap_factory():
+            cap = open_capture(camera.url, camera_id, max_tries=3, timeout=2)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            return cap
+
+        # Background thread continuously grabs frames — decouples capture
+        # rate from inference time, exactly like the intrusion feed.
+        grabber = FrameGrabber(cap_factory, camera_id)
+        grabber.start()
 
         stop_check_counter = 300
-
-        # load yolo model for license plate detection
-        model = YOLO(model="./yolo-models/yolo-license-plates.pt")  # Replace with your license plate model path
-        logging.info(f"Loaded license plate detection model for camera {camera_id}.")
+        frame_counter = 0
+        max_frame_skip_count = 0
+        logging.info(f"[LP Worker] Camera {camera_id}: processing started.")
 
         while True:
-            # Flush buffer: grab frames until only the latest remains
-            for _ in range(5):
-                cap.grab()
-            ret, frame = cap.read()
-            if not ret:
-                logging.warning(f"Failed to read frame from camera {camera_id}. Attempting to reopen capture object...")
-                cap = open_capture(camera.url, camera_id, max_tries=10, timeout=6)
+            frame = grabber.get_latest_frame()
+            if frame is None:
+                max_frame_skip_count += 1
+                time.sleep(0.01)
+                if max_frame_skip_count > 500:
+                    logging.error(f"Camera {camera_id}: No frames received. Exiting gracefully.")
+                    break
                 continue
 
-            annotated_frame = preprocess_frame(frame, camera)
+            max_frame_skip_count = 0
 
-            # Process frame with license plate detection model
-            results = model.predict(annotated_frame, verbose=False)
-            
-            license_plate_detected = False
-            lp_number = ""
-            valid = False
-            
-            for res in results:
-                for detection in res.boxes:
-                    if detection.conf < 0.8:  # Confidence threshold increased from 0.65 to 0.8
-                        continue
-                    x1, y1, x2, y2 = map(int, detection.xyxy[0])
-                    
-                    # Extract license plate region
-                    plate_region = annotated_frame[y1:y2, x1:x2]
-                    
-                    # Perform OCR on the license plate
-                    lp_number, confidence, valid = license_plate_ocr(plate_region, "car")  # Assuming car for now
-                    # If not valid, retry as motorcycle
-                    if not valid:
-                        lp_number, confidence, valid = license_plate_ocr(plate_region, "motorcycle")
-                    
-                    # Draw bounding box and text
-                    color = (0, 255, 0) if valid else (0, 0, 255)
-                    annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                    
-                    if lp_number:
-                        label = f"{lp_number} ({confidence:.2f})"
-                        cv2.putText(annotated_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 4, lineType=cv2.LINE_AA)
-                        cv2.putText(annotated_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
-                        license_plate_detected = True
+            frame_counter += 1
+            if frame_counter % 100 == 0:
+                logging.info(
+                    f"[Camera {camera_id}] Heartbeat — {frame_counter} frames "
+                    f"processed so far, worker is alive."
+                )
 
-            # Detect faces if license plate was detected
+            annotated_frame = preprocess_frame_for_lp(frame, camera)
+
+            if frame_counter % 100 == 1:  # log once per heartbeat cycle, not every frame
+                logging.info(
+                    f"[Camera {camera_id}] Frame fed to fast-alpr: "
+                    f"{annotated_frame.shape[1]}x{annotated_frame.shape[0]}px "
+                    f"(camera.resize_dims={camera.resize_dims!r}, "
+                    f"camera.crop_region={camera.crop_region!r})"
+                )
+
+            # ── fast-alpr inference ──────────────────────────────────────────
+            alpr_results = alpr.predict(annotated_frame)
+
+            if alpr_results:
+                logging.info(
+                    f"[Camera {camera_id}] fast-alpr found {len(alpr_results)} "
+                    f"plate candidate(s) this frame."
+                )
+
+            best_plate: str = ""
+            best_confidence: float = 0.0
+            best_bbox: list = []
+            plate_detected = False
+
+            for result in alpr_results:
+                # result.detection  → plate bounding box info
+                # result.ocr        → OCR text + confidence
+                if result.ocr is None:
+                    logging.debug(f"[Camera {camera_id}] Plate detected but OCR returned None.")
+                    continue
+
+                # Log detector geometry/confidence FIRST — this is what tells us
+                # whether the crop fed to OCR was even plausible (too small,
+                # wrong aspect ratio, etc.) before we look at OCR output.
+                det_box = result.detection.bounding_box
+                det_conf = getattr(result.detection, "confidence", None)
+                box_w = int(det_box.x2) - int(det_box.x1)
+                box_h = int(det_box.y2) - int(det_box.y1)
+                logging.info(
+                    f"[Camera {camera_id}] Detector box: "
+                    f"({int(det_box.x1)},{int(det_box.y1)})-({int(det_box.x2)},{int(det_box.y2)}) "
+                    f"size={box_w}x{box_h}px, detector_confidence={det_conf}"
+                )
+
+                raw_text: str = result.ocr.text or ""
+                raw_conf = result.ocr.confidence
+                # OcrResult.confidence can be a single float OR a list of
+                # per-character floats — normalize to a single average value.
+                if isinstance(raw_conf, (list, tuple)):
+                    ocr_conf: float = (sum(raw_conf) / len(raw_conf)) if raw_conf else 0.0
+                else:
+                    ocr_conf: float = float(raw_conf or 0.0)
+
+                logging.info(
+                    f"[Camera {camera_id}] Raw OCR result: text='{raw_text}', "
+                    f"confidence={ocr_conf:.3f}"
+                )
+
+                if not raw_text or ocr_conf < 0.60:
+                    logging.info(
+                        f"[Camera {camera_id}] Rejected — empty text (model likely decoded "
+                        f"only pad/blank characters from a low-quality crop) or confidence "
+                        f"{ocr_conf:.3f} below 0.60 threshold. Crop was {box_w}x{box_h}px."
+                    )
+                    continue
+
+                # Extract bounding box from detection result
+                box = result.detection.bounding_box  # BoundingBox object
+                x1 = int(box.x1)
+                y1 = int(box.y1)
+                x2 = int(box.x2)
+                y2 = int(box.y2)
+
+                # Apply Pakistan plate OCR rules
+                valid, cleaned_text = apply_lp_ocr_rules(raw_text)
+
+                if not valid:
+                    logging.info(
+                        f"[Camera {camera_id}] Rejected by regex/prefix rules: "
+                        f"raw='{raw_text}' cleaned='{cleaned_text}'"
+                    )
+                    # Draw rejected plate in red
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    continue
+
+                logging.info(
+                    f"[Camera {camera_id}] ACCEPTED plate '{cleaned_text}' "
+                    f"(confidence={ocr_conf:.3f})"
+                )
+
+                # Keep the highest-confidence valid plate per frame
+                if ocr_conf > best_confidence:
+                    best_confidence = ocr_conf
+                    best_plate = cleaned_text
+                    best_bbox = [x1, y1, x2, y2]
+                    plate_detected = True
+
+                # Draw accepted plate in green
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                label = f"{cleaned_text} ({ocr_conf * 100:.1f}%)"
+                cv2.putText(annotated_frame, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
+                cv2.putText(annotated_frame, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+
+            # ── Face detection (when a valid plate is found) ─────────────────
             faces = []
-            if license_plate_detected and lp_number and valid:
-                logging.info(f"License plate detected: {lp_number}. Running face detection...")
+            if plate_detected and best_plate:
                 faces = detect_faces_in_frame(annotated_frame)
-                
-                # Draw face bounding boxes
                 for face in faces:
-                    x1, y1, x2, y2 = face['bbox']
-                    conf = face['confidence']
-                    
-                    # Draw face bounding box in blue
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-                    
-                    # Add face label
-                    face_label = f"Face {conf:.2f}"
-                    cv2.putText(annotated_frame, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 4, lineType=cv2.LINE_AA)
-                    cv2.putText(annotated_frame, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
+                    fx1, fy1, fx2, fy2 = face['bbox']
+                    fconf = face['confidence']
+                    cv2.rectangle(annotated_frame, (fx1, fy1), (fx2, fy2), (255, 0, 0), 2)
+                    flabel = f"Face {fconf:.2f}"
+                    cv2.putText(annotated_frame, flabel, (fx1, fy1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
+                    cv2.putText(annotated_frame, flabel, (fx1, fy1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
 
-            # only publish the frame if the websocket is open
+            # ── Publish annotated frame to WebSocket consumers ───────────────
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
                 publish_frame(camera_id, annotated_frame)
 
-            # handle license plate detection event if detected
-            if license_plate_detected and lp_number and valid and confidence > 80:
-                normalized_lp = normalize_plate(lp_number)
-                redis_key = f"camera_{camera_id}_lp_{normalized_lp}"
-                
-                if not redis_client.exists(redis_key):
-                    handle_license_plate_event(camera_id, normalized_lp, annotated_frame, len(faces))
-                    redis_client.set(redis_key, "1", ex=300)  # 5 minute TTL
-                else:
-                    logging.info(f"Plate {normalized_lp} already handled recently for camera {camera_id}. Skipping DB insert.")
+            # ── Persist detection (Redis TTL deduplication) ──────────────────
+            if plate_detected and best_plate and best_confidence >= 0.85:
+                normalized = normalize_plate(best_plate)
+                redis_key = f"camera_{camera_id}_lp_{normalized}"
 
-            
+                if not redis_client.exists(redis_key):
+                    handle_license_plate_event(
+                        camera_id=camera_id,
+                        license_number=normalized,
+                        confidence=best_confidence,
+                        bounding_box=best_bbox,
+                        frame=annotated_frame,
+                        faces_detected=len(faces),
+                    )
+                    # 5-minute dedup window
+                    redis_client.set(redis_key, "1", ex=300)
+                else:
+                    logging.debug(
+                        f"Plate '{normalized}' already recorded recently for camera {camera_id}."
+                    )
+
+            # ── Stop-signal check (every 300 frames) ─────────────────────────
             stop_check_counter -= 1
             if stop_check_counter <= 0:
                 stop_check_counter = 300
-                camera_running = redis_client.get(f"camera_{camera_id}_running")
-                global_cameras_running = redis_client.get("license_plate_workers_running")
-
-                if camera_running == b"False" or global_cameras_running == b"False":
-                    logging.info(f"Stopping license plate detection for camera {camera_id}.")
+                cam_running = redis_client.get(f"camera_{camera_id}_running")
+                global_running = redis_client.get("license_plate_workers_running")
+                if cam_running == b"False" or global_running == b"False":
+                    logging.info(f"Stop signal received for camera {camera_id}.")
                     break
-                
-        cap.release()
 
     except Exception as e:
-        logging.exception(f"Error processing feed for camera {camera_id}: {e}")
+        logging.exception(f"Unhandled error in process_feed for camera {camera_id}: {e}")
     finally:
+        try:
+            grabber.stop()
+        except NameError:
+            pass  # grabber was never created (failed before reaching that point)
         redis_client.close()
-        logging.info(f"Stopped license plate detection for camera {camera_id}")
+        logging.info(f"[LP Worker] Camera {camera_id}: worker stopped.")
 
     return {"status": "License plate detection stopped."}
 
-def preprocess_frame(frame, camera: Camera):
-    """
-    Preprocess the frame (resize, crop, etc.) based on the camera's settings.
-    """
-    if camera.crop_region:
-        crop_region = eval(camera.crop_region)
-        frame = frame[crop_region[0][1]:crop_region[1][1], crop_region[0][0]:crop_region[1][0]]
 
-    if camera.resize_dims:
-        resize_dims = eval(camera.resize_dims)
-        frame = cv2.resize(frame, resize_dims)
-
-    return frame
-
-# redis client for publishing frames
-redis_client_ws = redis.from_url(settings.REDIS_URL)
-
-def publish_frame(camera_id: int, annotated_frame: np.ndarray):
-    """
-    Publish the annotated frame to Redis.
-    """
-    _, buffer = cv2.imencode(".jpg", annotated_frame)
-    global redis_client_ws
-    redis_client_ws.publish(f"camera_{camera_id}", buffer.tobytes())
-
-def open_capture(url:str, camera_id:int, max_tries:int=10, timeout:int=6):
-    """
-    Reopen video capture object if failed, using best-practice low-latency settings for RTSP.
-    """
-    for attempt in range(0, max_tries):
-        cap = None
-        if url.startswith("rtsp://"):
-            # Try GStreamer pipeline first
-            gst_str = (
-                f'rtspsrc location={url} latency=0 ! '
-                'rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! '
-                'appsink drop=1 max-buffers=1 sync=false'
-            )
-            cap = cv2.VideoCapture(gst_str, cv2.CAP_GSTREAMER)
-            if cap.isOpened():
-                logging.info(f"[GStreamer] Video Capture object for Camera {camera_id} successfully created.")
-                return cap
-            else:
-                cap.release()
-                # Fallback to FFMPEG with TCP transport
-                cap = cv2.VideoCapture(f"{url}?rtsp_transport=tcp", cv2.CAP_FFMPEG)
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                if cap.isOpened():
-                    logging.info(f"[FFMPEG] Video Capture object for Camera {camera_id} successfully created with TCP transport.")
-                    return cap
-                else:
-                    cap.release()
-        else:
-            cap = cv2.VideoCapture(url)
-            if cap.isOpened():
-                logging.info(f"Video Capture object for Camera {camera_id} successfully created.")
-                return cap
-            else:
-                cap.release()
-        logging.error(f"Attempt {attempt} of starting capture for Camera {camera_id} failed.")
-        time.sleep(timeout)
-    logging.error(f"Failed to create Capture object for Camera {camera_id}")
-    raise Exception(f"Failed to create Capture object for Camera {camera_id}")
-
-## ====== Handling License Plate Detection Logic ===== ##
-
-def handle_license_plate_event(camera_id: int, license_number: str, frame: np.ndarray = None, faces_detected: int = 0):
-    """
-    Handle a license plate detection event: create a database record and save the frame.
-    """
-    logging.info(f"License plate detected for camera {camera_id}: {license_number} with {faces_detected} faces")
-
-    file_path = None
-    current_time = datetime.now()
-    if frame is not None:
-        # Ensure face bounding boxes are drawn on the image before saving
-        # If faces_detected > 0 but no blue boxes are visible, redetect and draw faces
-        frame_with_faces = frame.copy()
-        
-        # Check if we need to detect and draw faces (if faces_detected > 0 but no blue boxes)
-        if faces_detected > 0:
-            # Detect faces again to ensure they're drawn on the saved image
-            faces = detect_faces_in_frame(frame_with_faces)
-            
-            # Draw face bounding boxes if not already drawn
-            for face in faces:
-                x1, y1, x2, y2 = face['bbox']
-                conf = face['confidence']
-                
-                # Draw face bounding box in blue
-                cv2.rectangle(frame_with_faces, (x1, y1), (x2, y2), (255, 0, 0), 2)
-                
-                # Add face label
-                face_label = f"Face {conf:.2f}"
-                cv2.putText(frame_with_faces, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 4, lineType=cv2.LINE_AA)
-                cv2.putText(frame_with_faces, face_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, lineType=cv2.LINE_AA)
-            
-            logging.info(f"Drew {len(faces)} face bounding boxes on saved image")
-        
-        # Save the frame with face annotations to a file
-        timestamp = int(datetime.now().timestamp())
-        file_path = f"/app/alert_images/license_plates/license_plate_{camera_id}_{timestamp}.jpg"
-        cv2.imwrite(file_path, frame_with_faces)
-
-    # Create database record
-    db = SessionLocal()
-    try:
-        new_license = License(
-            camera_id=camera_id,
-            license_number=license_number,
-            timestamp=datetime.now(),
-            file_path=file_path
-        )
-        db.add(new_license)
-         # Update Users table if match is found
-        user = db.query(Users).filter(Users.license_plate == license_number).first()
-        if user:
-            user.entered_at_timestamp = current_time
-            logging.info(f"Updated entered_at_timestamp for user {user.username}")
-        db.commit()
-        db.refresh(new_license)
-    except Exception as e:
-        logging.error(f"Error saving license plate detection to database: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
-    # Create alert for the detection
-    # alert_data = AlertBase(
-    #     camera_id=camera_id, 
-    #     timestamp=str(datetime.now().replace(microsecond=0)), 
-    #     is_acknowledged=False, 
-    #     file_path=file_path
-    # )
-    # db = SessionLocal()
-    # create_alert(alert_data, db)
-    # db.close()
-
-## ====== Celery Tasks for Starting and Stopping License Plate Workers ===== ##
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Worker management tasks
+# ──────────────────────────────────────────────────────────────────────────────
 @license_plate_worker_app.task
 def start_license_plate_worker(camera_id: int):
-    """
-    Start the license plate detection worker for a specific camera.
-    """
     redis_client = redis.from_url(settings.REDIS_URL)
-    redis_client.set(f"license_plate_worker_{camera_id}_running", "True")
+    redis_client.set(f"camera_{camera_id}_running", "True")
     redis_client.close()
-
     license_plate_worker_app.send_task(
         "core.celery.license_plate_worker.process_feed",
         args=[camera_id],
-        queue="license_plate_tasks"
+        queue="license_plate_tasks",
     )
-    return f"License plate detection worker started for camera {camera_id}"
+    return f"License plate worker started for camera {camera_id}"
+
 
 @license_plate_worker_app.task
 def start_all_license_plate_workers(camera_ids: list):
-    """
-    Start license plate detection workers for all cameras.
-    """
-    os.makedirs("/app/alert_images", exist_ok=True)
-
-    if not camera_ids or len(camera_ids) == 0:
-        logging.warning("No cameras found to start license plate detection workers.")
+    os.makedirs(PLATE_IMAGE_DIR, exist_ok=True)
+    if not camera_ids:
+        logging.warning("No cameras supplied to start_all_license_plate_workers.")
         return "No cameras found"
-    
     redis_client = redis.from_url(settings.REDIS_URL)
     redis_client.set("license_plate_workers_running", "True")
     redis_client.close()
+    tasks = group(start_license_plate_worker.s(cid) for cid in camera_ids)
+    return tasks.apply_async(queue="license_plate_tasks", priority=10)
 
-    tasks = group(start_license_plate_worker.s(camera_id) for camera_id in camera_ids)
-    result = tasks.apply_async(queue="license_plate_tasks", priority=10)
-    return result
 
 @license_plate_worker_app.task
 def stop_license_plate_worker(camera_id: int):
-    """
-    Stop the license plate detection worker for a specific camera.
-    """
     redis_client = redis.from_url(settings.REDIS_URL)
-    redis_client.set(f"license_plate_worker_{camera_id}_running", "False")
+    redis_client.set(f"camera_{camera_id}_running", "False")
     redis_client.close()
-    return f"License plate detection worker stopping for camera {camera_id}..."
+    return f"License plate worker stopping for camera {camera_id}..."
+
 
 @license_plate_worker_app.task
 def stop_all_license_plate_workers():
-    """
-    Stop all license plate detection workers.
-    """
     redis_client = redis.from_url(settings.REDIS_URL)
     redis_client.set("license_plate_workers_running", "False")
     redis_client.close()
-    return "All license plate detection workers stopping..."
-
-def normalize_plate(plate: str) -> str:
-    return plate.replace("-", "").replace(" ", "").upper()
+    return "All license plate workers stopping..."

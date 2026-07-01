@@ -21,32 +21,32 @@ import BACKEND_URL from '../../../config.js';
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     fontSize: "15px",
-    backgroundColor: "#1f2a40",
-    color: theme.palette.common.white,
+    backgroundColor: "var(--card-bg)",
+    color: "var(--text)",
     fontWeight: "bold",
   },
-  [`&.${tableCellClasses.body}`]: {
+    [`&.${tableCellClasses.body}`]: {
     fontSize: 12,
-    color:"white",
-    borderColor: "#141b2d"
+    color:"var(--text)",
+    borderColor: "var(--border)"
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "#1f2a40",
-    color:"white"
+    backgroundColor: "var(--card-bg)",
+    color:"var(--text)"
   },
   "&:nth-of-type(odd)": {
-    backgroundColor: "#1f2a40",
-    color:"white"
+    backgroundColor: "var(--card-bg)",
+    color:"var(--text)"
   },
   "&:last-child td, &:last-child th": {
     border: 0,
   },
   "&:hover": {
-    backgroundColor: "#1f2a40",
-    color: "white",
+    backgroundColor: "var(--card-bg)",
+    color: "var(--text)",
   },
 }));
 
@@ -155,21 +155,21 @@ const UserAdmin = ({ columns }) => {
           backgroundColor: "rgba(99, 102, 241, 0.05)",
           padding: "16px 20px",
           borderRadius: "8px",
-          border: "1px solid #2a2f42",
+          border: "1px solid var(--border)",
         }}>
           <div>
             <p style={{
               margin: 0,
               fontSize: "16px",
               fontWeight: "600",
-              color: "white",
+              color: "var(--text)",
             }}>
               All Users ({tableData.length})
             </p>
             <p style={{
               margin: "4px 0 0 0",
               fontSize: "12px",
-              color: "#a1a5b7",
+              color: "var(--muted)",
             }}>
               Manage user accounts and permissions
             </p>
@@ -220,13 +220,13 @@ const UserAdmin = ({ columns }) => {
         />
       )}
 
-      <TableContainer
+                <TableContainer
         component={Paper}
         sx={{ 
           borderRadius: "12px",
           backgroundColor: "transparent",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-          border: "1px solid #2a2f42",
+          border: "1px solid var(--border)",
           overflow: "hidden"
         }}
         className="table-container"
@@ -255,8 +255,8 @@ const UserAdmin = ({ columns }) => {
           <TableBody>
             {tableData.length === 0 ? (
               <StyledTableRow>
-                <StyledTableCell colSpan={5} align="center" sx={{ padding: "40px !important" }}>
-                  <div style={{ color: "#7a7e99", textAlign: "center" }}>
+                  <StyledTableCell colSpan={5} align="center" sx={{ padding: "40px !important" }}>
+                  <div style={{ color: "var(--muted)", textAlign: "center" }}>
                     <p style={{ fontSize: "16px", fontWeight: "500" }}> No users found</p>
                     <p style={{ fontSize: "12px", margin: 0 }}>Click "Add User" to create a new user</p>
                   </div>
@@ -273,7 +273,7 @@ const UserAdmin = ({ columns }) => {
                         <StyledTableCell key={column.accessor} align="left">
                           <span style={{
                             fontWeight: column.accessor === "username" ? "600" : "400",
-                            color: column.accessor === "username" ? "#a78bfa" : "#e0e0e0"
+                            color: column.accessor === "username" ? "#a78bfa" : "var(--text)"
                           }}>
                             {column.accessor === "cameras"
                               ? isAdmin
@@ -360,21 +360,21 @@ const UserAdmin = ({ columns }) => {
           </TableBody>
         </Table>
         {tableData.length > 0 && (
-          <TablePagination
+                <TablePagination
             rowsPerPageOptions={[5, 10, 15, 20, 25]}
             component="div"
             sx={{
-              backgroundColor: "#1f2a40",
-              borderTop: "1px solid #2a2f42",
+              backgroundColor: "var(--card-bg)",
+              borderTop: "1px solid var(--border)",
               "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-                color: "#e0e0e0",
+                color: "var(--text)",
               },
               "& .MuiIconButton-root": {
                 color: "#a78bfa",
               },
             }}
             count={tableData.length}
-            style={{color:'white'}}
+            style={{color:'var(--text)'}}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={(event, newPage) => setPage(newPage)}

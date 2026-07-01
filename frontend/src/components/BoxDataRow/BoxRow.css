@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   padding: 16px;
-  background-color: #1f2a40 !important;
+  background-color: var(--card-bg) !important;
   border-radius: 0px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -35,7 +35,7 @@
 
 .stat_2 {
   font-size: 24px;
-  color: white !important;
+  color: var(--text) !important;
   font-weight: 500;
   padding-bottom: 7px;
 }

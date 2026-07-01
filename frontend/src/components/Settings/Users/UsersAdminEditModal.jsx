@@ -30,11 +30,32 @@ const style = {
   width: "90%",
   maxWidth: 500,
   maxHeight: "90vh",
-  bgcolor: "#1f2a40",
+  bgcolor: "var(--card-bg)",
   borderRadius: 0,
   boxShadow: 24,
   p: 4,
   overflowY: "auto",
+};
+
+const sharedFieldStyles = {
+  "& input": {
+    color: "var(--text)",
+  },
+  "& .MuiInputLabel-root": {
+    color: "var(--text)",
+  },
+  "& .MuiInputLabel-root.Mui-focused": {
+    color: "var(--accent)",
+  },
+  "& .MuiOutlinedInput-root fieldset": {
+    borderColor: "var(--border)",
+  },
+  "& .MuiOutlinedInput-root:hover fieldset": {
+    borderColor: "var(--accent)",
+  },
+  "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+    borderColor: "var(--accent)",
+  },
 };
 
 export default function UsersAdminEditModal({
@@ -148,10 +169,10 @@ export default function UsersAdminEditModal({
   return (
     <Modal open={showEditSettingsModal} onClose={() => setShowEditSettingsModal(false)}>
       <Box sx={style}>
-        <IconButton onClick={() => setShowEditSettingsModal(false)} sx={{ color: "white", position: "absolute", top: 0, right: 0 }}>
+        <IconButton onClick={() => setShowEditSettingsModal(false)} sx={{ color: "var(--text)", position: "absolute", top: 0, right: 0 }}>
           <CloseIcon />
         </IconButton>
-        <Typography style={{ color: "white" }} variant="h6">Edit User</Typography>
+        <Typography style={{ color: "var(--text)" }} variant="h6">Edit User</Typography>
 
         <div style={{ display: "flex", marginBottom: "10px", columnGap: 6 }}>
           <Button onClick={() => setActiveTab("details")} variant={activeTab === "details" ? "contained" : "outlined"}>
@@ -164,134 +185,20 @@ export default function UsersAdminEditModal({
 
         {activeTab === "details" && (
           <>
-            <TextField sx={{
-              "& input": {
-                color: "white",
-
-              },
-              "& .MuiInputLabel-root": {
-                color: "white",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root fieldset": {
-                borderColor: "white",
-              },
-              "& .MuiOutlinedInput-root:hover fieldset": {
-                borderColor: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                borderColor: "#1565c0;",
-              },
-            }} label="Username" fullWidth margin="normal" value={fieldValues.username}
+            <TextField sx={sharedFieldStyles} label="Username" fullWidth margin="normal" value={fieldValues.username}
               onChange={(e) => setFieldValues({ ...fieldValues, username: e.target.value })} />
-            <TextField sx={{
-              "& input": {
-                color: "white",
-
-              },
-              "& .MuiInputLabel-root": {
-                color: "white",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root fieldset": {
-                borderColor: "white",
-              },
-              "& .MuiOutlinedInput-root:hover fieldset": {
-                borderColor: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                borderColor: "#1565c0;",
-              },
-            }} label="Email" fullWidth margin="normal" value={fieldValues.email}
+            <TextField sx={sharedFieldStyles} label="Email" fullWidth margin="normal" value={fieldValues.email}
               onChange={(e) => setFieldValues({ ...fieldValues, email: e.target.value })} />
-            <TextField sx={{
-              "& input": {
-                color: "white",
-
-              },
-              "& .MuiInputLabel-root": {
-                color: "white",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root fieldset": {
-                borderColor: "white",
-              },
-              "& .MuiOutlinedInput-root:hover fieldset": {
-                borderColor: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                borderColor: "#1565c0;",
-              },
-            }} label="Password" fullWidth margin="normal" type="password" placeholder="Leave empty to keep unchanged"
+            <TextField sx={sharedFieldStyles} label="Password" fullWidth margin="normal" type="password" placeholder="Leave empty to keep unchanged"
               onChange={(e) => setFieldValues({ ...fieldValues, password: e.target.value })} />
-            <TextField sx={{
-              "& input": {
-                color: "white",
-
-              },
-              "& .MuiInputLabel-root": {
-                color: "white",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root fieldset": {
-                borderColor: "white",
-              },
-              "& .MuiOutlinedInput-root:hover fieldset": {
-                borderColor: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                borderColor: "#1565c0;",
-              },
-            }} label="IP Address" fullWidth margin="normal" value={fieldValues.ip_address}
+            <TextField sx={sharedFieldStyles} label="IP Address" fullWidth margin="normal" value={fieldValues.ip_address}
               onChange={(e) => setFieldValues({ ...fieldValues, ip_address: e.target.value })} />
-            <FormControl sx={{
-              "& input": {
-                color: "white",
-
-              },
-              "& .MuiInputLabel-root": {
-                color: "white",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root fieldset": {
-                borderColor: "white",
-              },
-              "& .MuiOutlinedInput-root:hover fieldset": {
-                borderColor: "#1565c0",
-              },
-              "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                borderColor: "#1565c0;",
-              },
-            }} fullWidth margin="normal">
+            <FormControl sx={sharedFieldStyles} fullWidth margin="normal">
               <InputLabel>Superuser</InputLabel>
               <Select sx={{
+                ...sharedFieldStyles,
                 "& .MuiSelect-select": {
-                  color: "white",
-                },
-                "& .MuiInputLabel-root": {
-                  color: "white",
-                },
-                "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#1565c0",
-                },
-                "& .MuiOutlinedInput-root fieldset": {
-                  borderColor: "white",
-                },
-                "& .MuiOutlinedInput-root:hover fieldset": {
-                  borderColor: "#1565c0",
-                },
-                "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                  borderColor: "#1565c0;",
+                  color: "var(--text)",
                 },
               }} value={fieldValues.is_admin} onChange={(e) => setFieldValues({ ...fieldValues, is_admin: e.target.value })}>
                 <MenuItem value="Yes">Yes</MenuItem>
@@ -304,9 +211,9 @@ export default function UsersAdminEditModal({
         {activeTab === "cameras" && (
           <List>
             {cameras.map((camera) => (
-              <ListItem sx={{color:"white"}} key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
+              <ListItem sx={{ color: "var(--text)" }} key={camera.id} button onClick={() => handleCameraSelect(camera.id)}>
                 <ListItemIcon>
-                  <Checkbox sx={{color:"white"}} checked={selectedCameras.includes(camera.id)} />
+                  <Checkbox sx={{ color: "var(--text)" }} checked={selectedCameras.includes(camera.id)} />
                 </ListItemIcon>
                 <ListItemText primary={`${camera.location}`} />
               </ListItem>

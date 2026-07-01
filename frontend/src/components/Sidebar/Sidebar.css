@@ -6,18 +6,14 @@
   font-family: "Poppins", sans-serif;
 }
 :root {
-  /* ===== Colors ===== */
-  --body-color: #141b2d;
-  --sidebar-color: #1f2a40;
-  /* --primary-color: #367f2b; */
-  /* --primary-color: #9f9fed; */
+  /* Reuse global theme variables */
+  --body-color: var(--bg);
+  --sidebar-color: var(--card-bg);
   --primary-color: rgba(94, 55, 255, 0.85);
   --primary-color-light: #f6f5ff;
   --toggle-color: #ddd;
-  --text-color: #ffffff;
-  /* ====== Transition ====== */
+  --text-color: var(--text);
   --tran-03: all 0.2s ease;
-  --tran-03: all 0.3s ease;
   --tran-04: all 0.3s ease;
   --tran-05: all 0.3s ease;
 }
@@ -118,7 +114,7 @@ header .image-text .profession {
   height: 25px;
   width: 25px;
   background-color: var(--primary-color);
-  color: #1f2a40;
+  color: var(--text);
   border-radius: 0px;
   display: flex;
   align-items: center;
@@ -165,11 +161,11 @@ header .image-text .profession {
   transition: var(--tran-03);
 }
 .sidebar li a:hover {
-  background-color: var(--body-color);
+  background-color: var(--bg) !important;
 }
 .sidebar li a:hover .icon,
 .sidebar li a:hover .text {
-  color: white;
+  color: var(--text) !important;
 }
 
 .sidebar .menu-bar {

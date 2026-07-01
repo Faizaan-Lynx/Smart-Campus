@@ -22,8 +22,8 @@
 .grid-cell {
   flex: 1;
   position: relative;
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -34,20 +34,20 @@
 }
 
 .grid-cell:hover {
-  background-color: #f8f9fa;
-  border-color: #7272fa;
+  background-color: var(--card-bg);
+  border-color: var(--accent);
 }
 
 .grid-cell.active {
-  border-color: #7272fa;
-  background-color: #f0f0ff;
+  border-color: var(--accent);
+  background-color: var(--card-bg);
   box-shadow: 0 0 10px rgba(114, 114, 250, 0.3);
 }
 
 .grid-cell.empty {
-  background-color: #f8f9fa;
+  background-color: var(--bg);
   cursor: default;
-  border-color: #e9ecef;
+  border-color: var(--border);
 }
 
 .camera-label {
