@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { styled } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -11,7 +11,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
-import { Select, MenuItem, FormControl, Chip, Tooltip } from "@mui/material";
+import { Chip } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -19,9 +19,15 @@ import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import ImageIcon from "@mui/icons-material/Image";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import VideocamIcon from "@mui/icons-material/Videocam";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import SpeedIcon from "@mui/icons-material/Speed";
+import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import axios from "axios";
 import { toast } from "react-toastify";
 import BACKEND_URL from "../../config.js";
+import "./VehicleTable.css";
 
 // ── Styled cells ──────────────────────────────────────────────────────────────
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -75,6 +81,12 @@ function PlateImageModal({ licenseId, onClose }) {
           }
         );
         if (cancelled) return;
+
+        if (response.data.size === 0) {
+          setImgError(true);
+          return;
+        }
+
         objectUrl = URL.createObjectURL(response.data);
         setImgSrc(objectUrl);
       } catch (err) {
@@ -116,6 +128,7 @@ function PlateImageModal({ licenseId, onClose }) {
             src={imgSrc}
             alt={`Plate #${licenseId}`}
             style={{ maxWidth: "80vw", maxHeight: "70vh", borderRadius: 8 }}
+            onError={() => setImgError(true)}
           />
         ) : (
           <div style={{ padding: "60px 100px", textAlign: "center" }}>
@@ -124,21 +137,35 @@ function PlateImageModal({ licenseId, onClose }) {
         )}
         <p style={{ color: "var(--muted)", textAlign: "center", marginTop: 10, fontSize: 12 }}>
           Detection #{licenseId} · Click outside to close
-
         </p>
       </div>
     </div>
   );
 }
 
-// ── Bbox parser ───────────────────────────────────────────────────────────────
-function parseBbox(raw) {
-  try {
-    if (!raw) return null;
-    const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (Array.isArray(arr) && arr.length === 4) return `[${arr.join(", ")}]`;
-  } catch (_) {}
-  return null;
+// ── Confirm delete modal ────────────────────────────────────────────────────────
+function ConfirmDeleteModal({ onCancel, onConfirm, loading }) {
+  return (
+    <div className="vt__modal-backdrop" onClick={onCancel}>
+      <div className="vt__modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="vt__modal-icon">
+          <DeleteOutlineIcon sx={{ fontSize: 26 }} />
+        </div>
+        <h4 className="vt__modal-title">Delete this record?</h4>
+        <p className="vt__modal-body">
+          This will permanently remove the detection and its captured plate image. This can't be undone.
+        </p>
+        <div className="vt__modal-actions">
+          <button className="vt__modal-btn vt__modal-btn--ghost" onClick={onCancel} disabled={loading}>
+            Cancel
+          </button>
+          <button className="vt__modal-btn vt__modal-btn--danger" onClick={onConfirm} disabled={loading}>
+            {loading ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Confidence badge ──────────────────────────────────────────────────────────
@@ -158,16 +185,34 @@ function ConfidenceBadge({ value }) {
   );
 }
 
+// ── Stat card ─────────────────────────────────────────────────────────────────
+function StatCard({ icon, label, value, tint }) {
+  return (
+    <div className="vt__stat-card">
+      <div className="vt__stat-icon" style={{ color: tint, backgroundColor: `${tint}22`, border: `1px solid ${tint}40` }}>
+        {icon}
+      </div>
+      <div>
+        <div className="vt__stat-label">{label}</div>
+        <div className="vt__stat-value">{value}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 // selectedCameraId: when passed from Gate page, filters records to that camera
-export default function VehicleTable({ selectedCameraId = null }) {
+// cameras: the actual list of gate cameras (from Gate.jsx) used for the "Cams Online"
+//          stat — falls back to counting distinct cameras seen in detection records
+export default function VehicleTable({ selectedCameraId = null, cameras = null }) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("license_number");
   const [imageModal, setImageModal] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   // ── Fetch records ───────────────────────────────────────────────────────────
   const fetchLicensePlates = useCallback(async () => {
@@ -188,6 +233,7 @@ export default function VehicleTable({ selectedCameraId = null }) {
 
       const records = (response.data || []).map((r) => ({
         ...r,
+        rawTimestamp: r.timestamp,
         timestamp: r.timestamp ? new Date(r.timestamp).toLocaleString() : "—",
       }));
       setData(records);
@@ -214,40 +260,94 @@ export default function VehicleTable({ selectedCameraId = null }) {
   // Reset page when camera filter changes
   useEffect(() => { setPage(0); }, [selectedCameraId]);
 
+  // ── Delete a record ─────────────────────────────────────────────────────────
+  const confirmDelete = async () => {
+    const id = confirmDeleteId;
+    console.log("[delete] confirm clicked, deleting id =", id);
+    setConfirmDeleteId(null);
+    setDeletingId(id);
+    const token = localStorage.getItem("token");
+    const url = `http://${BACKEND_URL}/license-plates/${id}`;
+    console.log("[delete] sending DELETE to", url);
+    try {
+      const res = await axios.delete(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("[delete] success", res.status, res.data);
+      setData((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Record deleted.");
+    } catch (error) {
+      console.error("[delete] failed:", error.response?.status, error.response?.data || error.message);
+      const msg = error.response?.data?.detail || error.response?.data?.message;
+      toast.error(msg ? `Delete failed: ${msg}` : `Delete failed (${error.response?.status || "network error"}).`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const detectionsToday = data.filter(
+      (r) => r.rawTimestamp && new Date(r.rawTimestamp).toDateString() === todayStr
+    ).length;
+
+    const activeCameras = cameras ? cameras.length : new Set(data.map((r) => r.camera_id)).size;
+
+    const latest = data.reduce((acc, r) => {
+      if (!r.rawTimestamp) return acc;
+      if (!acc || new Date(r.rawTimestamp) > new Date(acc.rawTimestamp)) return r;
+      return acc;
+    }, null);
+
+    const confidences = data.map((r) => r.confidence).filter((c) => c != null);
+    const avgConfidence = confidences.length
+      ? Math.round((confidences.reduce((a, b) => a + b, 0) / confidences.length) * 100)
+      : null;
+
+    return {
+      activeCameras,
+      detectionsToday,
+      latestPlate: latest?.license_number || "—",
+      avgConfidence: avgConfidence != null ? `${avgConfidence}%` : "—",
+      total: data.length,
+    };
+  }, [data, cameras]);
+
   // ── Search filter ───────────────────────────────────────────────────────────
   const filteredData = data.filter((row) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    if (searchField === "license_number") return (row.license_number || "").toLowerCase().includes(term);
-    if (searchField === "timestamp")      return (row.timestamp || "").toLowerCase().includes(term);
-    if (searchField === "camera_id")      return String(row.camera_id).includes(term);
-    return false;
+    return (
+      (row.license_number || "").toLowerCase().includes(term) ||
+      (row.timestamp || "").toLowerCase().includes(term) ||
+      (row.camera_location || "").toLowerCase().includes(term) ||
+      String(row.camera_id ?? "").includes(term)
+    );
   });
-
-  const getPlaceholder = () => {
-    if (searchField === "license_number") return "Search by License Plate (e.g., ABC-1234)…";
-    if (searchField === "timestamp")      return "Search by Timestamp…";
-    if (searchField === "camera_id")      return "Search by Camera ID…";
-    return "Search…";
-  };
 
   return (
     <div className="foottable__div__main">
+
+      {/* ── Stat cards ────────────────────────────────────────────────────── */}
+      <div className="vt__stats-row">
+        <StatCard icon={<VideocamIcon fontSize="small" />} label="Cams Online" value={stats.activeCameras} tint="#22c55e" />
+        <StatCard icon={<TrendingUpIcon fontSize="small" />} label="Detections Today" value={stats.detectionsToday} tint="#6366f1" />
+        <StatCard icon={<DirectionsCarIcon fontSize="small" />} label="Latest Plate" value={stats.latestPlate} tint="#a78bfa" />
+        <StatCard icon={<SpeedIcon fontSize="small" />} label="Avg Confidence" value={stats.avgConfidence} tint="#f59e0b" />
+        <StatCard icon={<FormatListNumberedIcon fontSize="small" />} label="Total Detections" value={stats.total} tint="#ef4444" />
+      </div>
+
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 25 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <h3 style={{ margin: 0, marginLeft: 2, color: "var(--text)", fontSize: 20, fontWeight: 600 }}>
-            Vehicle Records
-            {selectedCameraId && (
-              <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 400, marginLeft: 8 }}>
-                — Camera {selectedCameraId}
-              </span>
-            )}
-          </h3>
-          <span style={{ color: "var(--muted)", fontSize: 12 }}>
-            {filteredData.length} record{filteredData.length !== 1 ? "s" : ""}
-          </span>
-        </div>
+        <h3 style={{ margin: "0 0 16px 2px", color: "var(--text)", fontSize: 20, fontWeight: 600 }}>
+          Vehicle Records
+          {selectedCameraId && (
+            <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 400, marginLeft: 8 }}>
+              — Camera {selectedCameraId}
+            </span>
+          )}
+        </h3>
 
         {/* Search bar */}
         <Paper elevation={3} sx={{
@@ -255,7 +355,7 @@ export default function VehicleTable({ selectedCameraId = null }) {
           border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "12px",
         }}>
           <TextField
-            fullWidth variant="outlined" placeholder={getPlaceholder()}
+            fullWidth variant="outlined" placeholder="Search by license plate, camera, or timestamp…"
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
               startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: "var(--accent)" }} /></InputAdornment>,
@@ -270,14 +370,6 @@ export default function VehicleTable({ selectedCameraId = null }) {
               "& .MuiInputBase-input::placeholder": { color: "var(--muted)", opacity: 0.8 },
             }}
           />
-          <FormControl variant="standard" sx={{ minWidth: 150 }}>
-            <Select value={searchField} onChange={(e) => setSearchField(e.target.value)} disableUnderline
-              sx={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>
-              <MenuItem value="license_number">License Plate</MenuItem>
-              <MenuItem value="timestamp">Timestamp</MenuItem>
-              <MenuItem value="camera_id">Camera ID</MenuItem>
-            </Select>
-          </FormControl>
           <IconButton
             aria-label="refresh" onClick={fetchLicensePlates} disabled={loading}
             sx={{
@@ -304,22 +396,21 @@ export default function VehicleTable({ selectedCameraId = null }) {
               <StyledTableCell><CameraAltIcon fontSize="small" sx={{ mr: 0.5 }} />Camera</StyledTableCell>
               <StyledTableCell><DirectionsCarIcon fontSize="small" sx={{ mr: 0.5 }} />License Plate</StyledTableCell>
               <StyledTableCell>Confidence</StyledTableCell>
-              <StyledTableCell>Bounding Box</StyledTableCell>
-              <StyledTableCell>Image</StyledTableCell>
+              <StyledTableCell>Action</StyledTableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
             {loading && data.length === 0 ? (
               <StyledTableRow>
-                <StyledTableCell colSpan={6} align="center" sx={{ padding: "40px !important" }}>
+                <StyledTableCell colSpan={5} align="center" sx={{ padding: "40px !important" }}>
                   <CircularProgress size={32} sx={{ color: "var(--accent)" }} />
                   <p style={{ color: "var(--muted)", marginTop: 12 }}>Loading records…</p>
                 </StyledTableCell>
               </StyledTableRow>
             ) : filteredData.length === 0 ? (
               <StyledTableRow>
-                <StyledTableCell colSpan={6} align="center" sx={{ padding: "40px !important" }}>
+                <StyledTableCell colSpan={5} align="center" sx={{ padding: "40px !important" }}>
                   <div style={{ color: "var(--muted)", textAlign: "center" }}>
                     <p style={{ fontSize: 16, fontWeight: 500 }}>No vehicle records found</p>
                     <p style={{ fontSize: 12, margin: 0 }}>
@@ -337,8 +428,9 @@ export default function VehicleTable({ selectedCameraId = null }) {
                   <StyledTableRow key={row.id || index}>
                     <StyledTableCell>{row.timestamp}</StyledTableCell>
                     <StyledTableCell>
-                      <Chip label={`Cam ${row.camera_id}`} size="small"
-                        sx={{ backgroundColor: "var(--accent)22", color: "var(--accent)", border: "1px solid var(--accent)", fontSize: 11 }} />
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--text)", fontSize: 13, fontWeight: 600 }}>
+                        {row.camera_location || `Cam ${row.camera_id}`}
+                      </span>
                     </StyledTableCell>
                     <StyledTableCell>
                       <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 14, letterSpacing: 1 }}>
@@ -349,30 +441,42 @@ export default function VehicleTable({ selectedCameraId = null }) {
                       <ConfidenceBadge value={row.confidence} />
                     </StyledTableCell>
                     <StyledTableCell>
-                      <Tooltip title={parseBbox(row.bounding_box) || "No bbox data"}>
-                        <span style={{ color: "var(--muted)", fontSize: 11, fontFamily: "monospace" }}>
-                          {parseBbox(row.bounding_box) || "—"}
-                        </span>
-                      </Tooltip>
-                    </StyledTableCell>
-                    <StyledTableCell>
-                      {row.file_path ? (
-                        <button
-                          onClick={() => setImageModal(row.id)}
-                          style={{
-                            padding: "7px 14px", backgroundColor: "var(--accent)", color: "#fff",
-                            border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12,
-                            fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5,
-                            transition: "all 0.2s ease",
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {row.file_path ? (
+                          <button
+                            onClick={() => setImageModal(row.id)}
+                            style={{
+                              padding: "7px 14px", backgroundColor: "var(--accent)", color: "#fff",
+                              border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12,
+                              fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5,
+                              transition: "background-color 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(16,185,129,0.9)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--accent)"; }}
+                          >
+                            <ImageIcon fontSize="small" /> View
+                          </button>
+                        ) : (
+                          <span style={{ color: "var(--muted)", fontSize: 12 }}>No image</span>
+                        )}
+                        <IconButton
+                          aria-label="delete"
+                          size="small"
+                          onClick={() => {
+                            console.log("[delete] trash icon clicked, row id =", row.id);
+                            setConfirmDeleteId(row.id);
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(16,185,129,0.9)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--accent)"; }}
+                          disabled={deletingId === row.id}
+                          sx={{
+                            color: "#ef4444", border: "1px solid #ef444460", borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#ef444422" },
+                          }}
                         >
-                          <ImageIcon fontSize="small" /> View
-                        </button>
-                      ) : (
-                        <span style={{ color: "var(--muted)", fontSize: 12 }}>No image</span>
-                      )}
+                          {deletingId === row.id
+                            ? <CircularProgress size={14} sx={{ color: "#ef4444" }} />
+                            : <DeleteOutlineIcon fontSize="small" />}
+                        </IconButton>
+                      </div>
                     </StyledTableCell>
                   </StyledTableRow>
                 ))
@@ -390,9 +494,29 @@ export default function VehicleTable({ selectedCameraId = null }) {
             onPageChange={(_, newPage) => setPage(newPage)}
             onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
             sx={{
-              backgroundColor: "var(--card-bg)", borderTop: "1px solid var(--border)",
-              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { color: "var(--text)" },
-              "& .MuiIconButton-root": { color: "var(--accent)" },
+              backgroundColor: "var(--card-bg)",
+              borderTop: "1px solid var(--border)",
+              color: "var(--text)",
+              "& .MuiTablePagination-toolbar": { paddingLeft: "20px", paddingRight: "12px", minHeight: "56px" },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+                color: "var(--muted)", fontSize: 12.5, fontWeight: 500,
+              },
+              "& .MuiTablePagination-select": {
+                color: "var(--text)", fontWeight: 700, fontSize: 13,
+                backgroundColor: "rgba(255,255,255,0.04)", borderRadius: "8px",
+                padding: "4px 24px 4px 10px !important",
+              },
+              "& .MuiTablePagination-selectIcon": { color: "var(--accent)" },
+              "& .MuiTablePagination-actions": { marginLeft: "16px", display: "flex", gap: "4px" },
+              "& .MuiIconButton-root": {
+                color: "var(--text)", border: "1px solid var(--border)", borderRadius: "8px",
+                margin: "0 2px", transition: "all 0.15s ease",
+              },
+              "& .MuiIconButton-root:hover:not(.Mui-disabled)": {
+                color: "var(--accent)", borderColor: "var(--accent)",
+                backgroundColor: "rgba(34,197,94,0.08)",
+              },
+              "& .MuiIconButton-root.Mui-disabled": { opacity: 0.35 },
             }}
           />
         )}
@@ -400,6 +524,14 @@ export default function VehicleTable({ selectedCameraId = null }) {
 
       {imageModal !== null && (
         <PlateImageModal licenseId={imageModal} onClose={() => setImageModal(null)} />
+      )}
+
+      {confirmDeleteId !== null && (
+        <ConfirmDeleteModal
+          onCancel={() => setConfirmDeleteId(null)}
+          onConfirm={confirmDelete}
+          loading={deletingId === confirmDeleteId}
+        />
       )}
     </div>
   );

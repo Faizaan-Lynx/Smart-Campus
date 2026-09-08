@@ -66,21 +66,11 @@ os.makedirs(PLATE_IMAGE_DIR, exist_ok=True)
 # ──────────────────────────────────────────────────────────────────────────────
 def apply_lp_ocr_rules(license_plate: str, class_name: str = "car") -> tuple[bool, str]:
     """
-    Applies regional cleanup rules to raw OCR text.
-    Returns (is_valid, cleaned_text).
+    Validates raw OCR text and returns the cleaned full license plate.
     """
-    text = license_plate.replace(' ', '').upper()
-    banned_keywords = [
-        'ICTISLAMABAD', 'ICT-', 'PUNJAB', 'SINDH',
-        'KPK', 'BALOCHISTAN', 'AJK', 'GILGIT', 'ISLAMABAD',
-    ]
-    for keyword in banned_keywords:
-        if text.startswith(keyword):
-            text = text[len(keyword):]
-            break
-    text = text.lstrip('-')
+    text = re.sub(r"[^A-Z0-9]", "", license_plate.replace(" ", "").upper())
 
-    pattern = r'^[A-Z0-9\-]{5,10}$'
+    pattern = r'^[A-Z0-9]{4,10}$'
     if re.match(pattern, text):
         logging.info(f"Plate matched pattern for class '{class_name}': {text}")
         return True, text
@@ -90,22 +80,15 @@ def apply_lp_ocr_rules(license_plate: str, class_name: str = "car") -> tuple[boo
 
 def normalize_plate(plate: str) -> str:
     """
-    Normalizes a Pakistani-format plate down to just its numeric portion.
+    Normalize a Pakistani plate into a compact alphanumeric string.
 
-    Pakistani plates are typically <letters>-<digits>, e.g. 'L-2893',
-    'LEA-2893', 'ABC-1234'. Per requirement, only the numeric part is
-    stored in the database (e.g. 'L-2893' -> '2893').
-
-    Falls back to the cleaned alphanumeric string if no digits are found,
-    so unusual/non-standard plates still get stored rather than dropped.
+    Example:
+    - 'ABL-1234' -> 'ABL1234'
+    - 'L-2893' -> 'L2893'
+    - 'ISB 5678' -> 'ISB5678'
     """
-    cleaned = plate.replace(" ", "").upper()
-    digits_only = re.sub(r"[^0-9]", "", cleaned)
-    if digits_only:
-        return digits_only
-    # No digits at all — fall back to stripped alphanumeric (shouldn't
-    # normally happen for a real plate, but avoids silently losing data).
-    return re.sub(r"[^A-Z0-9]", "", cleaned)
+    cleaned = re.sub(r"[^A-Z0-9]", "", plate.replace(" ", "").upper())
+    return cleaned
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -331,7 +314,8 @@ def publish_frame(camera_id: int, annotated_frame: np.ndarray):
 # ──────────────────────────────────────────────────────────────────────────────
 # Database persistence  (duplicate-guard + image save)
 # ──────────────────────────────────────────────────────────────────────────────
-LP_DEDUP_WINDOW_MINUTES = 5  # same window as the Redis TTL, kept in sync
+LP_DEDUP_WINDOW_SECONDS = 30  # Keep a short dedup window so repeated detections are still logged
+LP_DEDUP_WINDOW_MINUTES = LP_DEDUP_WINDOW_SECONDS / 60
 
 
 def handle_license_plate_event(
@@ -357,7 +341,7 @@ def handle_license_plate_event(
     from datetime import timedelta
 
     current_time = datetime.now()
-    cutoff = current_time - timedelta(minutes=LP_DEDUP_WINDOW_MINUTES)
+    cutoff = current_time - timedelta(seconds=LP_DEDUP_WINDOW_SECONDS)
 
     db: Session = SessionLocal()
     try:
@@ -627,10 +611,14 @@ def process_feed(camera_id: int):
 
             # ── Publish annotated frame to WebSocket consumers ───────────────
             if redis_client.get(f"camera_{camera_id}_websocket_active") == b"True":
-                publish_frame(camera_id, annotated_frame)
+                publish_frame(camera_id, cv2.resize(
+                    annotated_frame,
+                    eval(camera.resize_dims) if camera.resize_dims else eval(settings.FEED_DIMS),
+                    interpolation=cv2.INTER_AREA,
+                ))
 
             # ── Persist detection (Redis TTL deduplication) ──────────────────
-            if plate_detected and best_plate and best_confidence >= 0.85:
+            if plate_detected and best_plate and best_confidence >= 0.95:
                 normalized = normalize_plate(best_plate)
                 redis_key = f"camera_{camera_id}_lp_{normalized}"
 
@@ -643,8 +631,7 @@ def process_feed(camera_id: int):
                         frame=annotated_frame,
                         faces_detected=len(faces),
                     )
-                    # 5-minute dedup window
-                    redis_client.set(redis_key, "1", ex=300)
+                    redis_client.set(redis_key, "1", ex=LP_DEDUP_WINDOW_SECONDS)
                 else:
                     logging.debug(
                         f"Plate '{normalized}' already recorded recently for camera {camera_id}."

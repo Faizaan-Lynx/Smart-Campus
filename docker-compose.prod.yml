@@ -43,6 +43,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
+      - ./assets:/app/assets
       - ./alert_images:/app/alert_images
       - pip-cache:/root/.cache/pip
     depends_on:

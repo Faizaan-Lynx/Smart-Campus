@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import ReactDOM from "react-dom";
 import axios from "axios";
 import "./FootTable.css";
 import { FaEye, FaTrash, FaSearch } from "react-icons/fa";
@@ -7,32 +6,9 @@ import FeedPopup from "./FeedPopUp";
 import BACKEND_URL from '../../config.js';
 
 
-const FootTable = ({ alerts, setAlerts, cameras = [], searchPlaceholderId }) => {
+const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
   const [selectedFeed, setSelectedFeed] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  React.useEffect(() => {
-    if (searchPlaceholderId) {
-      const placeholder = document.getElementById(searchPlaceholderId);
-      if (placeholder) {
-        const searchBox = (
-          <div className="alert-card-search">
-            <input
-              type="text"
-              placeholder="Search camera or date"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button type="button" className="alert-card-search__button" aria-label="Search alerts">
-              <FaSearch />
-            </button>
-          </div>
-        );
-        const root = ReactDOM.createRoot(placeholder);
-        root.render(searchBox);
-      }
-    }
-  }, [searchTerm, searchPlaceholderId]);
 
   const handleFeedClick = async (alertId) => {
     console.log("Feed Clicked", alertId);
@@ -107,6 +83,18 @@ const FootTable = ({ alerts, setAlerts, cameras = [], searchPlaceholderId }) => 
 
   return (
     <div className="foottable__div__main">
+      <div className="alert-card-search">
+        <input
+          type="text"
+          placeholder="Search camera or date"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <button type="button" className="alert-card-search__button" aria-label="Search alerts">
+          <FaSearch />
+        </button>
+      </div>
+
       <div className="alert-card-list-container">
         {filteredAlerts.length === 0 ? (
           <div className="alert-card-empty">No alerts match your search.</div>

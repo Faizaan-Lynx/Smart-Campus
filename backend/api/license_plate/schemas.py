@@ -20,6 +20,7 @@ class LicensePlateResponse(LicensePlateBase):
     confidence: Optional[float] = None
     bounding_box: Optional[str] = None
     file_path: Optional[str] = None
+    camera_location: Optional[str] = None
 
     class Config:
         from_attributes = True

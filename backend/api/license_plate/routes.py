@@ -86,22 +86,23 @@ def create_license_plate_detection(
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
 
-    # Duplicate guard: reject if same plate + camera detected in last 5 minutes
+    # Duplicate guard: reject if same plate + camera detected in the recent short window
     from datetime import datetime, timedelta
-    five_min_ago = datetime.utcnow() - timedelta(minutes=5)
+    dedup_window_seconds = 30
+    recent_cutoff = datetime.utcnow() - timedelta(seconds=dedup_window_seconds)
     existing = (
         db.query(License)
         .filter(
             License.camera_id == data.camera_id,
             License.license_number == data.license_number,
-            License.timestamp >= five_min_ago,
+            License.timestamp >= recent_cutoff,
         )
         .first()
     )
     if existing:
         raise HTTPException(
             status_code=409,
-            detail=f"Duplicate: plate '{data.license_number}' already recorded within the last 5 minutes.",
+            detail=f"Duplicate: plate '{data.license_number}' already recorded within the last {dedup_window_seconds} seconds.",
         )
 
     new_license = License(**data.model_dump())
@@ -155,18 +156,32 @@ def get_license_image(
     current_user: UserResponseSchema = Depends(get_current_user),
 ):
     """Serve the saved plate-crop image for a detection record."""
+    import logging
+    logging.info(f"📸 Fetching image for license_id={license_id}")
+    
     record = db.query(License).filter(License.id == license_id).first()
     if not record:
+        logging.error(f"❌ License record not found: {license_id}")
         raise HTTPException(status_code=404, detail="License record not found")
 
     if not current_user.is_admin:
         user = db.query(Users).filter(Users.id == current_user.id).first()
-        if record.camera_id not in (user.cameras or []):
+        user_camera_ids = [camera.id for camera in (user.cameras or [])]
+        if record.camera_id not in user_camera_ids:
+            logging.error(f"❌ Access denied to camera {record.camera_id} for user {current_user.id}")
             raise HTTPException(status_code=403, detail="Access denied to this camera")
 
-    if not record.file_path or not os.path.isfile(record.file_path):
+    logging.info(f"📄 File path from DB: {record.file_path}")
+    
+    if not record.file_path:
+        logging.error(f"❌ No file_path stored for license_id={license_id}")
+        raise HTTPException(status_code=404, detail="Image file not found on disk")
+    
+    if not os.path.isfile(record.file_path):
+        logging.error(f"❌ File does not exist at: {record.file_path}")
         raise HTTPException(status_code=404, detail="Image file not found on disk")
 
+    logging.info(f"✅ Serving image from: {record.file_path}")
     return FileResponse(
         path=record.file_path,
         media_type="image/jpeg",

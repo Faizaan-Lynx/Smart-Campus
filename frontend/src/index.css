@@ -64,6 +64,10 @@ button {
   color: var(--muted) !important;
 }
 
+.live-status {
+  color: var(--accent) !important;
+}
+
 /* Broad selectors to ensure inherited text colors change with theme */
 body, #root, div, p, span, li, td, th, a, label, input, textarea, button {
   color: var(--text) !important;

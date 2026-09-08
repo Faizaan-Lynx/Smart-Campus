@@ -10,21 +10,15 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera, loading }) =>
   const [popupActive, setPopupActive] = useState(false);
   const [popupCameraId, setPopupCameraId] = useState(null);
   const [popupImageSrc, setPopupImageSrc] = useState(null);
-  const [layoutView, setLayoutView] = useState("grid");
+  const [layoutView, setLayoutView] = useState("horizontal");
   const popupWsRef = useRef(null);
   const wsConnectionsRef = useRef({});
 
-  // Load layout preference from localStorage
+  // Load layout preference from localStorage (set from Camera Management page)
   useEffect(() => {
-    const savedLayout = localStorage.getItem("cameraLayoutView") || "grid";
+    const savedLayout = localStorage.getItem("cameraLayoutView") || "horizontal";
     setLayoutView(savedLayout);
   }, []);
-
-  // Save layout preference to localStorage
-  const handleToggleLayout = (newLayout) => {
-    setLayoutView(newLayout);
-    localStorage.setItem("cameraLayoutView", newLayout);
-  };
 
   // WebSocket connections for camera feeds
   useEffect(() => {
@@ -121,25 +115,6 @@ const FootFallRow = ({ cameras, selectedCamera, setSelectedCamera, loading }) =>
   return (
     <div className="app__container__row">
       <div className="video__container__row">
-        <div className="layout-toggle-container">
-          <div className="toggle-btn-group">
-            <button
-              className={`toggle-btn ${layoutView === "grid" ? "active" : ""}`}
-              onClick={() => handleToggleLayout("grid")}
-              title="Switch to Grid View"
-            >
-              <span>⊞ Grid</span>
-            </button>
-            <button
-              className={`toggle-btn ${layoutView === "horizontal" ? "active" : ""}`}
-              onClick={() => handleToggleLayout("horizontal")}
-              title="Switch to Horizontal View"
-            >
-              <span>→ Horizontal</span>
-            </button>
-          </div>
-        </div>
-
         {loading ? (
           <div className="loader" />
         ) : layoutView === "grid" ? (

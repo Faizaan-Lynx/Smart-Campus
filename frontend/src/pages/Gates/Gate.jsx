@@ -6,10 +6,12 @@ import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { toast } from "react-toastify";
 import BACKEND_URL from "../../config.js";
-import { Chip, CircularProgress, Tooltip } from "@mui/material";
+import { CircularProgress, Tooltip } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
-import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import DirectionsCarFilledIcon from "@mui/icons-material/DirectionsCarFilled";
+import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import ListAltIcon from "@mui/icons-material/ListAlt";
 
 const Gate = () => {
   const [cameras, setCameras] = useState([]);
@@ -156,144 +158,94 @@ const Gate = () => {
     }
   };
 
+  const runningCount = cameras.filter((c) => workerStatus[c.id] === "running").length;
+
   return (
     <div className="gate__main">
       <div className="gate__content">
 
         {/* ── Page header ──────────────────────────────────────────────────── */}
-        <div className="gate__text__main" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-          <div className="dashboard__text">
-            <h1 className="gate__heading">Gate Vehicle Tracking</h1>
-            <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "-10px", marginLeft: "31px" }}>
-              Monitor and track vehicle entries with license plate recognition
-            </p>
+        <div className="gate__header">
+          <div className="gate__header-left">
+            {/* <span className="gate__heading-icon">
+              <DirectionsCarFilledIcon sx={{ fontSize: 22 }} />
+            </span> */}
+            <div className="dashboard__text">
+              <h1 className="gate__heading">Gate Vehicle Tracking</h1>
+              <p className="gate__subheading">
+                Monitor and track vehicle entries with license plate recognition
+              </p>
+            </div>
           </div>
 
           {!loading && cameras.length > 0 && (
-            <div style={{ display: "flex", gap: 10, marginRight: 10 }}>
-              <button
-                onClick={startAllWorkers}
-                disabled={allWorkersLoading}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  background: "var(--accent)", color: "var(--text)", border: "none",
-                  borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600,
-                  cursor: allWorkersLoading ? "default" : "pointer",
-                  opacity: allWorkersLoading ? 0.6 : 1,
-                  boxShadow: "0 4px 12px rgba(34,197,94,.3)",
-                }}
-              >
-                {allWorkersLoading
-                  ? <CircularProgress size={14} sx={{ color: "#fff" }} />
-                  : <PlayArrowIcon sx={{ fontSize: 16 }} />}
-                Start All Plate Cams
-              </button>
-              <button
-                onClick={stopAllWorkers}
-                disabled={allWorkersLoading}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  background: "transparent", color: "var(--danger, #ef4444)", border: "1px solid var(--danger, #ef4444)",
-                  borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600,
-                  cursor: allWorkersLoading ? "default" : "pointer",
-                  opacity: allWorkersLoading ? 0.6 : 1,
-                }}
-              >
-                <StopIcon sx={{ fontSize: 16 }} />
-                Stop All
-              </button>
+            <div className="gate__header-right">
+              {runningCount > 0 && (
+                <span className="gate__live-pill">
+                  <span className="gate__live-dot" />
+                  {runningCount} of {cameras.length} active
+                </span>
+              )}
+              <div className="gate__actions">
+                <Tooltip title="Start license plate detection on every gate camera">
+                  <button
+                    onClick={startAllWorkers}
+                    disabled={allWorkersLoading}
+                    className="gate__btn gate__btn--start"
+                  >
+                    {allWorkersLoading
+                      ? <CircularProgress size={14} sx={{ color: "inherit" }} />
+                      : <PlayArrowIcon sx={{ fontSize: 16 }} />}
+                    Start All
+                  </button>
+                </Tooltip>
+                <Tooltip title="Stop license plate detection on every gate camera">
+                  <button
+                    onClick={stopAllWorkers}
+                    disabled={allWorkersLoading}
+                    className="gate__btn gate__btn--stop"
+                  >
+                    {allWorkersLoading
+                      ? <CircularProgress size={14} sx={{ color: "inherit" }} />
+                      : <StopIcon sx={{ fontSize: 16 }} />}
+                    Stop All
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           )}
         </div>
 
-
-        {/* ── Camera status bar ────────────────────────────────────────────── */}
-        {/* {!loading && cameras.length > 0 && (
-          <div style={{
-            display: "flex", flexWrap: "wrap", gap: 10, marginLeft: 10, marginBottom: 10,
-          }}>
-            {cameras.map((camera) => {
-              const status = workerStatus[camera.id] || "stopped";
-              return (
-                <div
-                  key={camera.id}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    backgroundColor: "var(--card-bg)", border: "1px solid var(--border)",
-                    borderRadius: 10, padding: "8px 14px",
-                  }}
-                >
-                  <CameraAltIcon sx={{ color: "var(--accent)", fontSize: 16 }} />
-                  <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>
-                    Cam {camera.id}
-                  </span>
-                  {camera.location && (
-                    <span style={{ color: "var(--muted)", fontSize: 11 }}>({camera.location})</span>
-                  )}
-
-                  {/* Status chip */}
-                  {/* <Chip
-                    label={status === "running" ? "● Active" : status === "loading" ? "…" : "○ Idle"}
-                    size="small"
-                    sx={{
-                      fontSize: 10, fontWeight: 700,
-                      backgroundColor: status === "running" ? "#22c55e22" : status === "loading" ? "#f59e0b22" : "#374151",
-                      color: status === "running" ? "#22c55e" : status === "loading" ? "#f59e0b" : "#6b7280",
-                      border: `1px solid ${status === "running" ? "#22c55e" : status === "loading" ? "#f59e0b" : "#374151"}`,
-                    }}
-                  /> */}
-
-                  {/* Start / Stop buttons */}
-                  {/* {status === "loading" ? (
-                    <CircularProgress size={14} sx={{ color: "#f59e0b" }} />
-                  ) : status === "running" ? (
-                    <Tooltip title="Stop LP detection">
-                      <button
-                        onClick={() => stopWorker(camera.id)}
-                        style={{
-                          background: "#ef444422", border: "1px solid #ef4444",
-                          borderRadius: 6, color: "#ef4444", cursor: "pointer",
-                          padding: "2px 8px", fontSize: 11, fontWeight: 600,
-                          display: "flex", alignItems: "center", gap: 3,
-                        }}
-                      >
-                        <StopIcon sx={{ fontSize: 13 }} /> Stop
-                      </button>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Start LP detection">
-                      <button
-                        onClick={() => startWorker(camera.id)}
-                        style={{
-                          background: "#22c55e22", border: "1px solid #22c55e",
-                          borderRadius: 6, color: "#22c55e", cursor: "pointer",
-                          padding: "2px 8px", fontSize: 11, fontWeight: 600,
-                          display: "flex", alignItems: "center", gap: 3,
-                        }}
-                      >
-                        <PlayArrowIcon sx={{ fontSize: 13 }} /> Start
-                      </button>
-                    </Tooltip>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )} */} 
-
         {/* ── Live camera feeds ─────────────────────────────────────────────── */}
-        <div className="footfall__container" >
-          <FootFallRow
-            cameras={cameras}
-            selectedCamera={selectedCamera}
-            setSelectedCamera={setSelectedCamera}
-            loading={loading}
-          />
+        <div className="gate__section-label">
+          <span className="gate__section-label-bar" />
+          Live Feeds
+        </div>
+        <div className="footfall__container">
+          {!loading && cameras.length === 0 ? (
+            <div className="gate__empty-state">
+              <VideocamOffIcon sx={{ fontSize: 32, opacity: 0.5 }} />
+              <p>No gate cameras assigned yet.</p>
+              <span>Ask an administrator to assign a camera to this gate.</span>
+            </div>
+          ) : (
+            <FootFallRow
+              cameras={cameras}
+              selectedCamera={selectedCamera}
+              setSelectedCamera={setSelectedCamera}
+              loading={loading}
+            />
+          )}
         </div>
 
-        {/* ── Vehicle records table ─────────────────────────────────────────── */}
-        <div style={{ marginTop: "30px", animation: "slideInUp 0.5s ease-out 0.2s both" }}>
-          <VehicleTable selectedCameraId={selectedCamera} />
+        {/* ── Vehicle records table (all license plate cameras) ─────────────── */}
+        <div className="gate__section-label" style={{ marginTop: 34 }}>
+          <span className="gate__section-label-bar" />
+          <ListAltIcon sx={{ fontSize: 16, marginRight: "4px" }} />
+          Vehicle Records
+        </div>
+        <div className="gate__table-wrap">
+          <VehicleTable cameras={cameras} />
         </div>
 
       </div>

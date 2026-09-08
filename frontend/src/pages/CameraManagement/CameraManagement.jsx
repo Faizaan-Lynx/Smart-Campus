@@ -30,6 +30,21 @@ const CameraManagement = () => {
   const [drawnPoints, setDrawnPoints] = useState([]);
   const [workerLoadingId, setWorkerLoadingId] = useState(null); // per-camera LP worker toggle
 
+  // ── Live feed layout preference (Grid / Horizontal) ──────────────────────
+  // This drives how camera feeds render in FootFallRow on the Dashboard and
+  // Gate pages, via a shared localStorage key.
+  const [layoutView, setLayoutView] = useState("horizontal");
+
+  useEffect(() => {
+    const savedLayout = localStorage.getItem("cameraLayoutView") || "horizontal";
+    setLayoutView(savedLayout);
+  }, []);
+
+  const handleToggleLayout = (newLayout) => {
+    setLayoutView(newLayout);
+    localStorage.setItem("cameraLayoutView", newLayout);
+  };
+
   const urlRef = useRef(null);
   const locationRef = useRef(null);
   const thresholdRef = useRef(null);
@@ -309,6 +324,27 @@ const CameraManagement = () => {
             </Tooltip>
             <button className="btn-primary" onClick={openAddModal}>
               + Add Camera
+            </button>
+          </div>
+        </div>
+
+        {/* ── Live feed layout toggle (moved here from Dashboard / Gate) ──── */}
+        <div className="cam-control-panel">
+          <div className="cam-control-panel__title">Feed Layout</div>
+          <div className="cam-control-panel__actions">
+            <button
+              className={`toggle-btn ${layoutView === "grid" ? "active" : ""}`}
+              onClick={() => handleToggleLayout("grid")}
+              title="Switch live feeds to Grid View"
+            >
+              <span>⊞ Grid</span>
+            </button>
+            <button
+              className={`toggle-btn ${layoutView === "horizontal" ? "active" : ""}`}
+              onClick={() => handleToggleLayout("horizontal")}
+              title="Switch live feeds to Horizontal View"
+            >
+              <span>→ Horizontal</span>
             </button>
           </div>
         </div>

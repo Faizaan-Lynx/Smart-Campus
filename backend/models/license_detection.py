@@ -17,3 +17,7 @@ class License(Base):
 
     # Relationship with the Camera model
     camera = relationship("Camera", back_populates="license_detection")
+
+    @property
+    def camera_location(self) -> str:
+        return self.camera.location if self.camera is not None else None

@@ -21,9 +21,11 @@ const CameraCard = ({
       <div className="camera-card__header">
         <h3 className="camera-card__name">{camera.location || `Camera ${camera.id}`}</h3>
         {isLoading ? (
-          <span className="camera-card__offline">● Offline</span>
+          <span className="camera-card__offline" style={{ color: "red" }}>
+            ● Offline
+          </span>
         ) : (
-          <span className="camera-card__live">● Live</span>
+          <span className="camera-card__live live-status">● Live</span>
         )}
       </div>
 
