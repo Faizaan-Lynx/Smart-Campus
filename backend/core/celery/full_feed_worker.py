@@ -1,4 +1,13 @@
 import os
+
+# Import torch and bind inference threads BEFORE anything else touches torch.
+# If not set right away, torch starts its default thread pools (16 threads per worker);
+# multiplied across Celery's thread pool, this oversubscribes every core and pins
+# the CPU at 100% even when idle.
+import torch
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 import ast
 import cv2
 import time
@@ -15,7 +24,6 @@ from core.database import SessionLocal
 from api.alerts.schemas import AlertBase
 from api.alerts.routes import create_alert
 from shapely.geometry import Polygon, MultiPolygon
-import torch
 import threading
 
 
@@ -26,6 +34,19 @@ os.environ['OPENCV_LOG_LEVEL'] = 'DEBUG'
 os.environ['OPENCV_VIDEOIO_DEBUG'] = '1'
 
 os.environ['OPENCV_FFMPEG_LOGLEVEL'] = '8'
+
+# Load the YOLO model ONCE per process at module import, and place it on the GPU explicitly.
+# Once on the GPU, `model.predict(..., device=<device>)` must be told the device explicitly,
+# otherwise inference can silently fall back to the CPU (causing 100% CPU usage on every worker).
+MODEL_PATH = "./yolo-models/yolo26n.pt"
+_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+model = YOLO(MODEL_PATH)
+model.to(_DEVICE)
+logging.info(f"full_feed_worker: YOLO model loaded on device {_DEVICE}")
+
+# A single shared model is used by every `process_feed` loop in this process.
+# Ultralytics predict is not guaranteed thread-safe, so serialize inference calls.
+_model_lock = threading.Lock()
 
 
 ## ===== General Video Processing ===== ##
@@ -98,7 +119,19 @@ def process_feed(camera_id: int):
         # Initialize Redis intrusion flag
         redis_client = redis.from_url(settings.REDIS_URL)
         redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
-        
+
+        # Guard against duplicate processing loops for the same camera.
+        # With `--pool=threads` (high concurrency) plus the monitor/health restarts,
+        # the same `process_feed` can be dispatched multiple times, each spawning its
+        # own CPU-burning inference loop. Set a LOCK with NX (only-if-not-exists); if
+        # another loop already owns it, exit immediately.
+        lock_key = f"camera_{camera_id}_process_lock"
+        if redis_client.set(lock_key, "1", nx=True) is not True:
+            logging.warning(f"Camera {camera_id} already being processed by another worker. Exiting to avoid duplicates.")
+            redis_client.close()
+            return {"status": "Already being processed."}
+        redis_client.expire(lock_key, 3600)  # safety TTL if the loop crashes
+
         # Mark this camera as active
         redis_client.set(f"feed_worker_{camera_id}_running", "True", ex=3600)  # TTL of 1 hour
 
@@ -119,13 +152,13 @@ def process_feed(camera_id: int):
         stop_check_counter = 300
         max_frame_skip_count = 0  # Track frames with no data
 
-        # load yolo and move to GPU
-        model = YOLO(model="./yolo-models/yolo26n.pt")
-        if torch.cuda.is_available():
-            model.to("cuda:0")
-        else:
-            model.to("cpu")
-        logging.info(f"Loaded YOLO model for camera {camera_id}.")
+        # Rate-limit inference to the configured FPS. Without this the loop runs
+        # `model.predict` at the raw RTSP frame rate (potentially tens of FPS),
+        # keeping every core busy at ~100% even when a single camera is active.
+        frame_interval = 1.0 / max(int(settings.FEED_FPS), 1)
+        last_inference_time = 0.0
+
+        logging.info(f"Using shared YOLO model on device {_DEVICE} for camera {camera_id}.")
 
         while True:
             frame = grabber.get_latest_frame()
@@ -143,13 +176,21 @@ def process_feed(camera_id: int):
             
             # Keep updating the TTL to indicate this task is still running
             redis_client.expire(f"feed_worker_{camera_id}_running", 3600)
-            
+
+            # Throttle inference to the target FPS
+            now = time.time()
+            if now - last_inference_time < frame_interval:
+                time.sleep(0.001)
+                continue
+            last_inference_time = now
+
             annotated_frame = preprocess_frame(frame, camera)
 
             redis_client.get(f"camera_{camera_id}_intrusion_flag")
 
             intrusion_detected = False
-            results = model.predict(annotated_frame, classes=[0], verbose=False)
+            with _model_lock:
+                results = model.predict(annotated_frame, classes=[0], verbose=False, device=_DEVICE)
 
             for res in results:
                 for detection in res.boxes:
@@ -234,8 +275,12 @@ def process_feed(camera_id: int):
     except Exception as e:
         logging.exception(f"Error processing feed for camera {camera_id}: {e}")
     finally:
-        redis_client.set(f"feed_worker_{camera_id}_running", "False")
-        redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+        try:
+            redis_client.set(f"feed_worker_{camera_id}_running", "False")
+            redis_client.set(f"camera_{camera_id}_intrusion_flag", "False")
+            redis_client.delete(f"camera_{camera_id}_process_lock")
+        except Exception:
+            pass
         redis_client.close()
         logging.info(f"Stopped feed processing for camera {camera_id}")
 

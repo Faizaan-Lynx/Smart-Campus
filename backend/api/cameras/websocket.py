@@ -58,7 +58,7 @@ async def broadcast_frame(camera_id: str, frame_data: bytes):
 
     # Broadcast to specific camera connections
     if camera_id in frame_connections:
-        for connection in frame_connections[camera_id]:
+        for connection in list(frame_connections[camera_id]):
             try:
                 await connection.send_bytes(frame_data)  # Send as raw bytes
             except Exception as e:
@@ -67,12 +67,16 @@ async def broadcast_frame(camera_id: str, frame_data: bytes):
 
     # Remove disconnected clients
     for conn in to_remove:
-        for camera in list(frame_connections.keys()):
-            frame_connections[camera].discard(conn)
-            if not frame_connections[camera]:
-                del frame_connections[camera]
-                redis_client.set(f"camera_{camera_id}_websocket_active", "False")
-                logging.info(f"Removed inactive connection for camera {camera_id}")
+        for active_camera in list(frame_connections.keys()):
+            if conn in frame_connections[active_camera]:
+                frame_connections[active_camera].discard(conn)
+                if not frame_connections[active_camera]:
+                    del frame_connections[active_camera]
+                    redis_client.set(
+                        f"camera_{active_camera}_websocket_active",
+                        "False",
+                    )
+                    logging.info(f"Removed inactive connection for camera {active_camera}")
 
 
 # WebSocket for Frames (Per Camera) 
@@ -106,15 +110,16 @@ async def websocket_camera_frames(websocket: WebSocket, camera_id: str):
                 break
     finally:
         logging.warning(f"Cleaning up WebSocket connection for Camera {camera_id}")
-        frame_connections[camera_id].discard(websocket)
-        if not frame_connections[camera_id]:
-            del frame_connections[camera_id]
-            redis_client.set(f"camera_{camera_id}_websocket_active", "False")
-            
-            # Cancel polling task when no more connections
-            if camera_id in camera_polling_tasks:
-                camera_polling_tasks[camera_id].cancel()
-                del camera_polling_tasks[camera_id]
+        if camera_id in frame_connections:
+            frame_connections[camera_id].discard(websocket)
+            if not frame_connections[camera_id]:
+                del frame_connections[camera_id]
+                redis_client.set(f"camera_{camera_id}_websocket_active", "False")
+
+                # Cancel polling task when no more connections
+                if camera_id in camera_polling_tasks:
+                    camera_polling_tasks[camera_id].cancel()
+                    del camera_polling_tasks[camera_id]
 
 
 # Function to start frame delivery (now just a placeholder since polling is per-connection)

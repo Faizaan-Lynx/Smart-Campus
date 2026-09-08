@@ -61,8 +61,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
 
   const [popupActive, setPopupActive] = useState(false);
-  const [monthlyAlertZoom, setMonthlyAlertZoom] = useState(1);
-  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [monthlyAlertZoom, setMonthlyAlertZoom] = useState(1.8);
 
   // Camera Related Variables
   const [cameras, setCameras] = useState([]);
@@ -227,10 +226,12 @@ const Dashboard = () => {
               Authorization: `Bearer ${token}`,
             },
           });
-          const allUsers = response.data.map((user) => ({
-            label: user.username || `User ${user.id}`,
-            count: Array.isArray(user.cameras) ? user.cameras.length : 0,
-          }));
+          const allUsers = response.data
+            .map((user) => ({
+              label: user.username || `User ${user.id}`,
+              count: Array.isArray(user.cameras) ? user.cameras.length : 0,
+            }))
+            .filter((user) => user.count > 0);
           console.log("Users with camera counts:", allUsers);
           setUsersWithCameraCount(allUsers);
         } else {
@@ -535,14 +536,7 @@ const Dashboard = () => {
     [usersWithCameraCount]
   );
 
-  const recentAlerts = useMemo(() => {
-    if (showAllHistory) {
-      return [...alerts].reverse();
-    }
-    return alerts.slice(0, 8);
-  }, [alerts, showAllHistory]);
-
-  const hasMoreAlerts = alerts.length > 8;
+  const recentAlerts = alerts;
 
   return (
     <div className="dashboard__main">
@@ -582,7 +576,7 @@ const Dashboard = () => {
                   <button
                     type="button"
                     className="dashboard-chart-control-btn dashboard-chart-control-btn--reset"
-                    onClick={() => setMonthlyAlertZoom(1)}
+                    onClick={() => setMonthlyAlertZoom(1.8)}
                   >
                     Reset
                   </button>
@@ -774,17 +768,6 @@ const Dashboard = () => {
               <div className="dashboard-card__header-left">
                 <h3>Recent Alerts</h3>
                 <p className="dashboard-card__subtitle">Latest camera alerts and actions</p>
-              </div>
-              <div className="dashboard-card__header-right">
-                {hasMoreAlerts && !showAllHistory && (
-                  <button
-                    type="button"
-                    className="dashboard-history-btn"
-                    onClick={() => setShowAllHistory(true)}
-                  >
-                    View All History
-                  </button>
-                )}
               </div>
             </div>
             <div className="dashboard-card__body dashboard-card__body--table">

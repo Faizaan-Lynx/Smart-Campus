@@ -1,13 +1,13 @@
 .camera-card {
-  background: rgba(31, 42, 64, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   animation: cardFadeIn 0.4s ease-out;
 }
 
@@ -22,17 +22,16 @@
   }
 }
 
+/* No hover effects - keep the card simple */
 .camera-card:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(31, 42, 64, 0.95);
+  border-color: var(--border);
+  background: var(--card-bg);
 }
 
+/* No selection color change - keep the card simple */
 .camera-card--active {
-  border-color: rgba(94, 55, 255, 0.6);
-  background: rgba(94, 55, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(94, 55, 255, 0.2);
+  border-color: var(--border);
+  background: var(--card-bg);
 }
 
 .camera-card__header {
@@ -46,7 +45,7 @@
 
 .camera-card__name {
   margin: 0;
-  color: #ffffff;
+  color: var(--text);
   font-size: 0.95rem;
   font-weight: 600;
   flex: 1;

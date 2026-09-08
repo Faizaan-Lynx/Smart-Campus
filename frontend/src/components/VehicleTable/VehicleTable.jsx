@@ -143,31 +143,6 @@ function PlateImageModal({ licenseId, onClose }) {
   );
 }
 
-// ── Confirm delete modal ────────────────────────────────────────────────────────
-function ConfirmDeleteModal({ onCancel, onConfirm, loading }) {
-  return (
-    <div className="vt__modal-backdrop" onClick={onCancel}>
-      <div className="vt__modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="vt__modal-icon">
-          <DeleteOutlineIcon sx={{ fontSize: 26 }} />
-        </div>
-        <h4 className="vt__modal-title">Delete this record?</h4>
-        <p className="vt__modal-body">
-          This will permanently remove the detection and its captured plate image. This can't be undone.
-        </p>
-        <div className="vt__modal-actions">
-          <button className="vt__modal-btn vt__modal-btn--ghost" onClick={onCancel} disabled={loading}>
-            Cancel
-          </button>
-          <button className="vt__modal-btn vt__modal-btn--danger" onClick={onConfirm} disabled={loading}>
-            {loading ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Confidence badge ──────────────────────────────────────────────────────────
 function ConfidenceBadge({ value }) {
   if (value == null) return <span style={{ color: "var(--muted)" }}>—</span>;
@@ -263,18 +238,24 @@ export default function VehicleTable({ selectedCameraId = null, cameras = null }
   // ── Delete a record ─────────────────────────────────────────────────────────
   const confirmDelete = async () => {
     const id = confirmDeleteId;
+    if (!id) {
+      toast.error("This record does not have a valid ID.");
+      setConfirmDeleteId(null);
+      return;
+    }
+
     console.log("[delete] confirm clicked, deleting id =", id);
     setConfirmDeleteId(null);
     setDeletingId(id);
     const token = localStorage.getItem("token");
-    const url = `http://${BACKEND_URL}/license-plates/${id}`;
+    const url = `http://${BACKEND_URL}/license-plates/${encodeURIComponent(id)}`;
     console.log("[delete] sending DELETE to", url);
     try {
       const res = await axios.delete(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("[delete] success", res.status, res.data);
-      setData((prev) => prev.filter((r) => r.id !== id));
+      setData((prev) => prev.filter((r) => (r.id ?? r.license_id ?? r.licenseId) !== id));
       toast.success("Record deleted.");
     } catch (error) {
       console.error("[delete] failed:", error.response?.status, error.response?.data || error.message);
@@ -463,8 +444,14 @@ export default function VehicleTable({ selectedCameraId = null, cameras = null }
                           aria-label="delete"
                           size="small"
                           onClick={() => {
-                            console.log("[delete] trash icon clicked, row id =", row.id);
-                            setConfirmDeleteId(row.id);
+                            const recordId = row.id ?? row.license_id ?? row.licenseId;
+                            console.log("[delete] trash icon clicked, row id =", recordId);
+                            setConfirmDeleteId(recordId ?? null);
+                            if (!recordId) {
+                              toast.error("This record does not have a valid ID.");
+                              setConfirmDeleteId(null);
+                            }
+                            confirmDeleteId && confirmDelete();
                           }}
                           disabled={deletingId === row.id}
                           sx={{
@@ -526,13 +513,7 @@ export default function VehicleTable({ selectedCameraId = null, cameras = null }
         <PlateImageModal licenseId={imageModal} onClose={() => setImageModal(null)} />
       )}
 
-      {confirmDeleteId !== null && (
-        <ConfirmDeleteModal
-          onCancel={() => setConfirmDeleteId(null)}
-          onConfirm={confirmDelete}
-          loading={deletingId === confirmDeleteId}
-        />
-      )}
+      
     </div>
   );
 }

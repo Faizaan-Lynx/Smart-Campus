@@ -13,14 +13,14 @@
 }
 
 html.light {
-  --bg: #f7fafc;
+  --bg: #e9eef4;
   --text: #0f172a;
-  --muted: #475569;
+  --muted: #526071;
   --header-bg: #ffffff;
-  --nav-bg: rgba(255, 255, 255, 0.6);
+  --nav-bg: rgba(255, 255, 255, 0.85);
   --card-bg: #ffffff;
-  --border: #e6eef8;
-  --accent: #10b981;
+  --border: #cfd9e6;
+  --accent: #0d9668;
   --danger: #dc2626;
   --link: #2563eb;
 }
@@ -207,6 +207,6 @@ html.light .panel {
   background-color: var(--card-bg) !important;
   color: var(--text) !important;
   border-color: var(--border) !important;
-  box-shadow: 0 1px 6px rgba(16,24,40,0.06) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 18px rgba(15, 23, 42, 0.06) !important;
 }
 

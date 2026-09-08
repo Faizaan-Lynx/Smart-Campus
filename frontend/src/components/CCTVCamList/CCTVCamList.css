@@ -50,9 +50,6 @@
 
 }
 .camera-card.active,
-.camera-card:hover {
-  background-color: var(--border);
-}
 
 .camera-thumbnail {
   width: 100px;
@@ -148,9 +145,7 @@
   font-weight: bold;
 }
 
-.cctv-popup-close-btn:hover {
-  background-color: darkpurple;
-}
+
 
 /* Loader inside Popup */
 .cctv_popup_loader {

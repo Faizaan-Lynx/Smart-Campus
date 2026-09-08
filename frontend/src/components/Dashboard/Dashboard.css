@@ -122,28 +122,6 @@
   font-size: 0.8rem;
 }
 
-.dashboard-history-btn {
-  border: none;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #4f7df3, #3aa7d9);
-  color: #fff;
-  padding: 8px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-}
-
-.dashboard-history-btn:hover {
-  transform: scale(1.05);
-  filter: brightness(1.08);
-  box-shadow: 0 4px 12px rgba(58, 167, 217, 0.25);
-}
-
-.dashboard-history-btn:active {
-  transform: scale(0.98);
-}
-
 .dashboard-card h3 {
   margin: 0;
   color: var(--text);

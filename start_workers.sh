@@ -15,7 +15,7 @@ for i in $(seq 1 $WORKER_COUNT); do
   WORKER_NAME="worker$i"
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.worker.celery_app worker -n $WORKER_NAME -Q general_tasks --pool=threads --loglevel=info &
+  celery -A ${celery_mod}.worker.celery_app worker -n $WORKER_NAME -Q general_tasks --pool=threads --concurrency=8 --loglevel=info &
 
   sleep 1
 done
@@ -28,7 +28,9 @@ for i in $(seq 1 $FEED_WORKERS); do
   WORKER_NAME="full_feed_worker$i"
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.full_feed_worker.full_feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --pool=threads --loglevel=info &
+  # Each `process_feed` is a long-running loop that holds one thread, so keep the
+  # pool small (fewer threads -> less CPU overhead / thread bloat).
+  celery -A ${celery_mod}.full_feed_worker.full_feed_worker_app worker -n $WORKER_NAME -Q feed_tasks --pool=threads --concurrency=4 --loglevel=info &
 
   sleep 0.5
 done
@@ -41,7 +43,7 @@ for i in $(seq 1 $LICENSE_WORKERS); do
   WORKER_NAME="license_plate_worker$i"
 
   echo "Starting worker: $WORKER_NAME"
-  celery -A ${celery_mod}.license_plate_worker.license_plate_worker_app worker -n $WORKER_NAME -Q license_plate_tasks --pool=threads --loglevel=info &
+  celery -A ${celery_mod}.license_plate_worker.license_plate_worker_app worker -n $WORKER_NAME -Q license_plate_tasks --pool=threads --concurrency=2 --loglevel=info &
 
   sleep 0.5
 done

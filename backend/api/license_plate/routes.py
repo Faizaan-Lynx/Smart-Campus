@@ -30,6 +30,20 @@ from models import Users
 router = APIRouter(prefix="/license-plates", tags=["License Plates"])
 
 
+def _user_can_access_license_record(
+    db: Session, current_user: UserResponseSchema, camera_id: int
+) -> bool:
+    if current_user.is_admin:
+        return True
+
+    user = db.query(Users).filter(Users.id == current_user.id).first()
+    if not user or not user.cameras:
+        return False
+
+    user_camera_ids = {camera.id for camera in user.cameras}
+    return camera_id in user_camera_ids
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Worker control  (admin-only)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -138,6 +152,10 @@ def get_license_plates_by_camera(
     offset: int = Query(default=0, ge=0),
 ):
     """Return license plate detections for a specific camera (empty list if none yet)."""
+    if not current_user.is_admin:
+        if not _user_can_access_license_record(db, current_user, camera_id):
+            raise HTTPException(status_code=403, detail="Access denied to this camera")
+
     records = (
         db.query(License)
         .filter(License.camera_id == camera_id)
@@ -164,12 +182,9 @@ def get_license_image(
         logging.error(f"❌ License record not found: {license_id}")
         raise HTTPException(status_code=404, detail="License record not found")
 
-    if not current_user.is_admin:
-        user = db.query(Users).filter(Users.id == current_user.id).first()
-        user_camera_ids = [camera.id for camera in (user.cameras or [])]
-        if record.camera_id not in user_camera_ids:
-            logging.error(f"❌ Access denied to camera {record.camera_id} for user {current_user.id}")
-            raise HTTPException(status_code=403, detail="Access denied to this camera")
+    if not _user_can_access_license_record(db, current_user, record.camera_id):
+        logging.error(f"❌ Access denied to camera {record.camera_id} for user {current_user.id}")
+        raise HTTPException(status_code=403, detail="Access denied to this camera")
 
     logging.info(f"📄 File path from DB: {record.file_path}")
     
@@ -199,6 +214,8 @@ def get_license_plate_by_id(
     record = db.query(License).filter(License.id == license_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="License plate detection not found")
+    if not _user_can_access_license_record(db, current_user, record.camera_id):
+        raise HTTPException(status_code=403, detail="Access denied to this camera")
     return record
 
 
@@ -216,11 +233,17 @@ def delete_all_license_plates(
 def delete_license_plate(
     license_id: int,
     db: Session = Depends(get_db),
-    current_user: UserResponseSchema = Depends(is_admin),
+    current_user: UserResponseSchema = Depends(get_current_user),
 ):
     record = db.query(License).filter(License.id == license_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="License plate detection not found")
+    if not _user_can_access_license_record(db, current_user, record.camera_id):
+        raise HTTPException(status_code=403, detail="Access denied to this camera")
+
+    if record.file_path and os.path.isfile(record.file_path):
+        os.remove(record.file_path)
+
     db.delete(record)
     db.commit()
     return {"message": "License plate detection deleted successfully"}
