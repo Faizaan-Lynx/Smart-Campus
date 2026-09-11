@@ -14,6 +14,10 @@ class Settings:
     SHOW_INTRUSION_LINES = os.getenv("SHOW_INTRUSION_LINES", "True")
     SHOW_INTRUSION_FLAG = os.getenv("SHOW_INTRUSION_FLAG", "True")
 
+    # Fire / smoke detection
+    FIRE_SMOKE_MODEL_PATH = os.getenv("FIRE_SMOKE_MODEL_PATH", "./yolo-models/fire_smoke.pt")
+    FIRE_SMOKE_CONFIDENCE = float(os.getenv("FIRE_SMOKE_CONFIDENCE", 0.40))
+
     # Database settings
     DATABASE_NAME = os.getenv("DATABASE_NAME", "SmartCampus")
     DATABASE_USER = os.getenv("DATABASE_USER", "postgres")

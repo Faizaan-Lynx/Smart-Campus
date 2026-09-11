@@ -9,7 +9,7 @@ from models.cameras import Camera as CameraModel
 from api.auth.security import is_admin, get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from api.cameras.schemas import CameraCreate, CameraUpdate, Camera
+from api.cameras.schemas import CameraCreate, CameraUpdate, Camera, CameraDetectionToggle
 from core.celery.model_worker import update_cameras_for_model_workers
 import cv2
 import io
@@ -132,6 +132,36 @@ def update_camera(camera_id: int, camera: CameraUpdate, db: Session = Depends(ge
     db.refresh(db_camera)
 
     # create a task group to update the cameras list for all model workers
+    task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
+    task_group.apply_async(queue='model_tasks')
+
+    return db_camera
+
+
+# toggle an optional detection feature on a camera (e.g. fire/smoke) without editing the whole camera
+@router.patch("/{camera_id}/detection", response_model=Camera)
+def toggle_camera_detection(camera_id: int, toggle: CameraDetectionToggle, db: Session = Depends(get_db), current_user: UserResponseSchema = Depends(is_admin)):
+    db_camera = db.query(CameraModel).filter(CameraModel.id == camera_id).first()
+    if not db_camera:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found")
+
+    feature_columns = {
+        "fire_smoke": "detect_fire_smoke",
+        "intrusion": "detect_intrusions",
+    }
+
+    column = feature_columns.get(toggle.feature)
+    if not column:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown detection feature '{toggle.feature}'. Supported: {', '.join(feature_columns.keys())}"
+        )
+
+    setattr(db_camera, column, toggle.enabled)
+    db.commit()
+    db.refresh(db_camera)
+
+    # let disabled model workers know (no-op today, harmless)
     task_group = group(update_cameras_for_model_workers.s() for _ in range(settings.MODEL_WORKERS))
     task_group.apply_async(queue='model_tasks')
 

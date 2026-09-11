@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./FootTable.css";
-import { FaEye, FaTrash, FaSearch } from "react-icons/fa";
+import { FaEye, FaTrash, FaSearch, FaFire, FaSmog } from "react-icons/fa";
 import FeedPopup from "./FeedPopUp";
 import BACKEND_URL from '../../config.js';
 
@@ -131,17 +131,30 @@ const FootTable = ({ alerts, setAlerts, cameras = [] }) => {
           <div className="alert-card-list">
             {paginatedAlerts.map((row) => {
               const name = getCameraName(row.camera_id);
-              const alertType = row.alert_type || row.type || "Intrusion";
+              const alertType = String(row.alert_type || row.type || "Intrusion").toLowerCase();
+              const isFire = alertType === "fire";
+              const isSmoke = alertType === "smoke";
 
               return (
-                <div className="alert-card" key={row.id}>
+                <div
+                  className={[
+                    "alert-card",
+                    isFire ? "alert-card--fire" : "",
+                    isSmoke ? "alert-card--smoke" : "",
+                  ].filter(Boolean).join(" ")}
+                  key={row.id}
+                >
                   <div className="alert-card__left">
+                    {isFire && <FaFire className="alert-card__type-icon alert-card__type-icon--fire" />}
+                    {isSmoke && <FaSmog className="alert-card__type-icon alert-card__type-icon--smoke" />}
                     <div className="alert-card__camera-name">{name}</div>
                   </div>
 
                   <div className="alert-card__center">
                     <span className="alert-card__date">{formatDate(row.timestamp)}</span>
-                    <span className="alert-card__type-text">{alertType}</span>
+                    <span className={`alert-card__type-text ${isFire ? "alert-card__type-text--fire" : ""} ${isSmoke ? "alert-card__type-text--smoke" : ""}`}>
+                      {isFire ? "FIRE" : isSmoke ? "SMOKE" : alertType}
+                    </span>
                   </div>
 
                   <div className="alert-card__right">

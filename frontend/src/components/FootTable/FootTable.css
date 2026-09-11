@@ -205,7 +205,46 @@ html.light .alert-card-search input {
     grid-template-columns: 1fr;
   }
 
-  .alert-card__right {
+.alert-card__left {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-card__type-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.alert-card__type-icon--fire {
+  color: #f87171;
+}
+
+.alert-card__type-icon--smoke {
+  color: #94a3b8;
+}
+
+.alert-card--fire {
+  border-left: 4px solid #ef4444;
+  border-radius: 10px;
+}
+
+.alert-card--smoke {
+  border-left: 4px solid #94a3b8;
+  border-radius: 10px;
+}
+
+.alert-card__type-text--fire {
+  color: #f87171 !important;
+  font-weight: 700;
+}
+
+.alert-card__type-text--smoke {
+  color: #94a3b8 !important;
+  font-weight: 700;
+}
+
+.alert-card__right {
     justify-content: flex-start;
   }
 }

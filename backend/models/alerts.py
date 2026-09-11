@@ -10,5 +10,6 @@ class Alert(Base):
     timestamp = Column(String)  # Store as ISO string
     is_acknowledged = Column(Boolean, default=False)
     file_path = Column(String)
+    alert_type = Column(String, default="intrusion")  # e.g. intrusion, fire, smoke
 
     camera = relationship("Camera")

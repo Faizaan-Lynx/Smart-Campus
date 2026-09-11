@@ -6,6 +6,7 @@ class AlertBase(BaseModel):
     timestamp: str
     is_acknowledged: bool = False
     file_path: Optional[str] = None
+    alert_type: str = "intrusion"
 
 class AlertCreate(BaseModel):
     message: str

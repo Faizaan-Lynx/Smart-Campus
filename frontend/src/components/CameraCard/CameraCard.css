@@ -54,6 +54,20 @@
   white-space: nowrap;
 }
 
+.camera-card__fire-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
 .camera-card__live {
   display: flex;
   align-items: center;

@@ -9,8 +9,9 @@ import {
   Box, Modal, TextField, Button, Grid, IconButton,
   Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Dialog, DialogTitle, DialogContent,
-  DialogActions, Chip, Tooltip, CircularProgress,
+  DialogActions, Chip, Tooltip, CircularProgress, Checkbox, Typography,
 } from "@mui/material";
+import { FaFire } from "react-icons/fa";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
@@ -29,6 +30,9 @@ const CameraManagement = () => {
   const [currentCamera, setCurrentCamera] = useState(null);
   const [drawnPoints, setDrawnPoints] = useState([]);
   const [workerLoadingId, setWorkerLoadingId] = useState(null); // per-camera LP worker toggle
+  // ── Detection features panel ───────────────────────────────────────────
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [featureUpdatingId, setFeatureUpdatingId] = useState(null); // per-camera fire/smoke toggle
 
   // ── Live feed layout preference (Grid / Horizontal) ──────────────────────
   // This drives how camera feeds render in FootFallRow on the Dashboard and
@@ -224,6 +228,29 @@ const CameraManagement = () => {
     }
   };
 
+  // ── Detection features (fire/smoke) ──────────────────────────────────────
+  const fireSmokeCount = cameras.filter((c) => c.detect_fire_smoke).length;
+  const intrusionCount = cameras.filter((c) => c.detect_intrusions).length;
+  const gateCount = cameras.length - intrusionCount;
+
+  const toggleFireSmoke = async (camera, enabled) => {
+    setFeatureUpdatingId(camera.id);
+    try {
+      await axios.patch(
+        `${localurl}/camera/${camera.id}/detection`,
+        { feature: "fire_smoke", enabled },
+        { headers: { accept: "application/json", Authorization: `Bearer ${token}` } }
+      );
+      setCameras((prev) =>
+        prev.map((c) => (c.id === camera.id ? { ...c, detect_fire_smoke: enabled } : c))
+      );
+    } catch (err) {
+      toast.error(`Failed to update Camera ${camera.id}`);
+    } finally {
+      setFeatureUpdatingId(null);
+    }
+  };
+
   const openEditModal = (camera) => {
     setCurrentCamera(camera);
     setDrawnPoints([]);
@@ -381,11 +408,21 @@ const CameraManagement = () => {
 
                       {/* Mode badge */}
                       <TableCell style={{ borderColor: "var(--border)" }}>
-                        {camera.detect_intrusions ? (
-                          <Chip label="Intrusion" size="small" sx={{ backgroundColor: "#7c3aed22", color: "#a78bfa", border: "1px solid #7c3aed", fontWeight: 600, fontSize: 11 }} />
-                        ) : (
-                          <Chip label="Gate / LP" size="small" sx={{ backgroundColor: "#0284c722", color: "#38bdf8", border: "1px solid #0284c7", fontWeight: 600, fontSize: 11 }} />
-                        )}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          {camera.detect_intrusions ? (
+                            <Chip label="Intrusion" size="small" sx={{ backgroundColor: "#7c3aed22", color: "#a78bfa", border: "1px solid #7c3aed", fontWeight: 600, fontSize: 11 }} />
+                          ) : (
+                            <Chip label="Gate / LP" size="small" sx={{ backgroundColor: "#0284c722", color: "#38bdf8", border: "1px solid #0284c7", fontWeight: 600, fontSize: 11 }} />
+                          )}
+                          {camera.detect_fire_smoke && (
+                            <Chip
+                              label="Fire/Smoke"
+                              size="small"
+                              icon={<FaFire style={{ fontSize: 10 }} />}
+                              sx={{ backgroundColor: "#ef44441f", color: "#f87171", border: "1px solid #ef4444", fontWeight: 600, fontSize: 11 }}
+                            />
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* LP Worker start/stop — only visible for Gate cameras */}
@@ -438,6 +475,107 @@ const CameraManagement = () => {
             </Table>
           </TableContainer>
         )}
+
+        {/* ── Detection Features ─────────────────────────────────────────── */}
+        <div className="cam-features">
+          <div className="cam-features__header">
+            <h2>Detection Features</h2>
+            <p>
+              Features run independently per camera — a camera can have Intrusion and
+              Fire &amp; Smoke detection at the same time without affecting the live feed.
+            </p>
+          </div>
+          <div className="cam-features__grid">
+            {/* Fire & Smoke — the interactive feature */}
+            <button
+              className="cam-feature-card cam-feature-card--fire"
+              onClick={() => setShowFeatureModal(true)}
+              title="Manage fire/smoke detection per camera"
+            >
+              <span className="cam-feature-card__icon"><FaFire /></span>
+              <span className="cam-feature-card__body">
+                <strong>Fire &amp; Smoke Detection</strong>
+                <span className="cam-feature-card__desc">Detect fire and smoke on selected cameras</span>
+                <span className="cam-feature-card__meta">
+                  {fireSmokeCount} of {cameras.length} camera{fireSmokeCount === 1 ? "" : "s"} enabled
+                </span>
+              </span>
+              <span className="cam-feature-card__action">Manage</span>
+            </button>
+
+            {/* Intrusion — small, informational */}
+            <div className="cam-feature-card cam-feature-card--small" title="Configured per camera (see Mode column)">
+              <span className="cam-feature-card__icon cam-feature-card__icon--intrusion"><span>◍</span></span>
+              <span className="cam-feature-card__body">
+                <strong>Intrusion</strong>
+                <span className="cam-feature-card__meta">{intrusionCount} camera{intrusionCount === 1 ? "" : "s"} enabled</span>
+              </span>
+            </div>
+
+            {/* License Plate — small, informational */}
+            <div className="cam-feature-card cam-feature-card--small" title="Controlled per camera via the LP Detection column">
+              <span className="cam-feature-card__icon cam-feature-card__icon--lp"><span>#</span></span>
+              <span className="cam-feature-card__body">
+                <strong>License Plate</strong>
+                <span className="cam-feature-card__meta">{gateCount} Gate camera{gateCount === 1 ? "" : "s"}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Fire / Smoke per-camera management modal ─────────────────────── */}
+        <Dialog
+          open={showFeatureModal}
+          onClose={() => setShowFeatureModal(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{ sx: { backgroundColor: "var(--card-bg)", color: "var(--text)", border: "1px solid var(--border)" } }}
+        >
+          <DialogTitle sx={{ color: "var(--text)" }}>Fire &amp; Smoke Detection</DialogTitle>
+          <DialogContent dividers sx={{ p: 0, borderColor: "var(--border)", backgroundColor: "var(--card-bg)" }}>
+            <Box sx={{ px: 3, py: 1.5 }}>
+              <Typography variant="body2" sx={{ color: "var(--muted)" }}>
+                Tick the cameras that should run fire/smoke detection. This runs independently
+                of Intrusion and License Plate detection and does not interrupt the camera feed.
+              </Typography>
+            </Box>
+            <Box sx={{ maxHeight: 420, overflowY: "auto" }} role="list">
+              {cameras.map((camera) => (
+                <Box
+                  key={camera.id}
+                  sx={{ display: "flex", alignItems: "center", px: 3, py: 1, borderBottom: "1px solid var(--border)" }}
+                >
+                  <Checkbox
+                    checked={!!camera.detect_fire_smoke}
+                    onChange={(e) => toggleFireSmoke(camera, e.target.checked)}
+                    disabled={featureUpdatingId === camera.id}
+                    sx={{ color: "var(--text)", "&.Mui-checked": { color: "var(--accent)" } }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ color: "var(--text)", fontSize: 14, fontWeight: 600 }}>
+                      Camera {camera.id} — {camera.location || "Unnamed"}
+                    </Box>
+                    <Box sx={{ color: "var(--muted)", fontSize: 12 }}>
+                      {camera.detect_intrusions ? "Intrusion enabled" : "Gate / License Plate camera"}
+                    </Box>
+                  </Box>
+                  {camera.detect_fire_smoke && (
+                    <Chip
+                      label="Fire/Smoke"
+                      size="small"
+                      icon={<FaFire style={{ fontSize: 10 }} />}
+                      sx={{ backgroundColor: "#ef44441f", color: "#f87171", border: "1px solid #ef4444", fontWeight: 600, fontSize: 11 }}
+                    />
+                  )}
+                  {featureUpdatingId === camera.id && <CircularProgress size={16} sx={{ color: "var(--accent)", ml: 1 }} />}
+                </Box>
+              ))}
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--card-bg)" }}>
+            <Button onClick={() => setShowFeatureModal(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* ── Add Camera Modal ──────────────────────────────────────────────── */}
         <Modal open={showAddModal} onClose={() => setShowAddModal(false)}>

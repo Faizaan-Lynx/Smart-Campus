@@ -1,3 +1,5 @@
-const BACKEND_URL = "192.168.10.100:8000";
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/$/, '');
 
 export default BACKEND_URL;

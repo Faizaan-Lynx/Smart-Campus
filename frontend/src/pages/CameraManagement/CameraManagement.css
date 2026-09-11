@@ -245,3 +245,130 @@ label input[type="checkbox"] {
     max-width: 150px;
   }
 }
+
+/* ── Detection Features panel ─────────────────────────────────────── */
+.cam-features {
+  margin-top: 24px;
+}
+
+.cam-features__header h2 {
+  margin: 0 0 4px 0;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cam-features__header p {
+  margin: 0 0 14px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 760px;
+}
+
+.cam-features__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cam-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cam-feature-card--fire {
+  grid-column: 1 / -1;
+  border-left: 4px solid #ef4444;
+}
+
+.cam-feature-card--fire:hover {
+  border-color: #ef4444;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+  transform: translateY(-1px);
+}
+
+.cam-feature-card--small {
+  cursor: default;
+}
+
+.cam-feature-card--small:hover {
+  border-color: var(--border);
+}
+
+.cam-feature-card__icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  font-size: 1.35rem;
+}
+
+.cam-feature-card__icon--intrusion {
+  background: rgba(124, 58, 237, 0.14);
+  color: #a78bfa;
+  font-size: 1.1rem;
+}
+
+.cam-feature-card__icon--lp {
+  background: rgba(2, 132, 199, 0.14);
+  color: #38bdf8;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cam-feature-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cam-feature-card__body strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.cam-feature-card__desc {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.cam-feature-card__meta {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.cam-feature-card__action {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .cam-features__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cam-feature-card--fire {
+    grid-column: auto;
+  }
+}

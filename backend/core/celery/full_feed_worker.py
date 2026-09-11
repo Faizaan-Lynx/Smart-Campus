@@ -49,6 +49,29 @@ logging.info(f"full_feed_worker: YOLO model loaded on device {_DEVICE}")
 _model_lock = threading.Lock()
 
 
+# Fire/smoke model. Loaded LAZILY on first use so workers that only run intrusion
+# detection (or no model at all) never pay the memory/startup cost. Loaded and
+# pinned on the GPU like the intrusion model. It keeps its OWN inference lock so
+# fire detection never blocks intrusion detection and vice versa.
+FIRE_SMOKE_MODEL_PATH = settings.FIRE_SMOKE_MODEL_PATH
+FIRE_SMOKE_CONFIDENCE = float(getattr(settings, "FIRE_SMOKE_CONFIDENCE", 0.40))
+
+_fire_smoke_model = None
+_fire_smoke_load_lock = threading.Lock()      # guards lazy loading
+_fire_smoke_predict_lock = threading.Lock()   # serializes fire inference
+
+
+def get_fire_smoke_model():
+    global _fire_smoke_model
+    if _fire_smoke_model is None:
+        with _fire_smoke_load_lock:
+            if _fire_smoke_model is None:
+                logging.info(f"full_feed_worker: loading fire/smoke model on device {_DEVICE}")
+                _fire_smoke_model = YOLO(FIRE_SMOKE_MODEL_PATH)
+                _fire_smoke_model.to(_DEVICE)
+    return _fire_smoke_model
+
+
 ## ===== General Video Processing ===== ##
 
 class FrameGrabber(threading.Thread):
@@ -135,10 +158,16 @@ def process_feed(camera_id: int):
         # Mark this camera as active
         redis_client.set(f"feed_worker_{camera_id}_running", "True", ex=3600)  # TTL of 1 hour
 
-        # Only open capture and process frames if detect_intrusions is True
-        if not camera.detect_intrusions:
-            logging.info(f"Camera {camera_id} detect_intrusions is False. Skipping capture and processing.")
-            return {"status": "Intrusion detection disabled for this camera."}
+        # Determine which detections should run on this camera. Features are independent:
+        # a camera can run intrusion AND fire/smoke detection on the same feed at the same time.
+        intrusion_enabled = bool(camera.detect_intrusions)
+        fire_smoke_enabled = bool(camera.detect_fire_smoke)
+
+        if not intrusion_enabled and not fire_smoke_enabled:
+            logging.info(f"Camera {camera_id} has no detection features enabled. Skipping capture and processing.")
+            return {"status": "No detection features enabled for this camera."}
+        else:
+            logging.info(f"Camera {camera_id} features -> intrusion: {intrusion_enabled}, fire/smoke: {fire_smoke_enabled}.")
 
         def cap_factory():
             cap = open_capture(camera.url, camera_id, max_tries=3, timeout=2)
@@ -250,7 +279,47 @@ def process_feed(camera_id: int):
                     redis_client.set(f"camera_{camera_id}_intrusion_flag", "True")
                     redis_client.set(intrusion_time_key, str(current_time))
                     redis_client.set(alert_time_key, str(current_time))
-            
+
+            # ---- Fire / smoke detection (fully independent of intrusion) ----
+            # Runs on the same grabbed frame and shares the same publish loop, so the
+            # live feed is never disturbed. It has its OWN cooldown key so a fire alert
+            # never suppresses an intrusion alert (or vice versa).
+            if fire_smoke_enabled:
+                fire_smoke_model = get_fire_smoke_model()
+                with _fire_smoke_predict_lock:
+                    fire_results = fire_smoke_model.predict(
+                        annotated_frame, conf=FIRE_SMOKE_CONFIDENCE, verbose=False, device=_DEVICE
+                    )
+
+                fire_smoke_detected = False
+                detected_label = None
+                detected_confidence = 0.0
+                for res in fire_results:
+                    for detection in res.boxes:
+                        try:
+                            label_idx = int(detection.cls[0])
+                            label = str(fire_smoke_model.names[label_idx] if hasattr(fire_smoke_model, "names") and label_idx in fire_smoke_model.names else label_idx).strip().lower()
+                        except Exception:
+                            continue
+                        if "fire" not in label and "smoke" not in label:
+                            continue
+                        conf = float(detection.conf[0])
+                        x1, y1, x2, y2 = map(int, detection.xyxy[0])
+                        color = (0, 0, 255) if "fire" in label else (210, 180, 140)
+                        annotated_frame = cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+                        annotated_frame = cv2.putText(annotated_frame, label.upper(), (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+                        if conf > detected_confidence:
+                            detected_confidence = conf
+                            detected_label = "fire" if "fire" in label else "smoke"
+                        fire_smoke_detected = True
+
+                if fire_smoke_detected:
+                    fire_alert_time_key = f"camera_{camera_id}_last_fire_smoke_alert_time"
+                    last_fire_alert_time = float(redis_client.get(fire_alert_time_key) or 0)
+                    if (current_time - last_fire_alert_time) > COOLDOWN:
+                        handle_fire_smoke_event(camera_id, annotated_frame, alert_type=detected_label or "fire_smoke")
+                        redis_client.set(fire_alert_time_key, str(current_time))
+
             stop_check_counter -= 1
             if stop_check_counter <= 0:
                 stop_check_counter = 300
@@ -264,6 +333,11 @@ def process_feed(camera_id: int):
                 if threshold_polygons is None:
                     logging.error(f"Failed to get polygons for camera {camera_id}.")
                     break
+
+                # Refresh enabled features so toggling fire/smoke (or intrusion) in the UI
+                # takes effect on the running loop without restarting the worker.
+                intrusion_enabled = bool(camera.detect_intrusions)
+                fire_smoke_enabled = bool(camera.detect_fire_smoke)
 
                 if camera_running == b"False" or global_cameras_running == b"False":
                     logging.info(f"Stopping feed processing for camera {camera_id}.")
@@ -531,6 +605,36 @@ def handle_intrusion_event(camera_id: int, frame: np.ndarray = None):
     full_feed_worker_app.send_task('core.celery.full_feed_worker.unset_intrusion_flag', args=[camera_id], queue="feed_tasks", countdown=settings.INTRUSION_FLAG_DURATION)
 
 
+def handle_fire_smoke_event(camera_id: int, frame: np.ndarray = None, alert_type: str = "fire_smoke"):
+    """
+    Handle a fire/smoke detection event: save the annotated frame and create an alert.
+    Uses its own `alert_type` (e.g. "fire", "smoke") so it never collides with intrusion alerts.
+    """
+    logging.warning(f"{alert_type.upper()} detected for camera {camera_id}!!!")
+
+    file_path = None
+    if frame is not None:
+        timestamp = int(datetime.now().timestamp())
+        file_path = f"/app/alert_images/{alert_type}_{camera_id}_{timestamp}.jpg"
+        try:
+            cv2.imwrite(file_path, frame)
+        except Exception:
+            file_path = None
+
+    alert_data = AlertBase(
+        camera_id=camera_id,
+        timestamp=str(datetime.now().replace(microsecond=0)),
+        is_acknowledged=False,
+        file_path=file_path,
+        alert_type=alert_type,
+    )
+    db = SessionLocal()
+    try:
+        create_alert(alert_data, db)
+    finally:
+        db.close()
+
+
 def centroid_near_line(bounding_box: tuple, region:MultiPolygon, threshold:float=5) -> bool:
     """
     Determine if a centroid is near or has crossed a region.
@@ -568,7 +672,7 @@ def start_feed_worker(camera_id: int):
     camera = db.query(Camera).filter(Camera.id == camera_id).first()
     db.close()
 
-    if camera.detect_intrusions:
+    if camera.detect_intrusions or camera.detect_fire_smoke:
         full_feed_worker_app.send_task(
             "core.celery.full_feed_worker.process_feed",
             args=[camera_id],

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./CameraCard.css";
+import { FaFire } from "react-icons/fa";
 
 const CameraCard = ({
   camera,
@@ -20,6 +21,11 @@ const CameraCard = ({
     >
       <div className="camera-card__header">
         <h3 className="camera-card__name">{camera.location || `Camera ${camera.id}`}</h3>
+        {camera.detect_fire_smoke && (
+          <span className="camera-card__fire-badge" title="Fire/smoke detection enabled">
+            <FaFire />
+          </span>
+        )}
         {isLoading ? (
           <span className="camera-card__offline" style={{ color: "red" }}>
             ● Offline

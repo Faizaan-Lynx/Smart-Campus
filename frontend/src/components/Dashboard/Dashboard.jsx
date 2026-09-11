@@ -13,6 +13,7 @@ import { LineChart, PieChart, BarChart } from "@mui/x-charts";
 import FeedPopup from "../FootTable/FeedPopUp";
 import { jwtDecode } from "jwt-decode";
 import { useAlert } from "../../context/AlertContext";
+import { FaFire, FaSmog } from "react-icons/fa";
 import BACKEND_URL from '../../config.js';
 
 const MONTH_LABELS = [
@@ -380,10 +381,31 @@ const Dashboard = () => {
             // Find camera location for toast
             const cam = cameras.find(c => c.id === alertData.camera_id);
             const locationText = cam && cam.location ? cam.location : `Camera ${alertData.camera_id}`;
-            addToast(`🚨 New Alert at ${locationText}`, {
-              onClick: () =>
-                handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id),
-            });
+
+            // Fire / smoke alerts get a distinct toast so they stand out from usual intrusion alerts.
+            const alertType = String(alertData.alert_type || alertData.type || "intrusion").toLowerCase();
+            const isFire = alertType === "fire";
+            const isSmoke = alertType === "smoke";
+
+            addToast(
+              isFire ? `FIRE detected at ${locationText}` :
+              isSmoke ? `SMOKE detected at ${locationText}` :
+              `New Alert at ${locationText}`,
+              {
+                icon: isFire ? <FaFire /> : isSmoke ? <FaSmog /> : undefined,
+                style: {
+                  background: "var(--card-bg)",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  maxHeight: "80vh",
+                  overflowY: "auto",
+                  ...(isFire ? { borderLeft: "4px solid #ef4444" } : {}),
+                  ...(isSmoke ? { borderLeft: "4px solid #94a3b8" } : {}),
+                },
+                onClick: () =>
+                  handleToastClick(newAlert.id || alertData.id || alertData.file_path, alertData.camera_id),
+              }
+            );
           };
 
           socket.onerror = (error) => {
